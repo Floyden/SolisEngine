@@ -29,13 +29,11 @@ Shooter::~Shooter()
 
 void Shooter::Init()
 {
-    mWindow = Solis::Window::Create();
-
     //Init Modules
-    mModules = std::make_unique<ModuleManager>();
     LoadDefaultModules();
     mModules->Init();
     
+    auto events = mModules->GetModule<Events>();
     events->Subscribe(this, &Shooter::OnKeyEvent);
     events->Subscribe(this, &Shooter::OnMouseMove);
     events->Subscribe(this, &Shooter::OnMouseButton);
