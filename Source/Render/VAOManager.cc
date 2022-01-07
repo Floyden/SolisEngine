@@ -1,5 +1,4 @@
 #include "VAOManager.hh"
-#include "GL/glew.h"
 
 namespace Solis
 {

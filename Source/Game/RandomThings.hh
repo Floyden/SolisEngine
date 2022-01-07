@@ -108,7 +108,7 @@ static std::vector<uint8_t> gLevel = {
 };
 
 static const char* gVertexShaderSource =
-    "#version 430 core\n" 
+    "#version 410 core\n" 
     "uniform mat4 uMVP;\n"
     "layout(location = 0) in vec3 inPos;\n" 
     "layout(location = 1) in vec2 inUV;\n" 
@@ -122,7 +122,7 @@ static const char* gVertexShaderSource =
     "}"; 
 
 static const char* gFragmentShaderSource =
-    "#version 430 core\n" 
+    "#version 410 core\n" 
     "uniform sampler2D uSampler;"
     "in vec2 uvs;"
     "in vec3 normal;\n"
@@ -136,7 +136,7 @@ static const char* gFragmentShaderSource =
 
 //TODO: instance this
 static const char* gLightVShaderSource =
-    "#version 430 core\n" 
+    "#version 410 core\n" 
     "out vec3 uPos;\n"
     "void main() {\n"
     "   gl_Position = vec4(uPos, 1.0);\n" 
@@ -145,7 +145,7 @@ static const char* gLightVShaderSource =
     "}"; 
 
 static const char* gLightFShaderSource =
-    "#version 430 core\n" 
+    "#version 410 core\n" 
     "uniform sampler2D uSampler;"
     "in vec2 uvs;"
     "in vec3 normal;\n"
@@ -158,7 +158,7 @@ static const char* gLightFShaderSource =
     "}";
     
 static const char* gPassthroughShaderSource = 
-    "#version 430 core\n" 
+    "#version 410 core\n" 
     "layout(location = 0) in vec3 pos;"
     "out vec2 uv;"
     "void main() {"
@@ -167,7 +167,7 @@ static const char* gPassthroughShaderSource =
     "}";
 
 static const char* gImageShaderSource = 
-    "#version 430 core\n" 
+    "#version 410 core\n" 
     "in vec2 uv;"
     "out vec3 color;"
     "uniform sampler2D uAlbedo;" 
@@ -199,12 +199,12 @@ static const char* gImageShaderSource =
     "   float falloff = pow(clamp(1.0 - pow(distance / uLightRadius, 4.0), 0.0, 1.0), 2.0) / (pow(distance, 2) + 1.0);"
     //"   float falloff = 1 / pow(distance, 2);"
     ""
-    "   vec3 N = (texture2D(uNormal, uv).xyz - 0.5) * 2.0;"
+    "   vec3 N = (texture(uNormal, uv).xyz - 0.5) * 2.0;"
     "   vec3 L = normalize(uLightPos - pos.xyz);"
     "   vec3 E = normalize(-pos);"
     "   float NdotL = clamp(dot(N, L), 0.0, 1.0);"
     ""
-    "   vec3 diffuse = texture2D(uAlbedo, uv).rgb * uLightBrightness * uLightColor.rgb * falloff * NdotL;"
+    "   vec3 diffuse = texture(uAlbedo, uv).rgb * uLightBrightness * uLightColor.rgb * falloff * NdotL;"
     //"   color = texture2D(uAlbedo, uv).rgb * uLightBrightness * falloff * uLightColor.rgb;"
     "   float specularFactor = max(0.0, dot(normalize(L + E), N));"
     "   vec3 specular = max(pow(specularFactor, 0.8), 0.0) * falloff * vec3(0.0, 1.0, 0.0);"

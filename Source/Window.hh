@@ -1,9 +1,8 @@
 #pragma once 
-#include <iostream>
-#include <memory>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_syswm.h>
-#include <GL/glew.h>
+
+#include "Defines.hh"
 #include "Input/InputEvent.hh"
 
 namespace Solis {

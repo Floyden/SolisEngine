@@ -1,6 +1,5 @@
 #include "Texture.hh"
 #include "Image.hh"
-#include <GL/glew.h>
 
 namespace Solis
 {

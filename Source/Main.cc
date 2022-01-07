@@ -9,7 +9,7 @@ int WINAPI WinMain(HINSTANCE hinstance,
     HINSTANCE hprevinstance,
     LPSTR lpcmdline,
     int ncmdshow) {
-#elif __linux__
+#elif __linux__ || __APPLE__
 int main(int argc, char* argv[]) {
 #endif
     SDL_Init(SDL_INIT_EVERYTHING);

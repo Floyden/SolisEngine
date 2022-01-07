@@ -1,5 +1,4 @@
 #include "Program.hh"
-#include <GL/glew.h>
 #include <vector>
 #include <iostream>
 

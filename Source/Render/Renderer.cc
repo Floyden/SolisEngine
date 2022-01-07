@@ -1,6 +1,5 @@
 #include "Renderer.hh"
 #include <iostream>
-#include <GL/glew.h>
 #include "VAOManager.hh"
 
 namespace Solis

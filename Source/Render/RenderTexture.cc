@@ -1,5 +1,4 @@
 #include "RenderTexture.hh"
-#include <GL/glew.h>
 
 namespace Solis
 {

@@ -1,5 +1,4 @@
 #include "Framebuffer.hh"
-#include <GL/glew.h>
 #include <iostream>
 
 namespace Solis

@@ -10,6 +10,14 @@
 #include <unordered_set>
 #include <unordered_map>
 
+#if __APPLE__
+    #define GL_SILENCE_DEPRECATION
+    #include <OpenGL/gl3.h>
+    #include <OpenGL/glext.h>
+#else
+    #include <GL/glew.h>
+#endif
+
 template<class T, size_t N>
 using Array = std::array<T, N>;
 
