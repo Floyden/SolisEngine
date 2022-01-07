@@ -139,6 +139,7 @@ void Shooter::Init()
     mFrame->Build();
 
     // Load Physics stuff
+    auto physics = mModules->GetModule<Physics>();
     mShape = std::make_unique<btBoxShape>(btVector3(0.5f, 0.5f, 0.5f));
     mBody = std::make_unique<btRigidBody>(0.0f, nullptr, nullptr);
     mBody->setCollisionShape(mShape.get());

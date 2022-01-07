@@ -4,6 +4,9 @@
 #include "Render/Renderer.hh"
 #include <chrono>
 
+namespace Solis
+{
+    
 
 class Game {
 public:
@@ -26,3 +29,5 @@ protected:
     std::chrono::time_point<std::chrono::steady_clock> mLastFrame;
     std::chrono::duration<float> mDelta;
 };
+
+} // namespace Solis
