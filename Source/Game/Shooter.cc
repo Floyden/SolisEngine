@@ -33,10 +33,7 @@ void Shooter::Init()
 
     //Init Modules
     mModules = std::make_unique<ModuleManager>();
-    mModules->AddModule<ComponentManager>();
-    auto events = mModules->AddModule<Events>();
-    mModules->AddModule<Input>();
-    auto physics = mModules->AddModule<Physics>();
+    LoadDefaultModules();
     mModules->Init();
     
     events->Subscribe(this, &Shooter::OnKeyEvent);

@@ -14,6 +14,8 @@ public:
     virtual void Render() {};
     virtual void RunMainLoop() {};
 
+    void LoadDefaultModules();
+
 protected:
 
     UPtr<Solis::Window> mWindow;
