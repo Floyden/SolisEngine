@@ -15,9 +15,6 @@ UPtr<Window> Window::Create()
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-
-    ///*auto surface = */SDL_GetWindowSurface(window->mWindow);
-    //SDL_UpdateWindowSurface(window->mWindow);
     window->mContext = SDL_GL_CreateContext(window->mWindow);
     
     if(window->mContext == nullptr)
