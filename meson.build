@@ -20,6 +20,7 @@ source = [
     'Source/Game.cc',
     'Source/Game/LevelGenerator.cc',
     'Source/Game/Shooter.cc',
+    'Source/Game/TestGame.cc',
     'Source/Input/Input.cc',
     'Source/Input/InputEvent.cc',
     'Source/Physics/Physics.cc',

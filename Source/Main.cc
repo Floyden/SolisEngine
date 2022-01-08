@@ -2,6 +2,7 @@
 #include <SDL2/SDL_image.h>
 
 #include "Game/Shooter.hh"
+#include "Game/TestGame.hh"
 
 
 #ifdef _WIN32
@@ -15,7 +16,7 @@ int main(int argc, char* argv[]) {
     SDL_Init(SDL_INIT_EVERYTHING);
     {
 
-    Solis::Shooter game;
+    Solis::TestGame game;
     game.Init();
     game.RunMainLoop();
 

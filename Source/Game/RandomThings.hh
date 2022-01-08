@@ -7,9 +7,9 @@ namespace Solis
 {
 
 static const std::vector<float> gTriangleData = {
-    -1.0f, -1.0f,
-    1.0f, -1.0f,
-    0.0f,  1.0f,
+    -1.0f, -1.0f, 0.0f,
+    1.0f, -1.0f, 0.0f,
+    0.0f,  1.0f, 0.0f
 };
 
 static const std::vector<float> gTriangleData2 = {
@@ -133,6 +133,20 @@ static const char* gFragmentShaderSource =
     "   color = tex.rgb;"
     "   normalOut = normal;"
     "}";
+
+static const char* gBasicVertexShaderSource =
+    "#version 330 core\n" 
+    "layout(location = 0) in vec3 inPos;\n" 
+    "void main() {\n"
+    "   gl_Position = vec4(inPos, 1.0);\n" 
+    "}"; 
+
+static const char* gBasicFragmentShaderSource =
+    "#version 330 core\n" 
+    "out vec4 color;"
+    "void main() {\n"
+    "   color = vec4(1.0, 1.0, 1.0, 1.0);"
+    "}"; 
 
 //TODO: instance this
 static const char* gLightVShaderSource =
