@@ -14,7 +14,7 @@ void TestGame::Init()
 
     glGenBuffers(1, &mVB);
     glBindBuffer(GL_ARRAY_BUFFER, mVB);
-    glBufferData(GL_ARRAY_BUFFER, gTriangleData.size(), gTriangleData.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, gTriangleData.size() * sizeof(float), gTriangleData.data(), GL_STATIC_DRAW);
 
     glVertexAttribPointer(
         0,                  
@@ -42,15 +42,16 @@ void TestGame::Render()
     glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
+    glEnableVertexAttribArray(0);
     glUseProgram(mProgram->GetHandle());
     glBindVertexArray(mVAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, mVB);
 
     glDrawArrays(GL_TRIANGLES, 0, 3);
+    glDisableVertexAttribArray(0);
 
     mWindow->SwapWindow(); 
-    glDisableVertexAttribArray(0);
 }
 
 void TestGame::RunMainLoop()
