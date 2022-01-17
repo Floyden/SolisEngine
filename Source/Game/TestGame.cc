@@ -1,4 +1,5 @@
 #include "TestGame.hh"
+#include "Render/Renderable.hh"
 #include "RandomThings.hh"
 
 namespace Solis
@@ -9,47 +10,60 @@ void TestGame::Init()
     LoadDefaultModules();
     mModules->Init();
 
-    glGenVertexArrays(1, &mVAO);
-    glBindVertexArray(mVAO);
+    auto program = Program::Create();
+    program->LoadFrom(gBasicVertexShaderSource, gBasicFragmentShaderSource);
 
-    glGenBuffers(1, &mVB);
-    glBindBuffer(GL_ARRAY_BUFFER, mVB);
-    glBufferData(GL_ARRAY_BUFFER, gTriangleData.size() * sizeof(float), gTriangleData.data(), GL_STATIC_DRAW);
+    auto material = std::make_shared<DefaultMaterial>();
+    material->SetProgram(program);
 
-    glVertexAttribPointer(
-        0,                  
-        3,                  
-        GL_FLOAT,           // type
-        GL_FALSE,           // normalized?
-        0,                  // stride
-        (void*)0            // array buffer offset
-    );
-    glEnableVertexAttribArray(0);
+    auto triangleData = std::make_shared<VertexData>();
+    triangleData->SetBuffer(0, VertexBuffer::Create(VertexBufferDesc{
+        static_cast<uint32_t>(gTriangleData.size()),
+        sizeof(float)
+    }));
+    triangleData->GetBuffer(0)->WriteData(0, gTriangleData.size() * sizeof(float), gTriangleData.data());
 
-    mProgram = Program::Create();
-    mProgram->LoadFrom(gBasicVertexShaderSource, gBasicFragmentShaderSource);
+    std::vector<VertexAttribute> attributeList {
+        VertexAttribute{
+            0,
+            3,
+            GL_FLOAT,
+            GL_FALSE,
+            0
+        }
+    };
+    auto attributes = VertexAttributes::Create(attributeList);
+
+    auto mesh = std::make_shared<Mesh>();
+    mesh->mVertexData = triangleData;
+    mesh->mAttributes = attributes;
+    
+    mTriangle = std::make_shared<Renderable>();
+    mTriangle->SetMaterial(material);
+    mTriangle->SetMesh(mesh);
 }
 
 void TestGame::Update(float delta)
 {
     mWindow->ProcessEvents();
     mRunMainLoop = !mWindow->CloseRequested();
-
 }
 
 void TestGame::Render()
 {
-    glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    mRender->Clear(0.0f, 0.0f, 0.4f, 0.0f);
+
+    auto material = mTriangle->GetMaterial();
+    auto mesh = mTriangle->GetMesh();
+
+    mRender->BindProgram(material->GetProgram());
     
-    glEnableVertexAttribArray(0);
-    glUseProgram(mProgram->GetHandle());
-    glBindVertexArray(mVAO);
+    mRender->BindVertexAttributes(mesh->mAttributes);
 
-    glBindBuffer(GL_ARRAY_BUFFER, mVB);
-
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    glDisableVertexAttribArray(0);
+    auto buffer = mesh->mVertexData->GetBuffer(0);
+    mRender->BindVertexBuffers(0, &buffer, 1);
+    
+    mRender->Draw(3);
 
     mWindow->SwapWindow(); 
 }

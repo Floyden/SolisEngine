@@ -23,6 +23,7 @@ protected:
 
     UPtr<Solis::Window> mWindow;
     UPtr<ModuleManager> mModules;
+    SPtr<Renderer> mRender;
 
     bool mRunMainLoop;
     std::chrono::time_point<std::chrono::steady_clock> mNow;

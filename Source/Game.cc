@@ -16,5 +16,8 @@ void Game::LoadDefaultModules()
     mModules->AddModule<Events>();
     mModules->AddModule<Input>();
     mModules->AddModule<Physics>();
+
+    if(mRender == nullptr)
+        mRender = std::make_unique<Renderer>();
 }
 } // namespace Solis

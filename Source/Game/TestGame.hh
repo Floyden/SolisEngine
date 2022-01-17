@@ -1,6 +1,7 @@
 #pragma once
 #include "Defines.hh"
 #include "Game.hh"
+#include "Render/Renderable.hh"
 
 namespace Solis
 {
@@ -17,6 +18,8 @@ private:
     GLuint mVAO;
     GLuint mVB;
     SPtr<Program> mProgram;
+    SPtr<Renderable> mTriangle;
+
 };
 
 } // namespace Solis
