@@ -16,31 +16,11 @@ void TestGame::Init()
     auto material = std::make_shared<DefaultMaterial>();
     material->SetProgram(program);
 
-    auto triangleData = std::make_shared<VertexData>();
-    triangleData->SetBuffer(0, VertexBuffer::Create(VertexBufferDesc{
-        static_cast<uint32_t>(gTriangleData.size()),
-        sizeof(float)
-    }));
-    triangleData->GetBuffer(0)->WriteData(0, gTriangleData.size() * sizeof(float), gTriangleData.data());
-
-    std::vector<VertexAttribute> attributeList {
-        VertexAttribute{
-            0,
-            3,
-            GL_FLOAT,
-            GL_FALSE,
-            0
-        }
-    };
-    auto attributes = VertexAttributes::Create(attributeList);
-
-    auto mesh = std::make_shared<Mesh>();
-    mesh->mVertexData = triangleData;
-    mesh->mAttributes = attributes;
-    
+    auto quad = Mesh::FromShape(Shapes::Cube(0.5));    
     mTriangle = std::make_shared<Renderable>();
     mTriangle->SetMaterial(material);
-    mTriangle->SetMesh(mesh);
+    mTriangle->SetMesh(quad);
+
 }
 
 void TestGame::Update(float delta)
@@ -62,8 +42,9 @@ void TestGame::Render()
 
     auto buffer = mesh->mVertexData->GetBuffer(0);
     mRender->BindVertexBuffers(0, &buffer, 1);
+    mRender->BindIndexBuffer(mTriangle->GetMesh()->mIndexBuffer);
     
-    mRender->Draw(3);
+    mRender->DrawIndexed(mTriangle->GetMesh()->mIndexBuffer->GetIndexCount());
 
     mWindow->SwapWindow(); 
 }

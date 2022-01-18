@@ -32,6 +32,7 @@ source = [
     'Source/Render/VertexData.cc',
     'Source/Render/VertexBuffer.cc',
     'Source/Render/IndexBuffer.cc',
+    'Source/Render/Mesh.cc',
     'Source/Render/Program.cc',
     'Source/Render/Texture.cc',
     'Source/Render/Renderer.cc',

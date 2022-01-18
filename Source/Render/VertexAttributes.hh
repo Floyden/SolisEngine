@@ -1,5 +1,7 @@
 #pragma once
 #include "Defines.hh"
+namespace Solis
+{
 
 struct VertexAttribute
 {
@@ -27,3 +29,5 @@ private:
 
     Vector<VertexAttribute> mAttributes;
 };
+
+} // namespace Solis
