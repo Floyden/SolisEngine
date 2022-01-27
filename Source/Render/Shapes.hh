@@ -9,7 +9,7 @@ class Shape
 public:
     virtual ~Shape() {};
     virtual Vector<float> GetVertices() const = 0;
-    virtual Vector<size_t> GetIndices() const = 0;
+    virtual Vector<uint32_t> GetIndices() const = 0;
 };
 
 class Cube : public Shape
@@ -34,9 +34,9 @@ public:
         return cube;
     }
 
-    Vector<size_t> GetIndices() const override
+    Vector<uint32_t> GetIndices() const override
     {
-        Vector<size_t> indices = 
+        Vector<uint32_t> indices = 
         {
             0, 1, 2,
             3, 2, 1

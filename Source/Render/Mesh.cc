@@ -18,7 +18,7 @@ SPtr<Mesh> Mesh::FromShape(const Shapes::Shape& shape)
     mesh->mVertexData->GetBuffer(0)->WriteData(0, vertices.size() * sizeof(float), vertices.data());
 
     auto indices = shape.GetIndices();
-    mesh->mIndexBuffer = std::make_shared<IndexBuffer>();
+    mesh->mIndexBuffer = IndexBuffer::Create(IndexBufferDesc{static_cast<uint32_t>(indices.size())});
     mesh->mIndexBuffer->WriteData(0, indices.size() * sizeof(size_t), indices.data());
 
     std::vector<VertexAttribute> attributeList {
