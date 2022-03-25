@@ -1,7 +1,7 @@
 #pragma once
-#include "Renderer.hh"
-#include "Program.hh"
-#include "VertexAttributes.hh"
+#include "RendererGL.hh"
+#include "../Program.hh"
+#include "../VertexAttributes.hh"
 #include "Module.hh"
 
 namespace Solis

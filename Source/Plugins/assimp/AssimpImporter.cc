@@ -5,9 +5,9 @@
 #include <assimp/postprocess.h> 
 #include <assimp/DefaultLogger.hpp> 
 #include <cstddef>
-#include "Render/IndexBuffer.hh"
+#include "Render/OpenGL/IndexBuffer.hh"
 #include "Render/VertexAttributes.hh"
-#include "Render/VertexBuffer.hh"
+#include "Render/OpenGL/VertexBuffer.hh"
 #include "Render/VertexData.hh"
 
 namespace Solis

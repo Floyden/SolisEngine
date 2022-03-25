@@ -2,6 +2,7 @@
 #include "Component.hh"
 #include "Input/Input.hh"
 #include "Physics/Physics.hh"
+#include "Render/OpenGL/RendererGL.hh"
 
 namespace Solis
 {
@@ -18,6 +19,6 @@ void Game::LoadDefaultModules()
     mModules->AddModule<Physics>();
 
     if(mRender == nullptr)
-        mRender = std::make_unique<Renderer>();
+        mRender = std::make_unique<RendererGL>();
 }
 } // namespace Solis

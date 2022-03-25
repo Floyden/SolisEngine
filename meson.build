@@ -9,8 +9,8 @@ libassimp = dependency('assimp')
 libbullet = dependency('bullet')
 
 incdir = include_directories('./Source')
-brew_includes = include_directories('/opt/homebrew/include')
-bullet_includes = include_directories('/opt/homebrew/include/bullet')
+#brew_includes = include_directories('/opt/homebrew/include')
+bullet_includes = include_directories('C:/msys64/mingw64/include/bullet')
 
 source = [
     'Source/Main.cc',
@@ -28,15 +28,15 @@ source = [
     'Source/Plugins/SDL2_image/SDL2ImgImporter.cc',
     'Source/Render/Framebuffer.cc',
     'Source/Render/RenderTexture.cc',
-    'Source/Render/VAOManager.cc',
     'Source/Render/VertexData.cc',
-    'Source/Render/VertexBuffer.cc',
-    'Source/Render/IndexBuffer.cc',
     'Source/Render/Mesh.cc',
     'Source/Render/Program.cc',
     'Source/Render/Texture.cc',
-    'Source/Render/Renderer.cc',
+    'Source/Render/OpenGL/VAOManager.cc',
+    'Source/Render/OpenGL/VertexBuffer.cc',
+    'Source/Render/OpenGL/IndexBuffer.cc',
+    'Source/Render/OpenGL/RendererGL.cc',
 ]
 executable('demo', source, 
-    include_directories : [incdir, brew_includes, bullet_includes], 
-    dependencies : [libgl, libsdl, libsdl_image, libassimp, libbullet])
+    include_directories : [incdir, bullet_includes], 
+    dependencies : [libgl, libsdl, libglew, libsdl_image, libassimp, libbullet])

@@ -1,5 +1,5 @@
 #pragma once
-#include "VertexBuffer.hh"
+#include "OpenGL/VertexBuffer.hh"
 
 class VertexData {
 public:

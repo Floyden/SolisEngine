@@ -1,7 +1,7 @@
 #pragma once
 #include "Window.hh"
 #include "Module.hh"
-#include "Render/Renderer.hh"
+#include "Render/Common/Renderer.hh"
 #include <chrono>
 
 namespace Solis
@@ -23,7 +23,7 @@ protected:
 
     UPtr<Solis::Window> mWindow;
     UPtr<ModuleManager> mModules;
-    SPtr<Renderer> mRender;
+    SPtr<Render::Renderer> mRender;
 
     bool mRunMainLoop;
     std::chrono::time_point<std::chrono::steady_clock> mNow;

@@ -1,5 +1,5 @@
 #pragma once
-#include "IndexBuffer.hh"
+#include "OpenGL/IndexBuffer.hh"
 #include "VertexData.hh"
 #include "VertexAttributes.hh"
 #include "Shapes.hh"

@@ -1,4 +1,4 @@
-#include "Renderer.hh"
+#include "RendererGL.hh"
 #include <iostream>
 #include "VAOManager.hh"
 
@@ -8,7 +8,7 @@ namespace Solis
 // TODO: This is a whacky workaround because of modules
 static UPtr<VAOManager> sVaoManager;
 
-Renderer::Renderer() : mBoundProgram(nullptr), mBoundAttributes(nullptr), mBoundBuffers({nullptr}), mBoundIndexBuffer(nullptr) {
+RendererGL::RendererGL() : mBoundProgram(nullptr), mBoundAttributes(nullptr), mBoundBuffers({nullptr}), mBoundIndexBuffer(nullptr) {
     sVaoManager = std::make_unique<VAOManager>();
     //S_MODULE_MANAGER->AddModule<VAOManager>();
 
@@ -16,23 +16,23 @@ Renderer::Renderer() : mBoundProgram(nullptr), mBoundAttributes(nullptr), mBound
     glDepthFunc(GL_LESS);
 }
 
-Renderer::~Renderer() {
+RendererGL::~RendererGL() {
     sVaoManager = nullptr;
     //S_MODULE_MANAGER->RemoveModule<VAOManager>();
 }
 
-void Renderer::Clear(float r, float g, float b, float a) 
+void RendererGL::Clear(float r, float g, float b, float a) 
 {
     glClearColor(r, g, b, a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void Renderer::BindVertexAttributes(SPtr<VertexAttributes> attribs)
+void RendererGL::BindVertexAttributes(SPtr<VertexAttributes> attribs)
 {
     mBoundAttributes = attribs;
 }
 
-void Renderer::BindVertexBuffers(uint32_t index, const SPtr<VertexBuffer>* vbs, uint32_t bufferCount)
+void RendererGL::BindVertexBuffers(uint32_t index, const SPtr<VertexBuffer>* vbs, uint32_t bufferCount)
 {
     if(index >= MAX_VB_COUNT) {
         std::cout << "BindVertexBuffer index out of bounds\n";
@@ -50,17 +50,17 @@ void Renderer::BindVertexBuffers(uint32_t index, const SPtr<VertexBuffer>* vbs, 
     }
 }
 
-void Renderer::BindIndexBuffer(const SPtr<IndexBuffer>& ib)
+void RendererGL::BindIndexBuffer(const SPtr<IndexBuffer>& ib)
 {
     mBoundIndexBuffer = ib;
 }
 
-void Renderer::BindTexture(const HTexture& texture)
+void RendererGL::BindTexture(const HTexture& texture)
 {
     glBindTexture(GL_TEXTURE_2D, texture->GetHandle());
 }
 
-void Renderer::BindProgram(const SPtr<Program>& program)
+void RendererGL::BindProgram(const SPtr<Program>& program)
 {
     if(mBoundProgram != program)
     {
@@ -69,7 +69,7 @@ void Renderer::BindProgram(const SPtr<Program>& program)
     }
 }
 
-void Renderer::Draw(uint32_t vertexCount) 
+void RendererGL::Draw(uint32_t vertexCount) 
 {
     //Begin
     if(mBoundAttributes == nullptr){
@@ -85,7 +85,7 @@ void Renderer::Draw(uint32_t vertexCount)
 
 }
 
-void Renderer::DrawIndexed(uint32_t indexCount) 
+void RendererGL::DrawIndexed(uint32_t indexCount) 
 {
     //Begin
     if(mBoundAttributes == nullptr){

@@ -4,6 +4,7 @@
 #include "RandomThings.hh"
 #include "Image.hh"
 #include "Input/Input.hh"
+#include "Render/OpenGL/RendererGL.hh"
 
 namespace Solis
 {
@@ -49,7 +50,7 @@ void Shooter::Init()
 
 
     // Init Render Stuff
-    mRender = std::make_shared<Renderer>();
+    mRender = std::make_shared<RendererGL>();
 
     mProgram = Program::Create();
     mProgram->LoadFrom(gVertexShaderSource, gFragmentShaderSource);

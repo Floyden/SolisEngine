@@ -1,20 +1,21 @@
 #pragma once
 #include <array>
+#include "../Common/Renderer.hh"
 #include "VertexBuffer.hh"
 #include "IndexBuffer.hh"
-#include "VertexAttributes.hh"
-#include "Program.hh"
-#include "Texture.hh"
+#include "../VertexAttributes.hh"
+#include "../Program.hh"
+#include "../Texture.hh"
 
 namespace Solis
 {
 
 static const uint32_t MAX_VB_COUNT = 8;
 
-class Renderer {
+class RendererGL : public Render::Renderer {
 public:
-    Renderer();
-    ~Renderer();
+    RendererGL();
+    ~RendererGL();
 
     void Clear(float r, float g, float b, float a);
 

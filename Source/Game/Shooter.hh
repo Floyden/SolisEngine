@@ -44,7 +44,7 @@ private:
     int mSelectedTile;
     
     // Render Resources
-    SPtr<Renderer> mRender;
+    SPtr<Render::Renderer> mRender;
     
     SPtr<Program> mProgram;
     SPtr<Program> mDeferred;
