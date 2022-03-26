@@ -1,5 +1,5 @@
 project('Solis', 'cpp',
-    default_options : 'cpp_std=c++17')
+    default_options : 'cpp_std=c++20')
 
 libsdl = dependency('SDL2')
 libsdl_image = dependency('SDL2_image')
@@ -7,6 +7,7 @@ libgl = dependency('GL')
 libglew = dependency('GLEW')
 libassimp = dependency('assimp')
 libbullet = dependency('bullet')
+libvulkan = dependency('vulkan')
 
 incdir = include_directories('./Source')
 #brew_includes = include_directories('/opt/homebrew/include')
@@ -36,7 +37,8 @@ source = [
     'Source/Render/OpenGL/VertexBuffer.cc',
     'Source/Render/OpenGL/IndexBuffer.cc',
     'Source/Render/OpenGL/RendererGL.cc',
+    'Source/Render/Vulkan/RendererVulkan.cc',
 ]
 executable('demo', source, 
     include_directories : [incdir, bullet_includes], 
-    dependencies : [libgl, libsdl, libglew, libsdl_image, libassimp, libbullet])
+    dependencies : [libgl, libsdl, libglew, libsdl_image, libvulkan, libassimp, libbullet])
