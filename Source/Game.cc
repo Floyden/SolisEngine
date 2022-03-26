@@ -19,6 +19,9 @@ void Game::LoadDefaultModules()
     mModules->AddModule<Physics>();
 
     if(mRender == nullptr)
+    {
         mRender = std::make_unique<RendererGL>();
+        mRender->Initialize();
+    }
 }
 } // namespace Solis

@@ -9,16 +9,20 @@ namespace Solis
 static UPtr<VAOManager> sVaoManager;
 
 RendererGL::RendererGL() : mBoundProgram(nullptr), mBoundAttributes(nullptr), mBoundBuffers({nullptr}), mBoundIndexBuffer(nullptr) {
-    sVaoManager = std::make_unique<VAOManager>();
-    //S_MODULE_MANAGER->AddModule<VAOManager>();
-
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
 }
 
 RendererGL::~RendererGL() {
     sVaoManager = nullptr;
     //S_MODULE_MANAGER->RemoveModule<VAOManager>();
+}
+
+void RendererGL::Initialize()
+{
+    sVaoManager = std::make_unique<VAOManager>();
+    //S_MODULE_MANAGER->AddModule<VAOManager>();
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
 }
 
 void RendererGL::Clear(float r, float g, float b, float a) 

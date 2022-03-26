@@ -17,6 +17,8 @@ public:
     RendererGL();
     ~RendererGL();
 
+    virtual void Initialize();
+
     void Clear(float r, float g, float b, float a);
 
     void BindVertexAttributes(SPtr<VertexAttributes> attribs);

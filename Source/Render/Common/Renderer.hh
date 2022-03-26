@@ -14,6 +14,8 @@ public:
     Renderer() {};
     virtual ~Renderer() {};
 
+    virtual void Initialize() = 0;
+
     virtual void Clear(float r, float g, float b, float a) = 0;
 
     virtual void BindVertexAttributes(SPtr<VertexAttributes> attribs) = 0;
