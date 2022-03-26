@@ -3,9 +3,11 @@
 #include "Input/Input.hh"
 #include "Physics/Physics.hh"
 #include "Render/OpenGL/RendererGL.hh"
+#include "Render/Vulkan/RendererVulkan.hh"
 
 namespace Solis
 {
+
 void Game::LoadDefaultModules() 
 {
     if(mWindow == nullptr)
@@ -20,8 +22,15 @@ void Game::LoadDefaultModules()
 
     if(mRender == nullptr)
     {
-        mRender = std::make_unique<RendererGL>();
+        mRender = std::make_unique<Render::RendererVulkan>();
         mRender->Initialize();
     }
 }
+
+
+void Game::Destroy()
+{
+    mRender->Destroy();
+}
+
 } // namespace Solis

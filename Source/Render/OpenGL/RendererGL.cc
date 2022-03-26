@@ -25,6 +25,12 @@ void RendererGL::Initialize()
     glDepthFunc(GL_LESS);
 }
 
+void RendererGL::Destroy()
+{
+    sVaoManager = nullptr;
+    //S_MODULE_MANAGER->RemoveModule<VAOManager>();
+}
+
 void RendererGL::Clear(float r, float g, float b, float a) 
 {
     glClearColor(r, g, b, a);

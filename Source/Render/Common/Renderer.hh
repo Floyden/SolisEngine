@@ -15,6 +15,7 @@ public:
     virtual ~Renderer() {};
 
     virtual void Initialize() = 0;
+    virtual void Destroy() = 0;
 
     virtual void Clear(float r, float g, float b, float a) = 0;
 

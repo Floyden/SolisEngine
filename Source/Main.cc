@@ -19,6 +19,7 @@ int main(int argc, char* argv[]) {
     Solis::TestGame game;
     game.Init();
     game.RunMainLoop();
+    game.Destroy();
 
     }
     SDL_Quit();

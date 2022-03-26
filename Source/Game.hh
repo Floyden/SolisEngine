@@ -18,6 +18,7 @@ public:
     virtual void RunMainLoop() {};
 
     void LoadDefaultModules();
+    void Destroy();
 
 protected:
 
