@@ -15,10 +15,9 @@ public:
     void RunMainLoop() override;
 private:
 
-    GLuint mVAO;
-    GLuint mVB;
     SPtr<Program> mProgram;
-    SPtr<Renderable> mTriangle;
+    SPtr<Renderable> mRenderable;
+    
 
 };
 

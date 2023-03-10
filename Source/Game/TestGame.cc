@@ -9,17 +9,17 @@ void TestGame::Init()
 {
     LoadDefaultModules();
     mModules->Init();
-
+    
     auto program = Program::Create();
     program->LoadFrom(gBasicVertexShaderSource, gBasicFragmentShaderSource);
 
     auto material = std::make_shared<DefaultMaterial>();
     material->SetProgram(program);
 
-    auto quad = Mesh::FromShape(Shapes::Cube(0.5));    
-    mTriangle = std::make_shared<Renderable>();
-    mTriangle->SetMaterial(material);
-    mTriangle->SetMesh(quad);
+    auto quad = Mesh::FromShape(Shapes::Square(0.5));    
+    mRenderable = std::make_shared<Renderable>();
+    mRenderable->SetMaterial(material);
+    mRenderable->SetMesh(quad);
 
 }
 
@@ -33,8 +33,8 @@ void TestGame::Render()
 {
     mRender->Clear(0.0f, 0.0f, 0.4f, 0.0f);
 
-    auto material = mTriangle->GetMaterial();
-    auto mesh = mTriangle->GetMesh();
+    auto material = mRenderable->GetMaterial();
+    auto mesh = mRenderable->GetMesh();
 
     mRender->BindProgram(material->GetProgram());
     
@@ -42,9 +42,9 @@ void TestGame::Render()
 
     auto buffer = mesh->mVertexData->GetBuffer(0);
     mRender->BindVertexBuffers(0, &buffer, 1);
-    mRender->BindIndexBuffer(mTriangle->GetMesh()->mIndexBuffer);
+    mRender->BindIndexBuffer(mRenderable->GetMesh()->mIndexBuffer);
     
-    mRender->DrawIndexed(mTriangle->GetMesh()->mIndexBuffer->GetIndexCount());
+    mRender->DrawIndexed(mRenderable->GetMesh()->mIndexBuffer->GetIndexCount());
 
     mWindow->SwapWindow(); 
 }
