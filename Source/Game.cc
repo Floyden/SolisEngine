@@ -22,7 +22,7 @@ void Game::LoadDefaultModules()
 
     if(mRender == nullptr)
     {
-        mRender = std::make_unique<Render::RendererVulkan>();
+        mRender = std::make_unique<RendererGL>();
         mRender->Initialize();
     }
 }
