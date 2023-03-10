@@ -47,7 +47,6 @@ public:
 
     Vector<float> GetNormals() const override
     {
-        auto halfSize = mSize / 2.0f;
         Vector<float> cube = 
         {
             0.0, 0.0, 1.0,
