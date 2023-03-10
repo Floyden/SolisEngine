@@ -8,11 +8,25 @@ SPtr<Mesh> Mesh::FromShape(const Shapes::Shape& shape)
 
 
     auto positions = shape.GetPositions();
+    auto normals = shape.GetNormals();
+    auto uvs = shape.GetUVs();
     mesh->mVertexData = std::make_shared<VertexData>();
     mesh->mVertexData->SetBuffer(0, 
         VertexBuffer::Create(
             VertexBufferDesc{
                 static_cast<uint32_t>(positions.size()),
+                sizeof(float)
+    }));
+    mesh->mVertexData->SetBuffer(1, 
+        VertexBuffer::Create(
+            VertexBufferDesc{
+                static_cast<uint32_t>(normals.size()),
+                sizeof(float)
+    }));
+    mesh->mVertexData->SetBuffer(2, 
+        VertexBuffer::Create(
+            VertexBufferDesc{
+                static_cast<uint32_t>(uvs.size()),
                 sizeof(float)
     }));
     mesh->mVertexData->GetBuffer(0)->WriteData(0, positions.size() * sizeof(float), positions.data());
