@@ -7,15 +7,15 @@ SPtr<Mesh> Mesh::FromShape(const Shapes::Shape& shape)
     SPtr<Mesh> mesh = std::make_shared<Mesh>();
 
 
-    auto vertices = shape.GetVertices();
+    auto positions = shape.GetPositions();
     mesh->mVertexData = std::make_shared<VertexData>();
     mesh->mVertexData->SetBuffer(0, 
         VertexBuffer::Create(
             VertexBufferDesc{
-                static_cast<uint32_t>(vertices.size()),
+                static_cast<uint32_t>(positions.size()),
                 sizeof(float)
     }));
-    mesh->mVertexData->GetBuffer(0)->WriteData(0, vertices.size() * sizeof(float), vertices.data());
+    mesh->mVertexData->GetBuffer(0)->WriteData(0, positions.size() * sizeof(float), positions.data());
 
     auto indices = shape.GetIndices();
     mesh->mIndexBuffer = IndexBuffer::Create(IndexBufferDesc{static_cast<uint32_t>(indices.size())});

@@ -8,7 +8,7 @@ class Shape
 {
 public:
     virtual ~Shape() {};
-    virtual Vector<float> GetVertices() const = 0;
+    virtual Vector<float> GetPositions() const = 0;
     virtual Vector<uint32_t> GetIndices() const = 0;
 };
 
@@ -16,7 +16,7 @@ class Cube : public Shape
 {
 public:
     Cube(float size) : mSize(size) {}
-    Vector<float> GetVertices() const override
+    Vector<float> GetPositions() const override
     {
         auto halfSize = mSize / 2.0f;
         Vector<float> cube = 
