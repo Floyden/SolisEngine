@@ -36,7 +36,7 @@ SPtr<Image> SDL2ImgImporter::Import(const String& path)
     auto surface = IMG_Load(path.c_str());
 
     if(!surface) {
-        std::cout << IMG_GetError();
+        std::cout << IMG_GetError() << std::endl;
         return nullptr;
     }
     
