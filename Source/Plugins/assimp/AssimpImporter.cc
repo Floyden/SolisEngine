@@ -9,6 +9,7 @@
 #include "Render/VertexAttributes.hh"
 #include "Render/OpenGL/VertexBuffer.hh"
 #include "Render/VertexData.hh"
+#include "Core/ResourceManger.hh"
 
 namespace Solis
 {
@@ -44,14 +45,14 @@ SPtr<Node> AssimpImporter::ImportScene(const String& path)
     return nullptr;
 }
 
-UPtr<Mesh> AssimpImporter::ImportMesh(const String& path)
+HMesh AssimpImporter::ImportMesh(const String& path)
 {
     Importer importer;
     const aiScene* scene = importer.ReadFile(path, 
         aiProcess_CalcTangentSpace | aiProcess_GenNormals);
     
     if(!scene->mNumMeshes)
-        return nullptr;
+        return HMesh();
 
     const aiMesh* ai_mesh = scene->mMeshes[0];
 
@@ -93,7 +94,7 @@ UPtr<Mesh> AssimpImporter::ImportMesh(const String& path)
         }
     }
 
-    UPtr<Mesh> mesh = std::make_unique<Mesh>();
+    Mesh mesh;
 
     Vector<VertexAttribute> attributes;
     attributes.push_back(VertexAttribute{0, 3, 0x1406, 0, 0});
@@ -102,29 +103,31 @@ UPtr<Mesh> AssimpImporter::ImportMesh(const String& path)
     if(hasNormals)
         attributes.push_back(VertexAttribute{2, 3, 0x1406, 0, 0});
 
-    mesh->mAttributes = VertexAttributes::Create(attributes);
-    mesh->mVertexData = std::make_shared<VertexData>();
+    mesh.mAttributes = VertexAttributes::Create(attributes);
+    mesh.mVertexData = std::make_shared<VertexData>();
 
     auto posBuffer = VertexBuffer::Create({ai_mesh->mNumVertices * 3, sizeof(float)});
     posBuffer->WriteData(0, positions.size() * sizeof(positions[0]), positions.data());
-    mesh->mVertexData->SetBuffer(0, posBuffer);
+    mesh.mVertexData->SetBuffer(0, posBuffer);
 
     if (hasUVs) 
     {
         auto uvBuffer = VertexBuffer::Create({ai_mesh->mNumVertices * 2, sizeof(float)});
         uvBuffer->WriteData(0, uvs.size() * sizeof(uvs[0]), uvs.data());
-        mesh->mVertexData->SetBuffer(1, uvBuffer);
+        mesh.mVertexData->SetBuffer(1, uvBuffer);
     }
     if (hasNormals)
     {
         auto normalBuffer = VertexBuffer::Create({ai_mesh->mNumVertices * 3, sizeof(float)});
         normalBuffer->WriteData(0, normals.size() * sizeof(normals[0]), normals.data());
-        mesh->mVertexData->SetBuffer(2, normalBuffer);
+        mesh.mVertexData->SetBuffer(2, normalBuffer);
     }
 
-    mesh->mIndexBuffer = IndexBuffer::Create({static_cast<uint32_t>(indices.size())});
-    mesh->mIndexBuffer->WriteData(0, indices.size() * sizeof(uint32_t), indices.data());
-    return mesh;
+    mesh.mIndexBuffer = IndexBuffer::Create({static_cast<uint32_t>(indices.size())});
+    mesh.mIndexBuffer->WriteData(0, indices.size() * sizeof(uint32_t), indices.data());
+
+    HMesh handle = ModuleManager::Get()->GetModule<ResourceManager>()->Add<Mesh>(mesh);
+    return handle;
 }
 
 } //namespace Solis

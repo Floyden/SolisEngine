@@ -13,7 +13,7 @@ using HMesh = ResourceHandle<Mesh>;
 
 class Mesh : public Resource {
 public:
-    static HMesh FromShape(const Shapes::Shape& shape);
+    static Mesh FromShape(const Shapes::Shape& shape);
 
     SPtr<IndexBuffer> mIndexBuffer;
     SPtr<VertexData> mVertexData;

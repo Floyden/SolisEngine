@@ -35,6 +35,8 @@ void Shooter::Init()
     LoadDefaultModules();
     mModules->Init();
     
+    auto resourceManager = mModules->GetModule<ResourceManager>();
+
     auto events = mModules->GetModule<Events>();
     events->Subscribe(this, &Shooter::OnKeyEvent);
     events->Subscribe(this, &Shooter::OnMouseMove);
@@ -77,26 +79,27 @@ void Shooter::Init()
 
     for (size_t i = 0; i < 1; i++)
     {
-        HMesh mesh;
+        Mesh mesh;
         //mMeshes.emplace_back(std::make_shared<Mesh>());
-        mesh->mAttributes = VertexAttributes::Create({
+        mesh.mAttributes = VertexAttributes::Create({
             VertexAttribute{0, 3, GL_FLOAT, GL_FALSE, 0},
             VertexAttribute{1, 2, GL_FLOAT, GL_FALSE, 0},
             VertexAttribute{2, 3, GL_FLOAT, GL_FALSE, 0}});
 
-        mesh->mVertexData = std::make_shared<VertexData>();
-        mesh->mVertexData->SetBuffer(0, quadData);
+        mesh.mVertexData = std::make_shared<VertexData>();
+        mesh.mVertexData->SetBuffer(0, quadData);
 
-        mesh->mVertexData->SetBuffer(1, quadUV);
-        mesh->mVertexData->SetBuffer(2, quadNormal);
+        mesh.mVertexData->SetBuffer(1, quadUV);
+        mesh.mVertexData->SetBuffer(2, quadNormal);
 
-        mesh->mIndexBuffer = IndexBuffer::Create({static_cast<uint32_t>(gQuadDataIdx.size())});
-        mesh->mIndexBuffer->WriteData(0, gQuadDataIdx.size() * sizeof(uint32_t), gQuadDataIdx.data());
-
+        mesh.mIndexBuffer = IndexBuffer::Create({static_cast<uint32_t>(gQuadDataIdx.size())});
+        mesh.mIndexBuffer->WriteData(0, gQuadDataIdx.size() * sizeof(uint32_t), gQuadDataIdx.data());
+        
+        HMesh meshHandle = resourceManager->Add(mesh);
         auto renderable = std::make_shared<Renderable>();
 
         renderable->SetMaterial(mMaterial);
-        renderable->SetMesh(mesh);
+        renderable->SetMesh(meshHandle);
         Transform trans;
         trans.SetPosition(Vec3(0.0f, 0.0f, 1.0f));
         trans.SetScale(Vec3(0.1f));
@@ -105,8 +108,8 @@ void Shooter::Init()
 
 
 
-    auto mesh = mImporter->ImportMesh("Resources/Floor/Floor.gltf");
-    HMesh meshHandle(std::move(mesh));
+    auto meshHandle = mImporter->ImportMesh("Resources/Floor/Floor.gltf");
+    //HMesh meshHandle = resourceManager->Add(mesh);
     auto renderableFloor = std::make_shared<Renderable>();
     renderableFloor->SetMaterial(mMaterial);
     renderableFloor->SetMesh(meshHandle);
@@ -271,7 +274,8 @@ void Shooter::Render()
     for(auto& p : mRenderables)
     {
         auto& renderable = p.first;
-        auto mesh = renderable->GetMesh();
+        //auto mesh = renderable->GetMesh();
+        Mesh* mesh = resourceManager->Get(renderable->GetMesh());
 
         mRender->BindVertexAttributes(mesh->mAttributes);
         for (auto& attr: mesh->mAttributes->GetAttributes())

@@ -22,10 +22,10 @@ void TestGame::Init()
     material->SetProgram(mProgram);
     material->SetTexture(mTexture);
 
-    auto quad = Mesh::FromShape(Shapes::Square(0.5));    
+    HMesh quadHandle = resourceManager->Add(Mesh::FromShape(Shapes::Square(0.5)));
     mRenderable = std::make_shared<Renderable>();
     mRenderable->SetMaterial(material);
-    mRenderable->SetMesh(quad);
+    mRenderable->SetMesh(quadHandle);
 
 }
 
@@ -52,11 +52,13 @@ void TestGame::Render()
 
     mRender->BindProgram(mProgram);
     auto material = mRenderable->GetMaterial();
-    auto mesh = mRenderable->GetMesh();
+    auto meshHandle = mRenderable->GetMesh();
+
+    Texture* texture = resourceManager->Get(material->GetTexture());
+    Mesh* mesh = resourceManager->Get(meshHandle);
 
     
     glActiveTexture(GL_TEXTURE0);
-    Texture* texture = resourceManager->Get(material->GetTexture());
     mRender->BindTexture(texture);
     mProgram->SetUniform1i("uAlbedo", 0);
     //glBindTexture(GL_TEXTURE_2D, mTexture->GetHandle());
@@ -68,14 +70,10 @@ void TestGame::Render()
         auto buffer = mesh->mVertexData->GetBuffer(i);
         mRender->BindVertexBuffers(i, &buffer, 1);
     }
-    mRender->BindIndexBuffer(mRenderable->GetMesh()->mIndexBuffer);
-    
-    checkError("Bind Index");
-    mRender->DrawIndexed(mRenderable->GetMesh()->mIndexBuffer->GetIndexCount());
+    mRender->BindIndexBuffer(mesh->mIndexBuffer);
+    mRender->DrawIndexed(mesh->mIndexBuffer->GetIndexCount());
 
-    
     mWindow->SwapWindow();
-    checkError("Swap");
 }
 
 void TestGame::RunMainLoop()
