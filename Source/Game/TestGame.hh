@@ -2,6 +2,7 @@
 #include "Defines.hh"
 #include "Game.hh"
 #include "Render/Renderable.hh"
+#include "Plugins/SDL2_image/SDL2ImgImporter.hh"
 
 namespace Solis
 {
@@ -17,7 +18,9 @@ private:
 
     SPtr<Program> mProgram;
     SPtr<Renderable> mRenderable;
-    
+    HTexture mTexture;
+
+    UPtr<SDL2ImgImporter> mImageImporter;
 
 };
 

@@ -4,17 +4,20 @@
 
 namespace Solis
 {
-
 void TestGame::Init()
-{
+{   
     LoadDefaultModules();
     mModules->Init();
     
-    auto program = Program::Create();
-    program->LoadFrom(gBasicVertexShaderSource, gBasicFragmentShaderSource);
+    mImageImporter = std::make_unique<SDL2ImgImporter>();
+    mTexture = Texture::Create(mImageImporter->Import("Resources/Floor/bricks.png"));
+
+    mProgram = Program::Create();
+    mProgram->LoadFrom(gBasicVertexShaderSource, gBasicFragmentShaderSource);
 
     auto material = std::make_shared<DefaultMaterial>();
-    material->SetProgram(program);
+    material->SetProgram(mProgram);
+    material->SetTexture(mTexture);
 
     auto quad = Mesh::FromShape(Shapes::Square(0.5));    
     mRenderable = std::make_shared<Renderable>();
@@ -29,24 +32,49 @@ void TestGame::Update(float delta)
     mRunMainLoop = !mWindow->CloseRequested();
 }
 
+void checkError(const std::string& msg) {
+
+    GLenum err;
+    while((err = glGetError()) != GL_NO_ERROR)
+    {
+        std::cout << std::hex << msg << ": " << err << std::endl;
+        exit(-1);
+    }
+}
+
 void TestGame::Render()
 {
+    checkError("Start");
     mRender->Clear(0.0f, 0.0f, 0.4f, 0.0f);
+
+    mRender->BindProgram(mProgram);
+    checkError("Bind Program");
 
     auto material = mRenderable->GetMaterial();
     auto mesh = mRenderable->GetMesh();
 
-    mRender->BindProgram(material->GetProgram());
+    
+    glActiveTexture(GL_TEXTURE0);
+    mRender->BindTexture(material->GetTexture());
+    mProgram->SetUniform1i("uAlbedo", 0);
+    checkError("Bind Texture");
+    //glBindTexture(GL_TEXTURE_2D, mTexture->GetHandle());
     
     mRender->BindVertexAttributes(mesh->mAttributes);
 
-    auto buffer = mesh->mVertexData->GetBuffer(0);
-    mRender->BindVertexBuffers(0, &buffer, 1);
+    for(size_t i = 0; i < mesh->mVertexData->GetBufferCount(); i++) 
+    {
+        auto buffer = mesh->mVertexData->GetBuffer(i);
+        mRender->BindVertexBuffers(i, &buffer, 1);
+    }
     mRender->BindIndexBuffer(mRenderable->GetMesh()->mIndexBuffer);
     
+    checkError("Bind Index");
     mRender->DrawIndexed(mRenderable->GetMesh()->mIndexBuffer->GetIndexCount());
 
-    mWindow->SwapWindow(); 
+    
+    mWindow->SwapWindow();
+    checkError("Swap");
 }
 
 void TestGame::RunMainLoop()
