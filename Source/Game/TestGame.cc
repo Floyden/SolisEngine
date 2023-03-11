@@ -1,6 +1,7 @@
 #include "TestGame.hh"
 #include "Render/Renderable.hh"
 #include "RandomThings.hh"
+#include "Core/ResourceManger.hh"
 
 namespace Solis
 {
@@ -8,9 +9,11 @@ void TestGame::Init()
 {   
     LoadDefaultModules();
     mModules->Init();
+    auto resourceManager = mModules->GetModule<ResourceManager>();
     
     mImageImporter = std::make_unique<SDL2ImgImporter>();
     mTexture = Texture::Create(mImageImporter->Import("Resources/Floor/bricks.png"));
+    
 
     mProgram = Program::Create();
     mProgram->LoadFrom(gBasicVertexShaderSource, gBasicFragmentShaderSource);
@@ -44,20 +47,18 @@ void checkError(const std::string& msg) {
 
 void TestGame::Render()
 {
-    checkError("Start");
+    auto resourceManager = mModules->GetModule<ResourceManager>();
     mRender->Clear(0.0f, 0.0f, 0.4f, 0.0f);
 
     mRender->BindProgram(mProgram);
-    checkError("Bind Program");
-
     auto material = mRenderable->GetMaterial();
     auto mesh = mRenderable->GetMesh();
 
     
     glActiveTexture(GL_TEXTURE0);
-    mRender->BindTexture(material->GetTexture());
+    Texture* texture = resourceManager->Get(material->GetTexture());
+    mRender->BindTexture(texture);
     mProgram->SetUniform1i("uAlbedo", 0);
-    checkError("Bind Texture");
     //glBindTexture(GL_TEXTURE_2D, mTexture->GetHandle());
     
     mRender->BindVertexAttributes(mesh->mAttributes);

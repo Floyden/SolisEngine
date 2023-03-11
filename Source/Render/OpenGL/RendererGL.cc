@@ -65,7 +65,7 @@ void RendererGL::BindIndexBuffer(const SPtr<IndexBuffer>& ib)
     mBoundIndexBuffer = ib;
 }
 
-void RendererGL::BindTexture(const HTexture& texture)
+void RendererGL::BindTexture(const Texture* texture)
 {
     glBindTexture(GL_TEXTURE_2D, texture->GetHandle());
 }

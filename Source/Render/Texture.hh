@@ -13,7 +13,7 @@ using HTexture = ResourceHandle<Texture>;
 class Texture : public Resource {
 public:
     ~Texture();
-    static HTexture Create(SPtr<Image> image);
+    static HTexture Create(ResourceHandle<Image> image);
 
     uint32_t GetHandle() const { return mHandle; }
 private:

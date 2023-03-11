@@ -27,7 +27,7 @@ public:
     void BindIndexBuffer(const SPtr<IndexBuffer>& ib);
 
     void BindProgram(const SPtr<Program>& program);
-    void BindTexture(const HTexture& texture);
+    void BindTexture(const Texture* texture);
 
     void Draw(uint32_t vertexCount);
     void DrawIndexed(uint32_t indexCount);

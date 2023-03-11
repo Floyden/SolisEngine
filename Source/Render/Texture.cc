@@ -1,5 +1,6 @@
 #include "Texture.hh"
 #include "Image.hh"
+#include "Core/ResourceManger.hh"
 
 namespace Solis
 {
@@ -47,9 +48,13 @@ GLenum GetGLFormat(ImageFormat format)
 } 
 
 
-HTexture Texture::Create(SPtr<Image> image)
+HTexture Texture::Create(ResourceHandle<Image> imageHandle)
 {
-    auto res = std::make_unique<Texture>();
+    //auto res = std::make_unique<Texture>();
+    auto resourceManager = ModuleManager::Get()->GetModule<ResourceManager>();
+    auto handle = resourceManager->Add<Texture>(Texture());
+    Texture* res = resourceManager->Get(handle);
+    Image* image =resourceManager->Get(imageHandle);
 
     glGenTextures(1, &res->mHandle);
     glBindTexture(GL_TEXTURE_2D, res->mHandle);
@@ -66,7 +71,7 @@ HTexture Texture::Create(SPtr<Image> image)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-    return HTexture(std::move(res));
+    return handle;
 }
 
 Texture::~Texture()

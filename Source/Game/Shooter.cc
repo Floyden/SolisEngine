@@ -5,6 +5,7 @@
 #include "Image.hh"
 #include "Input/Input.hh"
 #include "Render/OpenGL/RendererGL.hh"
+#include "Core/ResourceManger.hh"
 
 namespace Solis
 {
@@ -253,6 +254,7 @@ void Shooter::UpdateInput(float delta)
 
 void Shooter::Render()
 {
+    auto resourceManager = mModules->GetModule<ResourceManager>();
     mFrame->Bind();
     glViewport(0,0,mWindow->GetWidth(), mWindow->GetHeight());
 
@@ -261,7 +263,8 @@ void Shooter::Render()
 
     mRender->BindProgram(mMaterial->GetProgram());
     glActiveTexture(GL_TEXTURE0);
-    mRender->BindTexture(mMaterial->GetTexture());
+    Texture* texture = resourceManager->Get(mMaterial->GetTexture());
+    mRender->BindTexture(texture);
 
     auto vp = mCamera->GetProjection() * mCamera->GetView();
 

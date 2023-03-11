@@ -3,6 +3,7 @@
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL.h>
 #include <iostream>
+#include "Core/ResourceManger.hh"
 
 namespace Solis
 {
@@ -31,13 +32,13 @@ SDL2ImgImporter::~SDL2ImgImporter()
     IMG_Quit();
 }
 
-SPtr<Image> SDL2ImgImporter::Import(const String& path)
+ResourceHandle<Image> SDL2ImgImporter::Import(const String& path)
 {
     auto surface = IMG_Load(path.c_str());
 
     if(!surface) {
         std::cout << IMG_GetError() << std::endl;
-        return nullptr;
+        return ResourceHandle<Image>();
     }
     
     SDL_LockSurface(surface);
@@ -56,7 +57,7 @@ SPtr<Image> SDL2ImgImporter::Import(const String& path)
     SDL_UnlockSurface(surface);
     //SDL_FreeSurface(surface);
 
-    return std::make_shared<Image>(width, height, format, data);
+    return ModuleManager::Get()->GetModule<ResourceManager>()->Add<Image>(Image(width, height, format, data));
 }
 
 } // namespace Solis
