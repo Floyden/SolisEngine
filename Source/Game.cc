@@ -4,6 +4,7 @@
 #include "Physics/Physics.hh"
 #include "Render/OpenGL/RendererGL.hh"
 #include "Render/Vulkan/RendererVulkan.hh"
+#include "Core/ResourceManger.hh"
 
 namespace Solis
 {
@@ -15,6 +16,7 @@ void Game::LoadDefaultModules()
     if(mModules == nullptr)
         mModules = std::make_unique<ModuleManager>();
 
+    mModules->AddModule<ResourceManager>();
     mModules->AddModule<ComponentManager>();
     mModules->AddModule<Events>();
     mModules->AddModule<Input>();

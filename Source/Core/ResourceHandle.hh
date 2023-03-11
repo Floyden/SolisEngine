@@ -3,12 +3,19 @@
 #include "Resource.hh"
 #include <atomic>
 
+#include <typeindex>
+#include <typeinfo>
 namespace Solis
 {
+struct ResourceId {
+    size_t id;
+    //std::type_index typeId;
+};    
 
 template<typename T>
 class ResourceHandle
 {
+    friend class ResourceManager;
     struct ResourceHandleData
     {
         UPtr<Resource> mResource;
@@ -25,6 +32,7 @@ public:
     /// Copy Constructor 
     ResourceHandle(const ResourceHandle& other)
     {
+        this->mId = other.mId;
         this->mData = other.mData;
         this->Reference();
     }
@@ -34,7 +42,8 @@ public:
         Unreference();
     }
 
-    ResourceHandle(UPtr<T>&& resource)
+    ResourceHandle(UPtr<T>&& resource) : 
+        mId(0)
     {
         this->mData = std::make_unique<ResourceHandleData>();
         this->mData->mResource = std::move(resource);
@@ -46,6 +55,7 @@ public:
     T& operator*() { return *reinterpret_cast<T*>(mData->mResource.get()); }
     const T* operator->() const { return reinterpret_cast<T*>(mData->mResource.get()); }
     const T& operator*() const { return *reinterpret_cast<T*>(mData->mResource.get()); }
+    operator bool() const { return this->mData != 0; }
 
     ResourceHandle& operator=(ResourceHandle&& other) 
     {
@@ -54,6 +64,7 @@ public:
         
         this->Unreference();
         this->mData = std::exchange(other.mData, nullptr);
+        this->mId = other.mId;
 
         return *this;
     }
@@ -62,12 +73,14 @@ public:
     {
         this->Unreference();
         this->mData = other.mData;
+        this->mId = other.mId;
         this->Reference();
 
         return *this;
     }
 private:
 
+    size_t mId;
     SPtr<ResourceHandleData> mData;
 
     void Reference()
