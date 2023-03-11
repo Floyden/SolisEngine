@@ -3,6 +3,10 @@
 namespace Solis
 {
 
+const VertexAttribute Mesh::ATTRIBUTE_POSIITON = VertexAttribute{ 0, 3, GL_FLOAT, GL_FALSE, 0 };
+const VertexAttribute Mesh::ATTRIBUTE_NORMAL = VertexAttribute{ 1, 3, GL_FLOAT, GL_FALSE, 0 };
+const VertexAttribute Mesh::ATTRIBUTE_UV0 = VertexAttribute{ 2, 2, GL_FLOAT, GL_FALSE, 0 };
+
 Mesh Mesh::FromShape(const Shapes::Shape& shape)
 {
     Mesh mesh;
@@ -38,27 +42,9 @@ Mesh Mesh::FromShape(const Shapes::Shape& shape)
     mesh.mIndexBuffer->WriteData(0, indices.size() * sizeof(size_t), indices.data());
 
     std::vector<VertexAttribute> attributeList {
-        VertexAttribute{
-            0,
-            3,
-            GL_FLOAT,
-            GL_FALSE,
-            0
-        },
-        VertexAttribute{
-            1,
-            3,
-            GL_FLOAT,
-            GL_FALSE,
-            0
-        },
-        VertexAttribute{
-            2,
-            2,
-            GL_FLOAT,
-            GL_FALSE,
-            0
-        },
+        ATTRIBUTE_POSIITON,
+        ATTRIBUTE_NORMAL,
+        ATTRIBUTE_UV0
     };
     mesh.mAttributes = VertexAttributes::Create(attributeList);
 

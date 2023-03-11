@@ -18,6 +18,11 @@ public:
     SPtr<IndexBuffer> mIndexBuffer;
     SPtr<VertexData> mVertexData;
     SPtr<VertexAttributes> mAttributes;
+
+public:
+    static const VertexAttribute ATTRIBUTE_POSIITON;
+    static const VertexAttribute ATTRIBUTE_NORMAL;
+    static const VertexAttribute ATTRIBUTE_UV0;
 };
 
 } // namespace Solis
