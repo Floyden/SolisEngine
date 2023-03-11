@@ -43,7 +43,8 @@ SPtr<Node> AssimpImporter::ImportScene(const String& path)
 */
     return nullptr;
 }
-SPtr<Mesh> AssimpImporter::ImportMesh(const String& path)
+
+UPtr<Mesh> AssimpImporter::ImportMesh(const String& path)
 {
     Importer importer;
     const aiScene* scene = importer.ReadFile(path, 
@@ -92,7 +93,7 @@ SPtr<Mesh> AssimpImporter::ImportMesh(const String& path)
         }
     }
 
-    SPtr<Mesh> mesh = std::make_shared<Mesh>();
+    UPtr<Mesh> mesh = std::make_unique<Mesh>();
 
     Vector<VertexAttribute> attributes;
     attributes.push_back(VertexAttribute{0, 3, 0x1406, 0, 0});

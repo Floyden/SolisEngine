@@ -3,13 +3,17 @@
 #include "VertexData.hh"
 #include "VertexAttributes.hh"
 #include "Shapes.hh"
+#include "Core/ResourceHandle.hh"
 
 namespace Solis
 {
     
-class Mesh {
+class Mesh;
+using HMesh = ResourceHandle<Mesh>;
+
+class Mesh : public Resource {
 public:
-    static SPtr<Mesh> FromShape(const Shapes::Shape& shape);
+    static HMesh FromShape(const Shapes::Shape& shape);
 
     SPtr<IndexBuffer> mIndexBuffer;
     SPtr<VertexData> mVertexData;

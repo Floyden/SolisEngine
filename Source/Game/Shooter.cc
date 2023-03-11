@@ -76,7 +76,7 @@ void Shooter::Init()
 
     for (size_t i = 0; i < 1; i++)
     {
-        auto mesh = std::make_shared<Mesh>();
+        HMesh mesh;
         //mMeshes.emplace_back(std::make_shared<Mesh>());
         mesh->mAttributes = VertexAttributes::Create({
             VertexAttribute{0, 3, GL_FLOAT, GL_FALSE, 0},
@@ -105,9 +105,10 @@ void Shooter::Init()
 
 
     auto mesh = mImporter->ImportMesh("Resources/Floor/Floor.gltf");
+    HMesh meshHandle(std::move(mesh));
     auto renderableFloor = std::make_shared<Renderable>();
     renderableFloor->SetMaterial(mMaterial);
-    renderableFloor->SetMesh(mesh);
+    renderableFloor->SetMesh(meshHandle);
 
     mRenderables[renderableFloor] = Transform();
     //mMeshes.push_back(mesh);

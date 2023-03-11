@@ -28,7 +28,7 @@ public:
     SPtr<Node> ImportScene(const String& path);
 
     /// Load the first found mesh
-    SPtr<Mesh> ImportMesh(const String& path);
+    UPtr<Mesh> ImportMesh(const String& path);
 };
 
 } //namespace Solis

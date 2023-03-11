@@ -2,9 +2,9 @@
 
 namespace Solis
 {
-SPtr<Mesh> Mesh::FromShape(const Shapes::Shape& shape)
+HMesh Mesh::FromShape(const Shapes::Shape& shape)
 {
-    SPtr<Mesh> mesh = std::make_shared<Mesh>();
+    UPtr<Mesh> mesh = std::make_unique<Mesh>();
 
 
     auto positions = shape.GetPositions();
@@ -62,7 +62,7 @@ SPtr<Mesh> Mesh::FromShape(const Shapes::Shape& shape)
     };
     mesh->mAttributes = VertexAttributes::Create(attributeList);
 
-    return mesh;
+    return HMesh(std::move(mesh));
 }
 
 } // namespace Solis
