@@ -30,6 +30,8 @@ SPtr<Mesh> Mesh::FromShape(const Shapes::Shape& shape)
                 sizeof(float)
     }));
     mesh->mVertexData->GetBuffer(0)->WriteData(0, positions.size() * sizeof(float), positions.data());
+    mesh->mVertexData->GetBuffer(1)->WriteData(0, normals.size() * sizeof(float), normals.data());
+    mesh->mVertexData->GetBuffer(2)->WriteData(0, uvs.size() * sizeof(float), uvs.data());
 
     auto indices = shape.GetIndices();
     mesh->mIndexBuffer = IndexBuffer::Create(IndexBufferDesc{static_cast<uint32_t>(indices.size())});
@@ -42,7 +44,21 @@ SPtr<Mesh> Mesh::FromShape(const Shapes::Shape& shape)
             GL_FLOAT,
             GL_FALSE,
             0
-        }
+        },
+        VertexAttribute{
+            1,
+            3,
+            GL_FLOAT,
+            GL_FALSE,
+            0
+        },
+        VertexAttribute{
+            2,
+            2,
+            GL_FLOAT,
+            GL_FALSE,
+            0
+        },
     };
     mesh->mAttributes = VertexAttributes::Create(attributeList);
 
