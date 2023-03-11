@@ -110,7 +110,7 @@ void RendererGL::DrawIndexed(uint32_t indexCount)
     
     auto vao = sVaoManager->GetVao(mBoundProgram, mBoundAttributes, mBoundBuffers);
     glBindVertexArray(vao);
-/*
+
     auto& attributes = mBoundAttributes->GetAttributes();
     for (auto& attr: attributes)
     {
@@ -122,7 +122,7 @@ void RendererGL::DrawIndexed(uint32_t indexCount)
         glEnableVertexAttribArray(attr.location);
         glBindBuffer(GL_ARRAY_BUFFER, mBoundBuffers[attr.location]->GetHandle());
         glVertexAttribPointer(attr.location, attr.typeCount, attr.type, attr.normalized, attr.stride, (void*)0);
-    }*/
+    }
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mBoundIndexBuffer->GetHandle());
     glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, (void*)0);

@@ -137,15 +137,22 @@ static const char* gFragmentShaderSource =
 static const char* gBasicVertexShaderSource =
     "#version 330 core\n" 
     "layout(location = 0) in vec3 inPos;\n" 
+    "layout(location = 1) in vec3 inNormals;\n" 
+    "layout(location = 2) in vec2 inUVs;\n" 
+    "out vec2 outUVs;\n" 
     "void main() {\n"
+    "   outUVs = inUVs;\n" 
     "   gl_Position = vec4(inPos, 1.0);\n" 
     "}"; 
 
 static const char* gBasicFragmentShaderSource =
     "#version 330 core\n" 
+    "in vec2 outUVs;"
     "out vec4 color;"
+    "uniform sampler2D uAlbedo;"
     "void main() {\n"
-    "   color = vec4(1.0, 1.0, 1.0, 1.0);"
+    //"   color = vec4(1.0, 0.5, 1.0, 1.0);"
+    "   color = texture(uAlbedo, outUVs);"
     "}"; 
 
 //TODO: instance this
