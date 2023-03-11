@@ -11,7 +11,7 @@ class ResourceHandle
 {
     struct ResourceHandleData
     {
-        SPtr<Resource> mResource;
+        UPtr<Resource> mResource;
         std::atomic<uint32_t> mRefCount{0};
     };
 
@@ -34,10 +34,10 @@ public:
         Unreference();
     }
 
-    ResourceHandle(SPtr<T> resource)
+    ResourceHandle(UPtr<T>&& resource)
     {
-        this->mData = std::make_shared<ResourceHandleData>();
-        this->mData->mResource = std::dynamic_pointer_cast<Resource>(resource);
+        this->mData = std::make_unique<ResourceHandleData>();
+        this->mData->mResource = std::move(resource);
         this->Reference();
     }
 
@@ -73,13 +73,13 @@ private:
     void Reference()
     {
         if(mData)
-            mData->mRefCount.fetch_add(1, std::memory_order::memory_order_relaxed);
+            mData->mRefCount.fetch_add(1, std::memory_order_relaxed);
     }
 
     void Unreference()
     {
         if(mData)
-            mData->mRefCount.fetch_sub(1, std::memory_order::memory_order_release);
+            mData->mRefCount.fetch_sub(1, std::memory_order_release);
     }
 };
     

@@ -49,7 +49,7 @@ GLenum GetGLFormat(ImageFormat format)
 
 HTexture Texture::Create(SPtr<Image> image)
 {
-    auto res = std::make_shared<Texture>();
+    auto res = std::make_unique<Texture>();
 
     glGenTextures(1, &res->mHandle);
     glBindTexture(GL_TEXTURE_2D, res->mHandle);
@@ -66,7 +66,7 @@ HTexture Texture::Create(SPtr<Image> image)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-    return HTexture(res);
+    return HTexture(std::move(res));
 }
 
 Texture::~Texture()
