@@ -52,12 +52,11 @@ HTexture Texture::Create(ResourceHandle<Image> imageHandle)
 {
     //auto res = std::make_unique<Texture>();
     auto resourceManager = ModuleManager::Get()->GetModule<ResourceManager>();
-    auto handle = resourceManager->Add<Texture>(Texture());
-    Texture* res = resourceManager->Get(handle);
     Image* image =resourceManager->Get(imageHandle);
 
-    glGenTextures(1, &res->mHandle);
-    glBindTexture(GL_TEXTURE_2D, res->mHandle);
+    Texture texture;
+    glGenTextures(1, &texture.mHandle);
+    glBindTexture(GL_TEXTURE_2D, texture.mHandle);
 
     auto internalFormat = GetGLInternalFormat(image->GetFormat());
     auto format = GetGLFormat(image->GetFormat());
@@ -71,7 +70,7 @@ HTexture Texture::Create(ResourceHandle<Image> imageHandle)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-    return handle;
+    return resourceManager->Add<Texture>(std::move(texture));
 }
 
 Texture::~Texture()
