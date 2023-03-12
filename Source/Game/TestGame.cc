@@ -15,8 +15,9 @@ void TestGame::Init()
     mTexture = Texture::Create(mImageImporter->Import("Resources/Floor/bricks.png"));
     
 
-    mProgram = Program::Create();
-    mProgram->LoadFrom(gBasicVertexShaderSource, gBasicFragmentShaderSource);
+    Program program;
+    program.LoadFrom(gBasicVertexShaderSource, gBasicFragmentShaderSource);
+    mProgram = resourceManager->Add(program);
 
     auto material = std::make_shared<DefaultMaterial>();
     material->SetProgram(mProgram);
@@ -49,18 +50,19 @@ void TestGame::Render()
 {
     auto resourceManager = mModules->GetModule<ResourceManager>();
     mRender->Clear(0.0f, 0.0f, 0.4f, 0.0f);
-
-    mRender->BindProgram(mProgram);
+    
     auto material = mRenderable->GetMaterial();
     auto meshHandle = mRenderable->GetMesh();
 
     Texture* texture = resourceManager->Get(material->GetTexture());
     Mesh* mesh = resourceManager->Get(meshHandle);
+    Program* program = resourceManager->Get(mProgram);
 
     
+    mRender->BindProgram(program);
     glActiveTexture(GL_TEXTURE0);
     mRender->BindTexture(texture);
-    mProgram->SetUniform1i("uAlbedo", 0);
+    program->SetUniform1i("uAlbedo", 0);
     //glBindTexture(GL_TEXTURE_2D, mTexture->GetHandle());
     
     mRender->BindVertexAttributes(mesh->mAttributes);

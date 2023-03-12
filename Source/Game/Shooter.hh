@@ -46,8 +46,8 @@ private:
     // Render Resources
     SPtr<Render::Renderer> mRender;
     
-    SPtr<Program> mProgram;
-    SPtr<Program> mDeferred;
+    HProgram mProgram;
+    HProgram mDeferred;
     SPtr<Mesh> mRenderTarget;
     
     HTexture mTexture;

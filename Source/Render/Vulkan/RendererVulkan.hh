@@ -20,7 +20,7 @@ public:
     virtual void BindVertexBuffers(uint32_t index, const SPtr<VertexBuffer>* vbs, uint32_t bufferCount)  {};
     virtual void BindIndexBuffer(const SPtr<IndexBuffer>& ib)  {};
 
-    virtual void BindProgram(const SPtr<Program>& program)  {};
+    virtual void BindProgram(const Program* program)  {};
     virtual void BindTexture(const Texture* texture)  {};
 
     virtual void Draw(uint32_t vertexCount)  {};

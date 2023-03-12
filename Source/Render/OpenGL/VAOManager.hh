@@ -10,7 +10,7 @@ namespace Solis
 class VAOManager : public IModule
 {
 public:
-    uint32_t GetVao(const SPtr<Program>& vertexProgram, const SPtr<VertexAttributes>& attr, 
+    uint32_t GetVao(const Program* vertexProgram, const SPtr<VertexAttributes>& attr, 
                     const std::array<SPtr<VertexBuffer>, MAX_VB_COUNT>& buffers);
 private:
     struct VAO {

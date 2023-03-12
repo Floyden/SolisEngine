@@ -55,11 +55,13 @@ void Shooter::Init()
     // Init Render Stuff
     mRender = std::make_shared<RendererGL>();
 
-    mProgram = Program::Create();
-    mProgram->LoadFrom(gVertexShaderSource, gFragmentShaderSource);
+    Program program;
+    program.LoadFrom(gVertexShaderSource, gFragmentShaderSource);
+    mProgram = resourceManager->Add(program);
 
-    mDeferred = Program::Create();
-    mDeferred->LoadFrom(gPassthroughShaderSource, gImageShaderSource);
+    Program deferred;
+    deferred.LoadFrom(gPassthroughShaderSource, gImageShaderSource);
+    mDeferred = resourceManager->Add(deferred);
 
     auto img = mImageImporter->Import("Resources/Floor/bricks.png");
     mTexture = Texture::Create(img);
@@ -264,7 +266,8 @@ void Shooter::Render()
     mRender->Clear(0.f, 0.5f, 1.f, 1.0f);
     glEnable(GL_DEPTH_TEST);
 
-    mRender->BindProgram(mMaterial->GetProgram());
+    auto program = resourceManager->Get(mMaterial->GetProgram());
+    mRender->BindProgram(program);
     glActiveTexture(GL_TEXTURE0);
     Texture* texture = resourceManager->Get(mMaterial->GetTexture());
     mRender->BindTexture(texture);
@@ -289,7 +292,7 @@ void Shooter::Render()
         
 
         static double counter = 0;
-        mProgram->SetUniform1i("uSampler", 0);
+        program->SetUniform1i("uSampler", 0);
         if(counter <= 0) 
             counter -= mDelta.count() * 1.0f;
         else 
@@ -297,7 +300,7 @@ void Shooter::Render()
 
         counter *= -1.0f;
 
-        mProgram->SetUniformMat4f("uMVP", vp * p.second.GetTransform());
+        program->SetUniformMat4f("uMVP", vp * p.second.GetTransform());
         mRender->DrawIndexed(mesh->mIndexBuffer->GetIndexCount());
     }
 
@@ -306,29 +309,31 @@ void Shooter::Render()
     glViewport(0,0,mWindow->GetWidth(), mWindow->GetHeight());
     mRender->Clear(0.0f, 0.0f, 0.0f, 1.0f);
 
-    mRender->BindProgram(mDeferred);
+    auto deferred = resourceManager->Get(mDeferred);
+
+    mRender->BindProgram(deferred);
     //glDisable(GL_DEPTH_TEST);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, mRenderTextures[0]->GetHandle());
-    mDeferred->SetUniform1i("uAlbedo", 0);
+    deferred->SetUniform1i("uAlbedo", 0);
 
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, mRenderTextures[1]->GetHandle());
-    mDeferred->SetUniform1i("uNormal", 1);
+    deferred->SetUniform1i("uNormal", 1);
 
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, mRenderTextures[3]->GetHandle());
-    mDeferred->SetUniform1i("uDepth", 2);
+    deferred->SetUniform1i("uDepth", 2);
 
-    mDeferred->SetUniformMat4f("uInvView", mCamera->GetInvView());
-    mDeferred->SetUniformMat4f("uInvProj", mCamera->GetInvProjection());
+    deferred->SetUniformMat4f("uInvView", mCamera->GetInvView());
+    deferred->SetUniformMat4f("uInvProj", mCamera->GetInvProjection());
     
 
-    mDeferred->SetUniform3f("uLightPos", Vec3(0.1, 2.5, 5.5));
-    mDeferred->SetUniform4f("uLightColor", Vec4(1.0, 0.2, 0.4, 1.0));
-    mDeferred->SetUniform1f("uLightBrightness", 100.0f);
-    mDeferred->SetUniform1f("uLightRadius", 20.5f);
+    deferred->SetUniform3f("uLightPos", Vec3(0.1, 2.5, 5.5));
+    deferred->SetUniform4f("uLightColor", Vec4(1.0, 0.2, 0.4, 1.0));
+    deferred->SetUniform1f("uLightBrightness", 100.0f);
+    deferred->SetUniform1f("uLightRadius", 20.5f);
 
     mRender->BindVertexAttributes(mRenderTarget->mAttributes);
     auto buffer = mRenderTarget->mVertexData->GetBuffer(0);

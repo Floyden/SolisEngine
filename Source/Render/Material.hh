@@ -16,13 +16,12 @@ public:
 	const HTexture& GetTexture() const { return mTexture; }
 	void SetTexture(const HTexture& texture) { mTexture = texture; }
 
-	SPtr<Program> GetProgram() const { return mProgram; }
-	void SetProgram(const SPtr<Program> program) { mProgram = program; }
+	HProgram GetProgram() const { return mProgram; }
+	void SetProgram(const HProgram& program) { mProgram = program; }
 
 private:
 	HTexture mTexture;
-	SPtr<Program> mProgram;
-
+	HProgram mProgram;
 };
 
 

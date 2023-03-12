@@ -1,11 +1,12 @@
 #pragma once
 #include "Defines.hh"
+#include "Core/ResourceHandle.hh"
 #include "../Math.hh"
 
 namespace Solis
 {
     
-class Program 
+class Program : public Resource
 {
 public:
     ~Program();
@@ -29,5 +30,7 @@ public:
 private:
     uint32_t mHandle;
 };
+
+using HProgram = ResourceHandle<Program>;
 
 } // namespace Solis

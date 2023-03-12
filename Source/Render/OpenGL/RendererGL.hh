@@ -26,7 +26,7 @@ public:
     void BindVertexBuffers(uint32_t index, const SPtr<VertexBuffer>* vbs, uint32_t bufferCount);
     void BindIndexBuffer(const SPtr<IndexBuffer>& ib);
 
-    void BindProgram(const SPtr<Program>& program);
+    void BindProgram(const Program* program);
     void BindTexture(const Texture* texture);
 
     void Draw(uint32_t vertexCount);
@@ -34,7 +34,7 @@ public:
 
 private:
 
-    SPtr<Program> mBoundProgram;
+    const Program* mBoundProgram;
     SPtr<VertexAttributes> mBoundAttributes;
     std::array<SPtr<VertexBuffer>, MAX_VB_COUNT> mBoundBuffers;
     SPtr<IndexBuffer> mBoundIndexBuffer;

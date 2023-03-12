@@ -70,7 +70,7 @@ void RendererGL::BindTexture(const Texture* texture)
     glBindTexture(GL_TEXTURE_2D, texture->GetHandle());
 }
 
-void RendererGL::BindProgram(const SPtr<Program>& program)
+void RendererGL::BindProgram(const Program* program)
 {
     if(mBoundProgram != program)
     {
@@ -120,8 +120,8 @@ void RendererGL::DrawIndexed(uint32_t indexCount)
         }
 
         glEnableVertexAttribArray(attr.location);
-        glBindBuffer(GL_ARRAY_BUFFER, mBoundBuffers[attr.location]->GetHandle());
-        glVertexAttribPointer(attr.location, attr.typeCount, attr.type, attr.normalized, attr.stride, (void*)0);
+        //glBindBuffer(GL_ARRAY_BUFFER, mBoundBuffers[attr.location]->GetHandle());
+        //glVertexAttribPointer(attr.location, attr.typeCount, attr.type, attr.normalized, attr.stride, (void*)0);
     }
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mBoundIndexBuffer->GetHandle());

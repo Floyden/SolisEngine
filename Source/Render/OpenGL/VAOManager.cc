@@ -61,7 +61,7 @@ bool VAOManager::VAO::operator!=(const VAO& other) const
     return !operator==(other);
 }
 
-uint32_t VAOManager::GetVao(const SPtr<Program>& vertexProgram, 
+uint32_t VAOManager::GetVao(const Program* vertexProgram, 
     const SPtr<VertexAttributes>& attributes, const std::array<SPtr<VertexBuffer>, MAX_VB_COUNT>& buffers) 
 {
     // Try to find an existing VAO

@@ -16,7 +16,7 @@ public:
     void RunMainLoop() override;
 private:
 
-    SPtr<Program> mProgram;
+    HProgram mProgram;
     SPtr<Renderable> mRenderable;
     HTexture mTexture;
 
