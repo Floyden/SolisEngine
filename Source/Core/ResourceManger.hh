@@ -14,12 +14,11 @@ public:
     ResourceManager() : rng(std::random_device()())  {}
 
     template<class T>
-    ResourceHandle<T> Add(const T& resource) 
+    ResourceHandle<T> Add(T&& resource) 
     {   
-        std::uniform_int_distribution<std::mt19937::result_type> dist;
-        // TODO: better rng
+        std::uniform_int_distribution<uint_fast64_t> dist;
         size_t rId = static_cast<size_t>(dist(rng));
-        mResourceMap[rId] = std::make_unique<T>(resource);
+        mResourceMap[rId] = std::make_unique<T>(std::forward<T>(resource));
 
         ResourceHandle<T> handle;
         handle.mId = rId;

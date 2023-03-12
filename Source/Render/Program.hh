@@ -9,6 +9,12 @@ namespace Solis
 class Program : public Resource
 {
 public:
+    Program() = default;
+    Program(Program&& other) 
+    {
+        mHandle = other.mHandle;
+        other.mHandle = 0;
+    };
     ~Program();
 
     void LoadFrom(const String& vs, const String& fs);
@@ -23,10 +29,10 @@ public:
     void SetUniform1i(const String& name, int value);
     void SetUniform2i(const String& name, const Vec2i& value);
     uint32_t GetHandle() const { return mHandle; }
-
+/*
     static SPtr<Program> Create() {
         return std::make_shared<Program>();
-    }
+    }*/
 private:
     uint32_t mHandle;
 };

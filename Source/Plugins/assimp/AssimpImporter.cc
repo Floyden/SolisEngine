@@ -29,11 +29,11 @@ AssimpImporter::~AssimpImporter()
 
 SPtr<Node> AssimpImporter::ImportScene(const String& path)
 {
+/*
     Importer importer;
     const aiScene* scene = importer.ReadFile(path, 
         aiProcess_CalcTangentSpace);
 
-/*
     std::cout 
         << "num animations: " << scene->mNumAnimations
         << ", num cameras: " << scene->mNumCameras
@@ -126,7 +126,7 @@ HMesh AssimpImporter::ImportMesh(const String& path)
     mesh.mIndexBuffer = IndexBuffer::Create({static_cast<uint32_t>(indices.size())});
     mesh.mIndexBuffer->WriteData(0, indices.size() * sizeof(uint32_t), indices.data());
 
-    HMesh handle = ModuleManager::Get()->GetModule<ResourceManager>()->Add<Mesh>(mesh);
+    HMesh handle = ModuleManager::Get()->GetModule<ResourceManager>()->Add<Mesh>(std::move(mesh));
     return handle;
 }
 

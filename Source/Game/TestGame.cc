@@ -17,13 +17,14 @@ void TestGame::Init()
 
     Program program;
     program.LoadFrom(gBasicVertexShaderSource, gBasicFragmentShaderSource);
-    mProgram = resourceManager->Add(program);
+    mProgram = resourceManager->Add(std::move(program));
 
     auto material = std::make_shared<DefaultMaterial>();
     material->SetProgram(mProgram);
     material->SetTexture(mTexture);
 
-    HMesh quadHandle = resourceManager->Add(Mesh::FromShape(Shapes::Square(0.5)));
+    Mesh mesh = Mesh::FromShape(Shapes::Square(0.5));
+    HMesh quadHandle = resourceManager->Add(std::move(mesh));
     mRenderable = std::make_shared<Renderable>();
     mRenderable->SetMaterial(material);
     mRenderable->SetMesh(quadHandle);

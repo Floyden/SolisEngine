@@ -57,11 +57,11 @@ void Shooter::Init()
 
     Program program;
     program.LoadFrom(gVertexShaderSource, gFragmentShaderSource);
-    mProgram = resourceManager->Add(program);
+    mProgram = resourceManager->Add(std::move(program));
 
     Program deferred;
     deferred.LoadFrom(gPassthroughShaderSource, gImageShaderSource);
-    mDeferred = resourceManager->Add(deferred);
+    mDeferred = resourceManager->Add(std::move(deferred));
 
     auto img = mImageImporter->Import("Resources/Floor/bricks.png");
     mTexture = Texture::Create(img);
@@ -97,7 +97,7 @@ void Shooter::Init()
         mesh.mIndexBuffer = IndexBuffer::Create({static_cast<uint32_t>(gQuadDataIdx.size())});
         mesh.mIndexBuffer->WriteData(0, gQuadDataIdx.size() * sizeof(uint32_t), gQuadDataIdx.data());
         
-        HMesh meshHandle = resourceManager->Add(mesh);
+        HMesh meshHandle = resourceManager->Add(std::move(mesh));
         auto renderable = std::make_shared<Renderable>();
 
         renderable->SetMaterial(mMaterial);
