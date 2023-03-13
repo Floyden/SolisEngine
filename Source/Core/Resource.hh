@@ -9,9 +9,9 @@ public:
     Resource(const Resource& other) = delete;
     Resource(Resource&& other) = default;
 
-    const String& GetName() const { return mName; }
-    void SetName(const String& name) { mName = name; }
+//    const String& GetName() const { return mName; }
+//    void SetName(const String& name) { mName = name; }
 
 private:
-    String mName;
+//    String mName;
 };
