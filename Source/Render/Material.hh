@@ -3,14 +3,17 @@
 #include "Program.hh"
 #include "Math.hh"
 #include "Texture.hh"
+#include "Core/ResourceHandle.hh"
 
 namespace Solis
 {
 
-class Material
+class Material : public Resource
 {
 public:
-	virtual ~Material() {}
+	Material() = default;
+	Material(Material&& material) = default;
+	virtual ~Material() = default;
 	virtual void Bind() = 0;
 
 	const HTexture& GetTexture() const { return mTexture; }
@@ -28,8 +31,9 @@ private:
 class DefaultMaterial : public Material
 {
 public:
-	DefaultMaterial() {};
-	~DefaultMaterial() {};
+	DefaultMaterial() = default;
+	DefaultMaterial(DefaultMaterial&& material) = default;
+	virtual ~DefaultMaterial() = default;
 /*
 	SPtr<Texture> GetTexture() const { return mTexture; }
 	void SetTexture(const SPtr<Texture> texture) { mTexture = texture; }
@@ -40,5 +44,7 @@ public:
 	void Bind() {  };
 private:
 };
+
+using HDefaultMaterial = ResourceHandle<DefaultMaterial>;
 
 } // namespace Solis

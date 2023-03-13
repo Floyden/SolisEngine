@@ -52,7 +52,7 @@ private:
     
     HTexture mTexture;
     Map<SPtr<Renderable>, Transform> mRenderables;
-    SPtr<DefaultMaterial> mMaterial;
+    HDefaultMaterial mMaterial;
 
     SPtr<Camera> mCamera;
     SPtr<Node> mRoot;

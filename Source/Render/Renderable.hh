@@ -10,12 +10,12 @@ public:
 	void SetMesh(const HMesh& mesh) { mMesh = mesh; }
 	HMesh GetMesh() const { return mMesh; }
 
-	void SetMaterial(const SPtr<DefaultMaterial>& material) { mMaterial = material; }
-	SPtr<DefaultMaterial> GetMaterial() const { return mMaterial; }
+	void SetMaterial(const HDefaultMaterial& material) { mMaterial = material; }
+	HDefaultMaterial GetMaterial() const { return mMaterial; }
 
 private:
 	HMesh mMesh;
-	SPtr<DefaultMaterial> mMaterial;
+	HDefaultMaterial mMaterial;
 
 };
 }// namespace Solis

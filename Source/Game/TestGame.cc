@@ -19,15 +19,21 @@ void TestGame::Init()
     program.LoadFrom(gBasicVertexShaderSource, gBasicFragmentShaderSource);
     mProgram = resourceManager->Add(std::move(program));
 
-    auto material = std::make_shared<DefaultMaterial>();
-    material->SetProgram(mProgram);
-    material->SetTexture(mTexture);
+    //auto material = std::make_shared<DefaultMaterial>();
+    DefaultMaterial material;
+    material.SetProgram(mProgram);
+    material.SetTexture(mTexture);
+    auto materialHandle = resourceManager->Add(std::move(material));
 
     Mesh mesh = Mesh::FromShape(Shapes::Square(0.5));
     HMesh quadHandle = resourceManager->Add(std::move(mesh));
     mRenderable = std::make_shared<Renderable>();
-    mRenderable->SetMaterial(material);
+    mRenderable->SetMaterial(materialHandle);
     mRenderable->SetMesh(quadHandle);
+
+    /*
+    mRenderable = Renderable().withMaterial(material).withMesh(mesh);
+    */
 
 }
 
@@ -52,7 +58,7 @@ void TestGame::Render()
     auto resourceManager = mModules->GetModule<ResourceManager>();
     mRender->Clear(0.0f, 0.0f, 0.4f, 0.0f);
     
-    auto material = mRenderable->GetMaterial();
+    auto material = resourceManager->Get(mRenderable->GetMaterial());
     auto meshHandle = mRenderable->GetMesh();
 
     Texture* texture = resourceManager->Get(material->GetTexture());

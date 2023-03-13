@@ -66,9 +66,10 @@ void Shooter::Init()
     auto img = mImageImporter->Import("Resources/Floor/bricks.png");
     mTexture = Texture::Create(img);
 
-    mMaterial = std::make_shared<DefaultMaterial>();
-    mMaterial->SetTexture(mTexture);
-    mMaterial->SetProgram(mProgram);
+    DefaultMaterial material;
+    material.SetTexture(mTexture);
+    material.SetProgram(mProgram);
+    mMaterial = resourceManager->Add(std::move(material));
     
     auto quadData = VertexBuffer::Create({static_cast<uint32_t>(gQuadData.size()), sizeof(float)});
     quadData->WriteData(0, gQuadData.size() * sizeof(float), gQuadData.data());
@@ -266,10 +267,11 @@ void Shooter::Render()
     mRender->Clear(0.f, 0.5f, 1.f, 1.0f);
     glEnable(GL_DEPTH_TEST);
 
-    auto program = resourceManager->Get(mMaterial->GetProgram());
+    auto material = resourceManager->Get(mMaterial);
+    auto program = resourceManager->Get(material->GetProgram());
     mRender->BindProgram(program);
     glActiveTexture(GL_TEXTURE0);
-    Texture* texture = resourceManager->Get(mMaterial->GetTexture());
+    Texture* texture = resourceManager->Get(material->GetTexture());
     mRender->BindTexture(texture);
 
     auto vp = mCamera->GetProjection() * mCamera->GetView();
