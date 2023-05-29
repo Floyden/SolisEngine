@@ -12,16 +12,18 @@ using HTexture = ResourceHandle<Texture>;
 
 class Texture : public Resource {
 public:
-    Texture() = default;
     Texture(Texture&& other) {
         mHandle = other.mHandle;
         other.mHandle = 0;
     }
     ~Texture();
+
     static HTexture Create(ResourceHandle<Image> image);
 
     uint32_t GetHandle() const { return mHandle; }
 private:
+    Texture() = default;
+
     uint32_t mHandle;
 };
 
