@@ -19,7 +19,6 @@ void TestGame::Init()
     program.LoadFrom(gBasicVertexShaderSource, gBasicFragmentShaderSource);
     mProgram = resourceManager->Add(std::move(program));
 
-    //auto material = std::make_shared<DefaultMaterial>();
     DefaultMaterial material;
     material.SetProgram(mProgram);
     material.SetTexture(mTexture);
@@ -31,16 +30,24 @@ void TestGame::Init()
     mRenderable->SetMaterial(materialHandle);
     mRenderable->SetMesh(quadHandle);
 
+    mUBO = UniformBuffer::Create(12);
     /*
     mRenderable = Renderable().withMaterial(material).withMesh(mesh);
     */
-
 }
 
 void TestGame::Update(float delta)
 {
     mWindow->ProcessEvents();
     mRunMainLoop = !mWindow->CloseRequested();
+
+    mTime += delta;
+    mTransform.SetPosition(Vec3(
+        glm::sin(mTime) * 1.0,
+        glm::cos(mTime) * 1.0,
+        0.0
+    ));
+    mUBO->WriteData(0, 12, glm::value_ptr(mTransform.GetPosition()));
 }
 
 void checkError(const std::string& msg) {
@@ -70,6 +77,11 @@ void TestGame::Render()
     glActiveTexture(GL_TEXTURE0);
     mRender->BindTexture(texture);
     program->SetUniform1i("uAlbedo", 0);
+
+    glBindBufferRange(GL_UNIFORM_BUFFER, 0, mUBO->GetHandle(), 0, mUBO->Size());
+    uint32_t index = glGetUniformBlockIndex(program->GetHandle(), "transform"); 
+    glUniformBlockBinding(program->GetHandle(), index, 0);
+
     //glBindTexture(GL_TEXTURE_2D, mTexture->GetHandle());
     
     mRender->BindVertexAttributes(mesh->mAttributes);

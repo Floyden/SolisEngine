@@ -10,6 +10,7 @@ SPtr<UniformBuffer> UniformBuffer::Create(uint32_t size)
         std::cout << "Failed to create an OpenGL buffer\n";
         return {};
     }
+    res->mSize = size;
 
     glBindBuffer(GL_UNIFORM_BUFFER, res->mHandle);
     glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_STATIC_DRAW);

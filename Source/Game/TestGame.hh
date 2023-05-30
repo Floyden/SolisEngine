@@ -2,6 +2,7 @@
 #include "Defines.hh"
 #include "Game.hh"
 #include "Render/Renderable.hh"
+#include "Render/OpenGL/UniformBuffer.hh"
 #include "Plugins/SDL2_image/SDL2ImgImporter.hh"
 
 namespace Solis
@@ -18,7 +19,11 @@ private:
 
     HProgram mProgram;
     SPtr<Renderable> mRenderable;
+    //uint32_t mUBO;
+    SPtr<UniformBuffer> mUBO;
+    Transform mTransform;
     HTexture mTexture;
+    float mTime = 0.0;
 
     UPtr<SDL2ImgImporter> mImageImporter;
 
