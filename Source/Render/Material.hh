@@ -15,16 +15,6 @@ public:
 	Material(Material&& material) = default;
 	virtual ~Material() = default;
 	virtual void Bind() = 0;
-
-	const HTexture& GetTexture() const { return mTexture; }
-	void SetTexture(const HTexture& texture) { mTexture = texture; }
-
-	HProgram GetProgram() const { return mProgram; }
-	void SetProgram(const HProgram& program) { mProgram = program; }
-
-private:
-	HTexture mTexture;
-	HProgram mProgram;
 };
 
 
@@ -34,15 +24,21 @@ public:
 	DefaultMaterial() = default;
 	DefaultMaterial(DefaultMaterial&& material) = default;
 	virtual ~DefaultMaterial() = default;
-/*
-	SPtr<Texture> GetTexture() const { return mTexture; }
-	void SetTexture(const SPtr<Texture> texture) { mTexture = texture; }
 
-	SPtr<Program> GetProgram() const { return mProgram; }
-	void SetProgram(const SPtr<Program> program) { mProgram = program; }*/
+	const HTexture& GetDiffusionTexture() const { return mDiffusionTexture; }
+	void SetDiffusionTexture(const HTexture& texture) { mDiffusionTexture = texture; }
+
+	const HTexture& GetNormalTexture() const { return mNormalTexture; }
+	void SetNormalTexture(const HTexture& texture) { mNormalTexture = texture; }
+
+	HProgram GetProgram() const { return mProgram; }
+	void SetProgram(const HProgram& program) { mProgram = program; }
 
 	void Bind() {  };
 private:
+	HProgram mProgram;
+	HTexture mDiffusionTexture;
+	HTexture mNormalTexture;
 };
 
 using HDefaultMaterial = ResourceHandle<DefaultMaterial>;

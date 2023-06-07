@@ -67,7 +67,7 @@ void Shooter::Init()
     mTexture = Texture::Create(img);
 
     DefaultMaterial material;
-    material.SetTexture(mTexture);
+    material.SetDiffusionTexture(mTexture);
     material.SetProgram(mProgram);
     mMaterial = resourceManager->Add(std::move(material));
     
@@ -271,7 +271,7 @@ void Shooter::Render()
     auto program = resourceManager->Get(material->GetProgram());
     mRender->BindProgram(program);
     glActiveTexture(GL_TEXTURE0);
-    Texture* texture = resourceManager->Get(material->GetTexture());
+    Texture* texture = resourceManager->Get(material->GetDiffusionTexture());
     mRender->BindTexture(texture);
 
     auto vp = mCamera->GetProjection() * mCamera->GetView();

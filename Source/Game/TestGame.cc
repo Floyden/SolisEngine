@@ -21,7 +21,7 @@ void TestGame::Init()
 
     DefaultMaterial material;
     material.SetProgram(mProgram);
-    material.SetTexture(mTexture);
+    material.SetDiffusionTexture(mTexture);
     auto materialHandle = resourceManager->Add(std::move(material));
 
     Mesh mesh = Mesh::FromShape(Shapes::Square(0.5));
@@ -68,7 +68,7 @@ void TestGame::Render()
     auto material = resourceManager->Get(mRenderable->GetMaterial());
     auto meshHandle = mRenderable->GetMesh();
 
-    Texture* texture = resourceManager->Get(material->GetTexture());
+    Texture* texture = resourceManager->Get(material->GetDiffusionTexture());
     Mesh* mesh = resourceManager->Get(meshHandle);
     Program* program = resourceManager->Get(mProgram);
 
