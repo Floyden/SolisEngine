@@ -1,6 +1,8 @@
 #pragma once
 #include <typeinfo>
 #include <iostream>
+#include <ranges>
+#include <algorithm>
 #include "Defines.hh"
 
 /**
@@ -27,9 +29,9 @@ public:
     template<class T>
     T* AddModule() 
     {
-        auto module = std::make_unique<T>();
-        auto ptr = module.get();
-        mModules.emplace(std::move(module));
+        auto mod = std::make_unique<T>();
+        auto ptr = mod.get();
+        mModules.emplace(std::move(mod));
         mOrder.push_back(ptr);
         return ptr;
     }
@@ -38,22 +40,24 @@ public:
     template<class T>
     void RemoveModule() 
     {
-        for (auto it = mModules.begin(); it != mModules.end(); ++it){
-            auto res = dynamic_cast<T*>((*it).get());
-            if(res != nullptr) {
-                res->Shutdown();
-                mModules.erase(it);
-                return;
-            }
-        }
+        std::remove_if(mModules.begin(), mModules.end(), [&](auto& mod){
+            auto res = dynamic_cast<T*>(mod.get());
+            if (!res) 
+                return false;
+
+            res->Shutdown();
+            mOrder.erase(res);
+            return true;
+        });
     }
 
     /// Get the module T. Return nullptr if none exists.
     template<class T>
     T* GetModule() 
     {
-        for (auto it = mModules.begin(); it != mModules.end(); ++it){
-            auto res = dynamic_cast<T*>((*it).get());
+        for (auto& mod : mModules)
+        {
+            auto res = dynamic_cast<T*>(mod.get());
             if(res != nullptr) 
                 return res;
         }
@@ -64,15 +68,15 @@ public:
 
     /// Initialize all modules in the order they were added
     void Init() {
-        for (auto it = mOrder.begin(); it != mOrder.end(); it++)
-            (*it)->Init();
+        for (auto& mod : mOrder)
+            mod->Init();
         
     }
 
     /// Shutdown all modules in the reverse order they were added
     void Shutdown() {
-        for (auto rit = mOrder.rbegin(); rit != mOrder.rend(); rit++)
-            (*rit)->Shutdown();
+        for (auto& mod : mOrder | std::views::reverse)
+            mod->Shutdown();
     }
 
     /// Static function to get a module.
