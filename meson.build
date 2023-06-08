@@ -11,7 +11,7 @@ libvulkan = dependency('vulkan')
 
 incdir = include_directories('./Source')
 #brew_includes = include_directories('/opt/homebrew/include')
-bullet_includes = include_directories('C:/msys64/mingw64/include/bullet')
+#bullet_includes = include_directories('C:/msys64/mingw64/include/bullet')
 
 source = [
     'Source/Main.cc',
@@ -34,11 +34,12 @@ source = [
     'Source/Render/Program.cc',
     'Source/Render/Texture.cc',
     'Source/Render/OpenGL/VAOManager.cc',
+    'Source/Render/OpenGL/UniformBuffer.cc',
     'Source/Render/OpenGL/VertexBuffer.cc',
     'Source/Render/OpenGL/IndexBuffer.cc',
     'Source/Render/OpenGL/RendererGL.cc',
     'Source/Render/Vulkan/RendererVulkan.cc',
 ]
 executable('demo', source, 
-    include_directories : [incdir, bullet_includes], 
+    include_directories : [incdir], 
     dependencies : [libgl, libsdl, libglew, libsdl_image, libvulkan, libassimp, libbullet])
