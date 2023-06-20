@@ -4,6 +4,7 @@
 #include "Render/Renderable.hh"
 #include "Render/OpenGL/UniformBuffer.hh"
 #include "Plugins/SDL2_image/SDL2ImgImporter.hh"
+#include "Core/Task.hh"
 
 namespace Solis
 {
@@ -26,7 +27,8 @@ private:
     float mTime = 0.0;
 
     UPtr<SDL2ImgImporter> mImageImporter;
-
+    Optional<Task<>> windowTask;
+    Optional<Task<>> uniformTask;
 };
 
 } // namespace Solis

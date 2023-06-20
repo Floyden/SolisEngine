@@ -6,6 +6,7 @@
 #include <deque>
 #include <queue>
 #include <map>
+#include <optional>
 
 #include <unordered_set>
 #include <unordered_map>
@@ -38,6 +39,9 @@ using SPtr = std::shared_ptr<T>;
 
 template<class T>
 using UPtr = std::unique_ptr<T>;
+
+template<class T>
+using Optional = std::optional<T>;
 
 template<class T, class H = std::hash<T>, class E = std::equal_to<T>>
 using UnorderedSet = std::unordered_set<T, H, E>;

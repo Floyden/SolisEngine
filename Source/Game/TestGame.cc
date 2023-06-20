@@ -13,7 +13,6 @@ void TestGame::Init()
     
     mImageImporter = std::make_unique<SDL2ImgImporter>();
     mTexture = Texture::Create(mImageImporter->Import("Resources/Floor/bricks.png"));
-    
 
     Program program;
     program.LoadFrom(gBasicVertexShaderSource, gBasicFragmentShaderSource);
@@ -31,23 +30,32 @@ void TestGame::Init()
     mRenderable->SetMesh(quadHandle);
 
     mUBO = UniformBuffer::Create(12);
-    /*
-    mRenderable = Renderable().withMaterial(material).withMesh(mesh);
-    */
+
+    windowTask.emplace(
+        std::bind(
+            &Window::ProcessEvents,
+            mWindow.get())
+    );
+
+    uniformTask.emplace(std::bind(
+        [](float* time, Transform* transform, UniformBuffer* ubo) {
+            transform->SetPosition(Vec3(
+                glm::sin(*time * 2.0) * 0.5,
+                glm::cos(*time * 2.0) * 1.0,
+                0.0
+            ));
+            ubo->WriteData(0, 12, glm::value_ptr(transform->GetPosition()));
+        },
+        &mTime, &mTransform, mUBO.get()
+    )).After(&*windowTask);
 }
 
 void TestGame::Update(float delta)
 {
-    mWindow->ProcessEvents();
-    mRunMainLoop = !mWindow->CloseRequested();
-
     mTime += delta;
-    mTransform.SetPosition(Vec3(
-        glm::sin(mTime) * 1.0,
-        glm::cos(mTime) * 1.0,
-        0.0
-    ));
-    mUBO->WriteData(0, 12, glm::value_ptr(mTransform.GetPosition()));
+    windowTask->Execute();
+    uniformTask->Execute();
+    mRunMainLoop = !mWindow->CloseRequested();
 }
 
 void checkError(const std::string& msg) {
