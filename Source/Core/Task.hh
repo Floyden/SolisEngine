@@ -67,21 +67,47 @@ private:
     bool mHasCompleted;
 };
 
+
+template<typename T>
+struct ScheduleStage 
+{
+    static constexpr std::type_index GetTypeIndex()
+    {
+        return std::type_index(typeid(T));
+    }
+};
+
+struct StartUpStage : public ScheduleStage<StartUpStage>{};
+struct UpdateStage : public ScheduleStage<UpdateStage>{};
+
 class TaskScheduler
 {
 public:
-
-    TaskScheduler* AddTask(TaskBase* task)
+    template<typename Stage = UpdateStage>
+    TaskScheduler* AddTask(std::function<void()>&& fn)
     {
-        mTasks.emplace_back(task);
+        mTasks.emplace_back(new Task<void>(std::move(fn)));
+        mStages[Stage::GetTypeIndex()] += 1;
         return this;
     }
 
-    void ExecuteNext() {
-
+    TaskScheduler* AddTask(Task<>& task)
+    {
+        mTasks.push_back(std::make_unique<Task<>>(std::forward<Task<>>(task)));
+        return this;
     }
 
-    Vector<TaskBase*> mTasks;
+    void ExecuteAll() 
+    {
+        for(auto& task: mTasks)
+            task->Execute();
+    }
+
+    Vector<UPtr<TaskBase>> mTasks;
+    UnorderedMap<std::type_index, size_t> mStages;
+
+    // Store which Stages depend on other stages
+    UnorderedMap<std::type_index, Vector<std::type_index>> mStageDependencies;
 };
 
 
