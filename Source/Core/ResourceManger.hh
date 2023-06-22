@@ -28,6 +28,22 @@ public:
 
         return handle;
     }
+    
+    /**
+     * Construct and add a Resource to the ResourceManager. A ResourceHandle for the object is returned.
+    */
+    template<class T, typename... Args>
+    ResourceHandle<T> Add(Args&&... resource) 
+    {   
+        std::uniform_int_distribution<uint_fast64_t> dist;
+        size_t rId = static_cast<size_t>(dist(rng));
+        mResourceMap[rId] = std::make_unique<T>(std::forward<Args>(resource)...);
+
+        ResourceHandle<T> handle;
+        handle.mId = rId;
+
+        return handle;
+    }
 
     /**
      * Returns a non-owning pointer to the resource if it exists, otherwise a nullptr is returned

@@ -31,6 +31,7 @@ source = [
     'Source/Render/RenderTexture.cc',
     'Source/Render/VertexData.cc',
     'Source/Render/Mesh.cc',
+    'Source/Render/Material.cc',
     'Source/Render/Program.cc',
     'Source/Render/Texture.cc',
     'Source/Render/OpenGL/VAOManager.cc',

@@ -18,10 +18,17 @@ public:
 };
 
 
+struct DefaultMaterialDesc{
+	HProgram program;
+	HTexture diffusionTexture;
+	HTexture normalTexture;
+};
+
 class DefaultMaterial : public Material
 {
 public:
 	DefaultMaterial() = default;
+	DefaultMaterial(const DefaultMaterialDesc& desc);
 	DefaultMaterial(DefaultMaterial&& material) = default;
 	virtual ~DefaultMaterial() = default;
 

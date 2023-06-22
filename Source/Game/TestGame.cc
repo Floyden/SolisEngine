@@ -49,13 +49,12 @@ void TestGame::Init()
     program.LoadFrom(gBasicVertexShaderSource, gBasicFragmentShaderSource);
     mProgram = resourceManager->Add(std::move(program));
 
-    DefaultMaterial material;
-    material.SetProgram(mProgram);
-    material.SetDiffusionTexture(mTexture);
-    auto materialHandle = resourceManager->Add(std::move(material));
+    auto materialHandle = resourceManager->Add<DefaultMaterial>(DefaultMaterialDesc{
+        .program = mProgram, 
+        .diffusionTexture = mTexture
+    });
 
-    Mesh mesh = Mesh::FromShape(Shapes::Cube(0.5));
-    HMesh quadHandle = resourceManager->Add(std::move(mesh));
+    HMesh quadHandle = resourceManager->Add(Mesh::FromShape(Shapes::Cube(0.5)));
     mRenderable = std::make_shared<Renderable>();
     mRenderable->SetMaterial(materialHandle);
     mRenderable->SetMesh(quadHandle);
@@ -76,9 +75,7 @@ void TestGame::Init()
     mCameraUBO = UniformBuffer::Create(16 * sizeof(float));
 
     mCamera = std::make_unique<Camera>(45.f, 800.0f/600.0f, 0.01f, 1000.f);
-    mCamera->GetPosition().y = 1.0;
     mCamera->SetRotation(Quaternion(0.0, 0.0, 1.0, 0.0));
-    //mCamera->Rotate(Vec3(0.0, 1.0, 0.0), 3.1415);
     mCameraUBO->WriteData(0, mCameraUBO->Size(), glm::value_ptr(mCamera->GetView()));
 
     scheduler.AddTask(
