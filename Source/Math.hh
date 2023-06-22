@@ -34,7 +34,19 @@ struct Transform
     void SetScale(const Vec3& _scale) { scale = _scale; }
 
     void Move(const Vec3& _position) { position += _position; }
-    void Roatate(const Quaternion& _rotation) { rotation *= _rotation; }
+
+    void Roatate(const Quaternion& _rotation) 
+    { 
+        rotation *= _rotation; 
+        rotation = glm::normalize(rotation); 
+    }
+
+    void Roatate(const Vec3& _axis, float amount) 
+    { 
+        rotation *= glm::quat(amount, _axis); 
+        rotation = glm::normalize(rotation); 
+    }
+    
     void Scale(const Vec3& _scale) { scale += _scale; }
 
     Vec3& GetPosition() { return position; }
@@ -49,9 +61,9 @@ struct Transform
     Matrix4 GetTransform() const
     {
         Matrix4 transform(1.0f);
-        glm::translate(transform, position);
+        transform = glm::translate(transform, position);
         transform = transform * glm::toMat4(rotation);
-        glm::scale(transform, scale);
+        transform = glm::scale(transform, scale);
 
         return transform;
     }
