@@ -4,9 +4,14 @@
 
 namespace Solis
 {
+
 class Renderable
 {
 public:
+	Renderable() = default;
+	Renderable(const HMesh& mesh, const HDefaultMaterial& material) :
+		mMesh(mesh), mMaterial(material) {};
+
 	void SetMesh(const HMesh& mesh) { mMesh = mesh; }
 	HMesh GetMesh() const { return mMesh; }
 

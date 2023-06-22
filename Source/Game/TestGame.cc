@@ -55,9 +55,7 @@ void TestGame::Init()
     });
 
     HMesh quadHandle = resourceManager->Add(Mesh::FromShape(Shapes::Cube(0.5)));
-    mRenderable = std::make_shared<Renderable>();
-    mRenderable->SetMaterial(materialHandle);
-    mRenderable->SetMesh(quadHandle);
+    mRenderable = std::make_shared<Renderable>(quadHandle, materialHandle);
 
     grid.extends = Vec2i(3, 2);
     grid.renderable = mRenderable.get();
