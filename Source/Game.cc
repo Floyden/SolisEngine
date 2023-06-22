@@ -33,6 +33,10 @@ void Game::LoadDefaultModules()
 void Game::Destroy()
 {
     mRender->Destroy();
+    if(mModules)
+        mModules->Shutdown();
+    if(mWindow)
+        mWindow->Destroy();
 }
 
 } // namespace Solis

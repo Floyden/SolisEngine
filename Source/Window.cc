@@ -37,7 +37,9 @@ Window::~Window()
 
 void Window::Destroy() 
 {
-    if(!mWindow) {
+    if(mContext)
+        SDL_GL_DeleteContext(mContext);
+    if(mWindow) {
         SDL_DestroyWindow(mWindow);
         mWindow = nullptr;
     }
