@@ -6,34 +6,79 @@
 
 namespace Solis
 {
+const String LEVEL[] = {
+    "##########",
+    "##......##",
+    "##..##..##",
+    "##......##",
+    ".........."
+    };
+    //"##########";
+
+const size_t WIDTH = 10;
+const size_t HEIGHT = 5;
+
+
+Grid GenerateGrid(HMesh cube, HMesh quad, HDefaultMaterial material) 
+{
+    Grid grid;
+
+    grid.extends = Vec2i(WIDTH, HEIGHT);
+    grid.globalTransform.Roatate(Vec3(1.0, 0.0, 0.0), -3.1415 * 0.5);
+    grid.globalTransform.GetPosition().z -= 5.5;
+    grid.renderables.emplace_back(cube, material);
+    grid.renderables.emplace_back(quad, material);
+
+    for(size_t h = 0; h < HEIGHT; h++)
+    {
+        for(size_t w = 0; w < WIDTH; w++)
+        {
+            grid.transformations.emplace_back(UniformBuffer::Create(16 * sizeof(float)));
+            Transform trans;
+            trans.GetPosition().x = w * 0.5;
+            trans.GetPosition().y = h * -0.5;
+
+            if(LEVEL[h][w] == '.') {
+                grid.cells.emplace_back(CellType::eGround);
+            } else {
+                grid.cells.emplace_back(CellType::eWall);
+                trans.GetPosition().z = 0.25;
+            }
+            grid.transformations.back()->WriteData(0, 16 * sizeof(float), glm::value_ptr(grid.globalTransform.GetTransform() * trans.GetTransform()));
+        }
+    }
+
+    return grid;
+}
+
 void UpdateInput(std::chrono::duration<float>* delta, Camera* camera, UniformBuffer* ubo, Input* input) 
 {
     bool moved = false;
     if(input->IsKeyPressed(SDLK_w)) 
     {
-        camera->GetPosition() += (Vec3(0.0, 1.0, 0.0) * delta->count() * 0.6f);
+        camera->GetPosition() += (Vec3(0.0, 1.0, 0.0) * delta->count() * 1.0f);
         moved = true;
     }
     if(input->IsKeyPressed(SDLK_s)) 
     {
-        camera->GetPosition() += (Vec3(0.0, -1.0, 0.0) * delta->count() * 0.6f);
+        camera->GetPosition() += (Vec3(0.0, -1.0, 0.0) * delta->count() * 1.0f);
         moved = true;
     }
     if(input->IsKeyPressed(SDLK_a)) 
     {
-        camera->GetPosition() += (Vec3(-1.0, 0.0, 0.0) * delta->count() * 0.6f);
+        camera->GetPosition() += (Vec3(-1.0, 0.0, 0.0) * delta->count() * 1.f);
         moved = true;
     }
     if(input->IsKeyPressed(SDLK_d)) 
     {
-        camera->GetPosition() += (Vec3(1.0, 0.0, 0.0) * delta->count() * 0.6f);
+        camera->GetPosition() += (Vec3(1.0, 0.0, 0.0) * delta->count() * 1.f);
         moved = true;
     }
 
     if(!moved)
         return;
     
-    ubo->WriteData(0, ubo->Size(), glm::value_ptr(camera->GetView()));
+    ubo->WriteData(0, 64, glm::value_ptr(camera->GetView()));
 }
 
 void TestGame::Init()
@@ -54,27 +99,19 @@ void TestGame::Init()
         .diffusionTexture = mTexture
     });
 
-    HMesh quadHandle = resourceManager->Add(Mesh::FromShape(Shapes::Cube(0.5)));
-    mRenderable = std::make_shared<Renderable>(quadHandle, materialHandle);
+    HMesh cubeHandle = resourceManager->Add(Mesh::FromShape(Shapes::Cube(0.5)));
+    HMesh quadHandle = resourceManager->Add(Mesh::FromShape(Shapes::Square(0.5)));
+    mRenderable = std::make_shared<Renderable>(cubeHandle, materialHandle);
 
-    grid.extends = Vec2i(3, 2);
-    grid.renderable = mRenderable.get();
-    for(size_t i = 0; i < 6; i++)
-    {
-        grid.transformations.emplace_back(UniformBuffer::Create(16 * sizeof(float)));
-        Transform trans;
-        trans.GetPosition().x = i%3 * 0.5;
-        trans.GetPosition().y = i%2 * -0.5;
-        auto matrix = trans.GetTransform();
-        grid.transformations[i]->WriteData(0, 16 * sizeof(float), glm::value_ptr(trans.GetTransform()));
-    }
-
+    grid = GenerateGrid(cubeHandle, quadHandle, materialHandle);
+    
     mUBO = UniformBuffer::Create(16 * sizeof(float));
-    mCameraUBO = UniformBuffer::Create(16 * sizeof(float));
+    mCameraUBO = UniformBuffer::Create(2 * 16 * sizeof(float));
 
     mCamera = std::make_unique<Camera>(45.f, 800.0f/600.0f, 0.01f, 1000.f);
     mCamera->SetRotation(Quaternion(0.0, 0.0, 1.0, 0.0));
-    mCameraUBO->WriteData(0, mCameraUBO->Size(), glm::value_ptr(mCamera->GetView()));
+    mCameraUBO->WriteData(0, 64, glm::value_ptr(mCamera->GetView()));
+    mCameraUBO->WriteData(64, 64, glm::value_ptr(mCamera->GetProjection()));
 
     scheduler.AddTask(
         std::bind(
@@ -158,20 +195,28 @@ void TestGame::Render()
         mRender->BindVertexBuffers(i, &buffer, 1);
     }
     mRender->BindIndexBuffer(mesh->mIndexBuffer);
-    mRender->DrawIndexed(mesh->mIndexBuffer->GetIndexCount());
+    //mRender->DrawIndexed(mesh->mIndexBuffer->GetIndexCount());
 
-    for(auto& buffer: grid.transformations) {
+    Mesh* wallMesh = resourceManager->Get(grid.renderables[0].GetMesh());
+    Mesh* groundMesh = resourceManager->Get(grid.renderables[1].GetMesh());
+
+    for(size_t i = 0; i < WIDTH * HEIGHT; i++) {
+        auto& buffer = grid.transformations[i];
+        auto& cell = grid.cells[i];
+        Mesh* cellMesh = cell == CellType::eGround ? groundMesh : wallMesh;
+
         glBindBufferRange(GL_UNIFORM_BUFFER, 0, buffer->GetHandle(), 0, buffer->Size());
         
-        mRender->BindVertexAttributes(mesh->mAttributes);
 
-        for(size_t i = 0; i < mesh->mVertexData->GetBufferCount(); i++) 
+        mRender->BindVertexAttributes(cellMesh->mAttributes);
+
+        for(size_t i = 0; i < cellMesh->mVertexData->GetBufferCount(); i++) 
         {
-            auto buffer = mesh->mVertexData->GetBuffer(i);
+            auto buffer = cellMesh->mVertexData->GetBuffer(i);
             mRender->BindVertexBuffers(i, &buffer, 1);
         }
-        mRender->BindIndexBuffer(mesh->mIndexBuffer);
-        mRender->DrawIndexed(mesh->mIndexBuffer->GetIndexCount());
+        mRender->BindIndexBuffer(cellMesh->mIndexBuffer);
+        mRender->DrawIndexed(cellMesh->mIndexBuffer->GetIndexCount());
 
     }
 

@@ -10,12 +10,18 @@
 namespace Solis
 {
 
+enum class CellType {
+    eGround,
+    eWall,
+};
+
 class Grid {
 public:
     Vec2i extends;
-    Renderable* renderable;
+    Vector<Renderable> renderables;
     Transform globalTransform;
     Vector<SPtr<UniformBuffer>> transformations;
+    Vector<CellType> cells;
 };
 
 class TestGame : public Game
