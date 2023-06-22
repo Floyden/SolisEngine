@@ -139,11 +139,11 @@ static const char* gBasicVertexShaderSource =
     "layout(location = 0) in vec3 inPos;\n" 
     "layout(location = 1) in vec3 inNormals;\n" 
     "layout(location = 2) in vec2 inUVs;\n" 
-    "uniform transform { vec3 uTransform; };\n"
+    "uniform transform { mat4 uTransform; mat4 uView; };\n"
     "out vec2 outUVs;\n" 
     "void main() {\n"
     "   outUVs = inUVs;\n" 
-    "   gl_Position = vec4(uTransform + inPos, 1.0);\n" 
+    "   gl_Position = uTransform * vec4(inPos, 1.0);\n" 
     "}"; 
 
 static const char* gBasicFragmentShaderSource =
@@ -151,11 +151,12 @@ static const char* gBasicFragmentShaderSource =
     "in vec2 outUVs;"
     "out vec4 color;"
     "uniform sampler2D uAlbedo;"
+    "uniform sampler2D uNormal;"
     "void main() {\n"
     //"   color = vec4(1.0, 0.5, 1.0, 1.0);"
     "   color = texture(uAlbedo, outUVs);"
     "}"; 
-
+/*
 //TODO: instance this
 static const char* gLightVShaderSource =
     "#version 410 core\n" 
@@ -179,6 +180,7 @@ static const char* gLightFShaderSource =
     "   normalOut = normal;"
     "}";
     
+*/
 static const char* gPassthroughShaderSource = 
     "#version 410 core\n" 
     "layout(location = 0) in vec3 pos;"

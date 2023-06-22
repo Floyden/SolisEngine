@@ -5,6 +5,7 @@
 
 namespace Solis
 {
+
 void TestGame::Init()
 {   
     LoadDefaultModules();
@@ -23,38 +24,54 @@ void TestGame::Init()
     material.SetDiffusionTexture(mTexture);
     auto materialHandle = resourceManager->Add(std::move(material));
 
-    Mesh mesh = Mesh::FromShape(Shapes::Square(0.5));
+    Mesh mesh = Mesh::FromShape(Shapes::Cube(0.5));
     HMesh quadHandle = resourceManager->Add(std::move(mesh));
     mRenderable = std::make_shared<Renderable>();
     mRenderable->SetMaterial(materialHandle);
     mRenderable->SetMesh(quadHandle);
 
-    mUBO = UniformBuffer::Create(12);
+    grid.extends = Vec2i(3, 2);
+    grid.renderable = mRenderable.get();
+    //grid.transformations.resize(2*3, );
+    for(size_t i = 0; i < 6; i++)
+    {
+        grid.transformations.emplace_back(UniformBuffer::Create(16 * sizeof(float)));
+        Transform trans;
+        trans.GetPosition().x = i%3 * 0.5;
+        trans.GetPosition().y = i%2 * -0.5;
+        auto matrix = trans.GetTransform();
+        grid.transformations[i]->WriteData(0, 16 * sizeof(float), glm::value_ptr(trans.GetTransform()));
+    }
 
-    windowTask.emplace(
+    mUBO = UniformBuffer::Create(16 * sizeof(float));
+
+    scheduler.AddTask(
         std::bind(
             &Window::ProcessEvents,
-            mWindow.get())
-    );
+            mWindow.get()));
 
-    uniformTask.emplace(std::bind(
+    scheduler.AddTask(Task<>(std::bind(
         [](float* time, Transform* transform, UniformBuffer* ubo) {
             transform->SetPosition(Vec3(
                 glm::sin(*time * 2.0) * 0.5,
                 glm::cos(*time * 2.0) * 1.0,
                 0.0
             ));
-            ubo->WriteData(0, 12, glm::value_ptr(transform->GetPosition()));
+            transform->Roatate(Vec3(
+                0.0,
+                1.0,
+                0.0
+            ), glm::sin(0.01));
+            ubo->WriteData(0, ubo->Size(), glm::value_ptr(transform->GetTransform()));
         },
         &mTime, &mTransform, mUBO.get()
-    )).After(&*windowTask);
+    )).After(&*windowTask));
 }
 
 void TestGame::Update(float delta)
 {
     mTime += delta;
-    windowTask->Execute();
-    uniformTask->Execute();
+    scheduler.ExecuteAll();
     mRunMainLoop = !mWindow->CloseRequested();
 }
 
@@ -86,9 +103,9 @@ void TestGame::Render()
     mRender->BindTexture(texture);
     program->SetUniform1i("uAlbedo", 0);
 
-    glBindBufferRange(GL_UNIFORM_BUFFER, 0, mUBO->GetHandle(), 0, mUBO->Size());
     uint32_t index = glGetUniformBlockIndex(program->GetHandle(), "transform"); 
     glUniformBlockBinding(program->GetHandle(), index, 0);
+/*    glBindBufferRange(GL_UNIFORM_BUFFER, 0, mUBO->GetHandle(), 0, mUBO->Size());
 
     //glBindTexture(GL_TEXTURE_2D, mTexture->GetHandle());
     
@@ -101,6 +118,22 @@ void TestGame::Render()
     }
     mRender->BindIndexBuffer(mesh->mIndexBuffer);
     mRender->DrawIndexed(mesh->mIndexBuffer->GetIndexCount());
+*/
+
+    for(auto& buffer: grid.transformations) {
+        glBindBufferRange(GL_UNIFORM_BUFFER, 0, buffer->GetHandle(), 0, buffer->Size());
+        
+        mRender->BindVertexAttributes(mesh->mAttributes);
+
+        for(size_t i = 0; i < mesh->mVertexData->GetBufferCount(); i++) 
+        {
+            auto buffer = mesh->mVertexData->GetBuffer(i);
+            mRender->BindVertexBuffers(i, &buffer, 1);
+        }
+        mRender->BindIndexBuffer(mesh->mIndexBuffer);
+        mRender->DrawIndexed(mesh->mIndexBuffer->GetIndexCount());
+
+    }
 
     mWindow->SwapWindow();
 }
