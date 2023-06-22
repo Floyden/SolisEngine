@@ -2,9 +2,39 @@
 #include "Render/Renderable.hh"
 #include "RandomThings.hh"
 #include "Core/ResourceManger.hh"
+#include "Input/Input.hh"
 
 namespace Solis
 {
+void UpdateInput(std::chrono::duration<float>* delta, Camera* camera, UniformBuffer* ubo, Input* input) 
+{
+    bool moved = false;
+    if(input->IsKeyPressed(SDLK_w)) 
+    {
+        camera->GetPosition() += (Vec3(0.0, 1.0, 0.0) * delta->count() * 0.6f);
+        moved = true;
+    }
+    if(input->IsKeyPressed(SDLK_s)) 
+    {
+        camera->GetPosition() += (Vec3(0.0, -1.0, 0.0) * delta->count() * 0.6f);
+        moved = true;
+    }
+    if(input->IsKeyPressed(SDLK_a)) 
+    {
+        camera->GetPosition() += (Vec3(-1.0, 0.0, 0.0) * delta->count() * 0.6f);
+        moved = true;
+    }
+    if(input->IsKeyPressed(SDLK_d)) 
+    {
+        camera->GetPosition() += (Vec3(1.0, 0.0, 0.0) * delta->count() * 0.6f);
+        moved = true;
+    }
+
+    if(!moved)
+        return;
+    
+    ubo->WriteData(0, ubo->Size(), glm::value_ptr(camera->GetView()));
+}
 
 void TestGame::Init()
 {   
@@ -32,7 +62,6 @@ void TestGame::Init()
 
     grid.extends = Vec2i(3, 2);
     grid.renderable = mRenderable.get();
-    //grid.transformations.resize(2*3, );
     for(size_t i = 0; i < 6; i++)
     {
         grid.transformations.emplace_back(UniformBuffer::Create(16 * sizeof(float)));
@@ -44,6 +73,13 @@ void TestGame::Init()
     }
 
     mUBO = UniformBuffer::Create(16 * sizeof(float));
+    mCameraUBO = UniformBuffer::Create(16 * sizeof(float));
+
+    mCamera = std::make_unique<Camera>(45.f, 800.0f/600.0f, 0.01f, 1000.f);
+    mCamera->GetPosition().y = 1.0;
+    mCamera->SetRotation(Quaternion(0.0, 0.0, 1.0, 0.0));
+    //mCamera->Rotate(Vec3(0.0, 1.0, 0.0), 3.1415);
+    mCameraUBO->WriteData(0, mCameraUBO->Size(), glm::value_ptr(mCamera->GetView()));
 
     scheduler.AddTask(
         std::bind(
@@ -65,6 +101,11 @@ void TestGame::Init()
             ubo->WriteData(0, ubo->Size(), glm::value_ptr(transform->GetTransform()));
         },
         &mTime, &mTransform, mUBO.get()
+    )).After(&*windowTask));
+
+    scheduler.AddTask(Task<>(std::bind(
+        UpdateInput,
+        &mDelta, mCamera.get(), mCameraUBO.get(), mModules->GetModule<Input>()
     )).After(&*windowTask));
 }
 
@@ -103,9 +144,14 @@ void TestGame::Render()
     mRender->BindTexture(texture);
     program->SetUniform1i("uAlbedo", 0);
 
-    uint32_t index = glGetUniformBlockIndex(program->GetHandle(), "transform"); 
+    uint32_t index = glGetUniformBlockIndex(program->GetHandle(), "viewProjection"); 
+    glUniformBlockBinding(program->GetHandle(), index, 1);
+    glBindBufferRange(GL_UNIFORM_BUFFER, 1, mCameraUBO->GetHandle(), 0, mCameraUBO->Size());
+
+    index = glGetUniformBlockIndex(program->GetHandle(), "transform"); 
     glUniformBlockBinding(program->GetHandle(), index, 0);
-/*    glBindBufferRange(GL_UNIFORM_BUFFER, 0, mUBO->GetHandle(), 0, mUBO->Size());
+    glBindBufferRange(GL_UNIFORM_BUFFER, 0, mUBO->GetHandle(), 0, mUBO->Size());
+
 
     //glBindTexture(GL_TEXTURE_2D, mTexture->GetHandle());
     
@@ -118,7 +164,6 @@ void TestGame::Render()
     }
     mRender->BindIndexBuffer(mesh->mIndexBuffer);
     mRender->DrawIndexed(mesh->mIndexBuffer->GetIndexCount());
-*/
 
     for(auto& buffer: grid.transformations) {
         glBindBufferRange(GL_UNIFORM_BUFFER, 0, buffer->GetHandle(), 0, buffer->Size());

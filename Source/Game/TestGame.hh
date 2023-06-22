@@ -40,6 +40,9 @@ private:
     Optional<Task<>> windowTask;
     Optional<Task<>> uniformTask;
     Grid grid;
+    UPtr<Camera> mCamera;
+    SPtr<UniformBuffer> mCameraUBO;
+
 };
 
 } // namespace Solis

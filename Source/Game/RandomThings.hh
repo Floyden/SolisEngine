@@ -139,11 +139,13 @@ static const char* gBasicVertexShaderSource =
     "layout(location = 0) in vec3 inPos;\n" 
     "layout(location = 1) in vec3 inNormals;\n" 
     "layout(location = 2) in vec2 inUVs;\n" 
-    "uniform transform { mat4 uTransform; mat4 uView; };\n"
+    "uniform transform { mat4 uTransform; };\n"
+    "uniform viewProjection { mat4 uView; };\n" 
     "out vec2 outUVs;\n" 
     "void main() {\n"
     "   outUVs = inUVs;\n" 
-    "   gl_Position = uTransform * vec4(inPos, 1.0);\n" 
+    "   mat4 view = 2.0 * uView;\n" 
+    "   gl_Position = uView * uTransform * vec4(inPos, 1.0);\n" 
     "}"; 
 
 static const char* gBasicFragmentShaderSource =
