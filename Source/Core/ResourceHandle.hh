@@ -9,7 +9,9 @@ namespace Solis
 {
 struct ResourceId {
     size_t id;
-    //std::type_index typeId;
+    std::type_index typeId;
+
+    auto operator<=>(const ResourceId& other) const { return id <=> other.id; }
 };    
 
 template<typename T>
@@ -18,12 +20,17 @@ class ResourceHandle
     friend class ResourceManager;
 
 public:
+    ResourceHandle(size_t id = 0) : mId({id, std::type_index(typeid(T))}) {};
 
     operator bool() const { return this->mData != 0; }
 
-private:
+    template <typename Other>
+    operator ResourceHandle<Other>() const {
+        return ResourceHandle<Other>(mId.id);
+    }
 
-    size_t mId;
+private:
+    ResourceId mId;
 };
     
 } // namespace Solis

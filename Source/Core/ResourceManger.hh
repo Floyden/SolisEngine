@@ -21,10 +21,8 @@ public:
     {   
         std::uniform_int_distribution<uint_fast64_t> dist;
         size_t rId = static_cast<size_t>(dist(rng));
-        mResourceMap[rId] = std::make_unique<T>(std::forward<T>(resource));
-
-        ResourceHandle<T> handle;
-        handle.mId = rId;
+        ResourceHandle<T> handle(rId);
+        mResourceMap[handle.mId] = std::make_unique<T>(std::forward<T>(resource));
 
         return handle;
     }
@@ -37,10 +35,8 @@ public:
     {   
         std::uniform_int_distribution<uint_fast64_t> dist;
         size_t rId = static_cast<size_t>(dist(rng));
-        mResourceMap[rId] = std::make_unique<T>(std::forward<Args>(resource)...);
-
-        ResourceHandle<T> handle;
-        handle.mId = rId;
+        ResourceHandle<T> handle(rId);
+        mResourceMap[handle.mId] = std::make_unique<T>(std::forward<Args>(resource)...);
 
         return handle;
     }
@@ -51,8 +47,9 @@ public:
     template<class T>
     T* Get(const ResourceHandle<T>& handle) 
     {   
-        if(mResourceMap.count(handle.mId))
-            return static_cast<T*>(mResourceMap[handle.mId].get());
+        auto it = mResourceMap.find(handle.mId);
+        if(it != mResourceMap.end())
+            return static_cast<T*>(it->second.get());
 
         return nullptr;
     }
@@ -74,7 +71,7 @@ public:
 
 private:
     // <ComponentType, List of components>
-    Map<size_t, UPtr<Resource>> mResourceMap;
+    Map<ResourceId, UPtr<Resource>> mResourceMap;
     std::mt19937 rng;
 };
 
