@@ -26,8 +26,8 @@ Grid GenerateGrid(HMesh cube, HMesh quad, HDefaultMaterial material)
     grid.extends = Vec2i(WIDTH, HEIGHT);
     grid.globalTransform.Roatate(Vec3(1.0, 0.0, 0.0), -3.1415 * 0.5);
     grid.globalTransform.GetPosition().z -= 5.5;
-    grid.renderables.emplace_back(cube, material);
-    grid.renderables.emplace_back(quad, material);
+    grid.renderables.emplace_back(cube, material, Transform());
+    grid.renderables.emplace_back(quad, material, Transform());
 
     for(size_t h = 0; h < HEIGHT; h++)
     {
@@ -101,7 +101,7 @@ void TestGame::Init()
 
     HMesh cubeHandle = resourceManager->Add(Mesh::FromShape(Shapes::Cube(0.5)));
     HMesh quadHandle = resourceManager->Add(Mesh::FromShape(Shapes::Square(0.5)));
-    mRenderable = std::make_shared<Renderable>(cubeHandle, materialHandle);
+    mRenderable = std::make_shared<Renderable>(cubeHandle, materialHandle, Transform());
 
     grid = GenerateGrid(cubeHandle, quadHandle, materialHandle);
     
@@ -123,7 +123,7 @@ void TestGame::Init()
             transform->SetPosition(Vec3(
                 glm::sin(*time * 2.0) * 0.5,
                 glm::cos(*time * 2.0) * 1.0,
-                0.0
+                -2.0
             ));
             transform->Roatate(Vec3(
                 0.0,
@@ -132,7 +132,7 @@ void TestGame::Init()
             ), glm::sin(0.01));
             ubo->WriteData(0, ubo->Size(), glm::value_ptr(transform->GetTransform()));
         },
-        &mTime, &mTransform, mUBO.get()
+        &mTime, &mRenderable->GetTransform(), mUBO.get()
     )).After(&*windowTask));
 
     scheduler.AddTask(Task<>(std::bind(
@@ -195,7 +195,7 @@ void TestGame::Render()
         mRender->BindVertexBuffers(i, &buffer, 1);
     }
     mRender->BindIndexBuffer(mesh->mIndexBuffer);
-    //mRender->DrawIndexed(mesh->mIndexBuffer->GetIndexCount());
+    mRender->DrawIndexed(mesh->mIndexBuffer->GetIndexCount());
 
     Mesh* wallMesh = resourceManager->Get(grid.renderables[0].GetMesh());
     Mesh* groundMesh = resourceManager->Get(grid.renderables[1].GetMesh());

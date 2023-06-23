@@ -37,7 +37,6 @@ private:
     SPtr<Renderable> mRenderable;
     //uint32_t mUBO;
     SPtr<UniformBuffer> mUBO;
-    Transform mTransform;
     HTexture mTexture;
     float mTime = 0.0;
 
