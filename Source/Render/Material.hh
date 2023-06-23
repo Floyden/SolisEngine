@@ -48,6 +48,7 @@ private:
 	HTexture mNormalTexture;
 };
 
+using HMaterial = ResourceHandle<Material>;
 using HDefaultMaterial = ResourceHandle<DefaultMaterial>;
 
 } // namespace Solis

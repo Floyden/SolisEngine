@@ -9,18 +9,18 @@ class Renderable
 {
 public:
 	Renderable() = default;
-	Renderable(const HMesh& mesh, const HDefaultMaterial& material) :
+	Renderable(const HMesh& mesh, const HMaterial& material) :
 		mMesh(mesh), mMaterial(material) {};
 
 	void SetMesh(const HMesh& mesh) { mMesh = mesh; }
 	HMesh GetMesh() const { return mMesh; }
 
-	void SetMaterial(const HDefaultMaterial& material) { mMaterial = material; }
-	HDefaultMaterial GetMaterial() const { return mMaterial; }
+	void SetMaterial(const HMaterial& material) { mMaterial = material; }
+	HMaterial GetMaterial() const { return mMaterial; }
 
 private:
 	HMesh mMesh;
-	HDefaultMaterial mMaterial;
+	HMaterial mMaterial;
 
 };
 }// namespace Solis

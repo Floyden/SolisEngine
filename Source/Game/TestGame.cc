@@ -163,7 +163,7 @@ void TestGame::Render()
     auto resourceManager = mModules->GetModule<ResourceManager>();
     mRender->Clear(0.0f, 0.0f, 0.4f, 0.0f);
     
-    auto material = resourceManager->Get(mRenderable->GetMaterial());
+    auto material = resourceManager->Get<DefaultMaterial>(mRenderable->GetMaterial());
     auto meshHandle = mRenderable->GetMesh();
 
     Texture* texture = resourceManager->Get(material->GetDiffusionTexture());
