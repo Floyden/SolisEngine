@@ -47,7 +47,7 @@ ResourceHandle<Image> SDL2ImgImporter::Import(const String& path)
     uint32_t width = surface->w;
     uint32_t height = surface->h;
     Vector<uint8_t> data;
-    for (int i = 0; i < height; i++)
+    for (uint32_t i = 0; i < height; i++)
     {
         data.insert(data.end(), 
             &reinterpret_cast<char*>(surface->pixels)[i * surface->pitch], 
