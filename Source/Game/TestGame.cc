@@ -26,24 +26,26 @@ Grid GenerateGrid(HMesh cube, HMesh quad, HDefaultMaterial material)
     grid.extends = Vec2i(WIDTH, HEIGHT);
     grid.globalTransform.Roatate(Vec3(1.0, 0.0, 0.0), -3.1415 * 0.5);
     grid.globalTransform.GetPosition().z -= 5.5;
-    grid.renderables.emplace_back(cube, material, Transform());
-    grid.renderables.emplace_back(quad, material, Transform());
 
     for(size_t h = 0; h < HEIGHT; h++)
     {
         for(size_t w = 0; w < WIDTH; w++)
         {
             grid.transformations.emplace_back(UniformBuffer::Create(16 * sizeof(float)));
+            
             Transform trans;
             trans.GetPosition().x = w * 0.5;
             trans.GetPosition().y = h * -0.5;
-
+            
             if(LEVEL[h][w] == '.') {
                 grid.cells.emplace_back(CellType::eGround);
+                grid.renderables.emplace_back(quad, material, trans);
             } else {
                 grid.cells.emplace_back(CellType::eWall);
                 trans.GetPosition().z = 0.25;
+                grid.renderables.emplace_back(cube, material, trans);
             }
+
             grid.transformations.back()->WriteData(0, 16 * sizeof(float), glm::value_ptr(grid.globalTransform.GetTransform() * trans.GetTransform()));
         }
     }
@@ -148,8 +150,8 @@ void TestGame::Update(float delta)
     mRunMainLoop = !mWindow->CloseRequested();
 }
 
-void checkError(const std::string& msg) {
-
+void checkError(const std::string& msg) 
+{
     GLenum err;
     while((err = glGetError()) != GL_NO_ERROR)
     {
@@ -197,13 +199,10 @@ void TestGame::Render()
     mRender->BindIndexBuffer(mesh->mIndexBuffer);
     mRender->DrawIndexed(mesh->mIndexBuffer->GetIndexCount());
 
-    Mesh* wallMesh = resourceManager->Get(grid.renderables[0].GetMesh());
-    Mesh* groundMesh = resourceManager->Get(grid.renderables[1].GetMesh());
-
-    for(size_t i = 0; i < WIDTH * HEIGHT; i++) {
+    for(size_t i = 0; i < WIDTH * HEIGHT; i++) 
+    {
         auto& buffer = grid.transformations[i];
-        auto& cell = grid.cells[i];
-        Mesh* cellMesh = cell == CellType::eGround ? groundMesh : wallMesh;
+        Mesh* cellMesh = resourceManager->Get(grid.renderables[i].GetMesh());
 
         glBindBufferRange(GL_UNIFORM_BUFFER, 0, buffer->GetHandle(), 0, buffer->Size());
         
@@ -228,15 +227,15 @@ void TestGame::RunMainLoop()
     mRunMainLoop = true;
     mLastFrame = std::chrono::steady_clock::now();
 
-    while (mRunMainLoop) {
-
+    while (mRunMainLoop) 
+    {
         // Update everything
         mNow = std::chrono::steady_clock::now();
         mDelta = mNow - mLastFrame;
         mLastFrame = mNow;
-    
+
         Update(mDelta.count());
-        Render();        
+        Render();
     }
 }
 
