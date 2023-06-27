@@ -19,15 +19,21 @@ const size_t WIDTH = 10;
 const size_t HEIGHT = 5;
 
 
-Grid GenerateGrid(HMesh cube, HMesh quad, HDefaultMaterial material) 
+//Grid GenerateGrid(HMesh cube, HMesh quad, HDefaultMaterial material) 
+Grid GenerateGrid(Renderable ground, Renderable walls)
 {
     Grid grid;
 
     grid.extends = Vec2i(WIDTH, HEIGHT);
     grid.globalTransform.Roatate(Vec3(1.0, 0.0, 0.0), -3.1415 * 0.5);
     grid.globalTransform.GetPosition().z -= 5.5;
-    grid.renderables.emplace_back(cube, material, Transform());
-    grid.renderables.emplace_back(quad, material, Transform());
+
+    ground.SetTransform(Transform());
+    walls.SetTransform(Transform());
+    walls.GetTransform().SetScale(Vec3(0.25));
+
+    grid.renderables.emplace_back(walls);
+    grid.renderables.emplace_back(ground);
 
     for(size_t h = 0; h < HEIGHT; h++)
     {
@@ -43,6 +49,7 @@ Grid GenerateGrid(HMesh cube, HMesh quad, HDefaultMaterial material)
             } else {
                 grid.cells.emplace_back(CellType::eWall);
                 trans.GetPosition().z = 0.25;
+                trans.SetScale(Vec3(0.25));
             }
             grid.transformations.back()->WriteData(0, 16 * sizeof(float), glm::value_ptr(grid.globalTransform.GetTransform() * trans.GetTransform()));
         }
@@ -88,22 +95,34 @@ void TestGame::Init()
     auto resourceManager = mModules->GetModule<ResourceManager>();
     
     mImageImporter = std::make_unique<SDL2ImgImporter>();
-    mTexture = Texture::Create(mImageImporter->Import("Resources/Floor/bricks.png"));
+    mTextureGround = Texture::Create(mImageImporter->Import("Resources/Floor/bricks.png"));
+    mTextureWalls = Texture::Create(mImageImporter->Import("Resources/Cube/Cube_BaseColor.png"));
+    mSceneImporter = std::make_unique<AssimpImporter>();
+
 
     Program program;
     program.LoadFrom(gBasicVertexShaderSource, gBasicFragmentShaderSource);
     mProgram = resourceManager->Add(std::move(program));
 
-    auto materialHandle = resourceManager->Add<DefaultMaterial>(DefaultMaterialDesc{
+    auto materialHandleGround = resourceManager->Add<DefaultMaterial>(DefaultMaterialDesc{
         .program = mProgram, 
-        .diffusionTexture = mTexture
+        .diffusionTexture = mTextureGround
+    }); 
+    auto materialHandleWall = resourceManager->Add<DefaultMaterial>(DefaultMaterialDesc{
+        .program = mProgram, 
+        .diffusionTexture = mTextureWalls
     });
 
-    HMesh cubeHandle = resourceManager->Add(Mesh::FromShape(Shapes::Cube(0.5)));
+    HMesh cubeHandle = mSceneImporter->ImportMesh("Resources/Cube/Cube.gltf");
+    //HMesh cubeHandle = resourceManager->Add(Mesh::FromShape(Shapes::Cube(0.5)));
     HMesh quadHandle = resourceManager->Add(Mesh::FromShape(Shapes::Square(0.5)));
-    mRenderable = std::make_shared<Renderable>(cubeHandle, materialHandle, Transform());
+    mRenderable = std::make_shared<Renderable>(cubeHandle, materialHandleGround, Transform());
+    mRenderable->GetTransform().SetScale(Vec3(0.25));
 
-    grid = GenerateGrid(cubeHandle, quadHandle, materialHandle);
+    Renderable ground = Renderable(quadHandle, materialHandleGround, Transform());
+    Renderable wall = Renderable(cubeHandle, materialHandleWall, Transform());
+    //wall.GetTransform().SetScale(Vec3(0.25));
+    grid = GenerateGrid(ground, wall);
     
     mUBO = UniformBuffer::Create(16 * sizeof(float));
     mCameraUBO = UniformBuffer::Create(2 * 16 * sizeof(float));
@@ -121,9 +140,9 @@ void TestGame::Init()
     scheduler.AddTask(Task<>(std::bind(
         [](float* time, Transform* transform, UniformBuffer* ubo) {
             transform->SetPosition(Vec3(
-                glm::sin(*time * 2.0) * 0.5,
-                glm::cos(*time * 2.0) * 1.0,
-                -2.0
+                glm::sin(*time * 2.0) * 0.5 + 2.,
+                1.0,
+                glm::cos(*time * 2.0) * 1.0 - 5.5
             ));
             transform->Roatate(Vec3(
                 0.0,
@@ -199,15 +218,21 @@ void TestGame::Render()
 
     Mesh* wallMesh = resourceManager->Get(grid.renderables[0].GetMesh());
     Mesh* groundMesh = resourceManager->Get(grid.renderables[1].GetMesh());
+    auto wallMaterial = resourceManager->Get<DefaultMaterial>(grid.renderables[0].GetMaterial());
+    auto groundMaterial = resourceManager->Get<DefaultMaterial>(grid.renderables[1].GetMaterial());
+    auto wallTexture = resourceManager->Get(wallMaterial->GetDiffusionTexture());
+    auto groundTexture = resourceManager->Get(groundMaterial->GetDiffusionTexture());
 
     for(size_t i = 0; i < WIDTH * HEIGHT; i++) {
         auto& buffer = grid.transformations[i];
         auto& cell = grid.cells[i];
         Mesh* cellMesh = cell == CellType::eGround ? groundMesh : wallMesh;
+        DefaultMaterial* cellMaterial = cell == CellType::eGround ? groundMaterial : wallMaterial;
+        Texture* cellTexture = cell == CellType::eGround ? groundTexture : wallTexture;
 
         glBindBufferRange(GL_UNIFORM_BUFFER, 0, buffer->GetHandle(), 0, buffer->Size());
+        mRender->BindTexture(cellTexture);
         
-
         mRender->BindVertexAttributes(cellMesh->mAttributes);
 
         for(size_t i = 0; i < cellMesh->mVertexData->GetBufferCount(); i++) 

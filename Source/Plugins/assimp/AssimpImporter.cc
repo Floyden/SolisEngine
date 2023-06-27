@@ -98,10 +98,10 @@ HMesh AssimpImporter::ImportMesh(const String& path)
 
     Vector<VertexAttribute> attributes;
     attributes.push_back(VertexAttribute{0, 3, 0x1406, 0, 0});
-    if(hasUVs)
-        attributes.push_back(VertexAttribute{1, 2, 0x1406, 0, 0});
     if(hasNormals)
-        attributes.push_back(VertexAttribute{2, 3, 0x1406, 0, 0});
+        attributes.push_back(VertexAttribute{1, 3, 0x1406, 0, 0});
+    if(hasUVs)
+        attributes.push_back(VertexAttribute{2, 2, 0x1406, 0, 0});
 
     mesh.mAttributes = VertexAttributes::Create(attributes);
     mesh.mVertexData = std::make_shared<VertexData>();
