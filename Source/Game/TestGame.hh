@@ -4,6 +4,7 @@
 #include "Render/Renderable.hh"
 #include "Render/OpenGL/UniformBuffer.hh"
 #include "Plugins/SDL2_image/SDL2ImgImporter.hh"
+#include "Plugins/assimp/AssimpImporter.hh"
 #include "Core/Task.hh"
 #include "Scene/Camera.hh"
 
@@ -37,9 +38,11 @@ private:
     SPtr<Renderable> mRenderable;
     //uint32_t mUBO;
     SPtr<UniformBuffer> mUBO;
-    HTexture mTexture;
+    HTexture mTextureGround;
+    HTexture mTextureWalls;
     float mTime = 0.0;
 
+    UPtr<AssimpImporter> mSceneImporter;
     UPtr<SDL2ImgImporter> mImageImporter;
     TaskScheduler scheduler;
     Optional<Task<>> windowTask;
