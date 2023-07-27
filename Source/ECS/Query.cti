@@ -1,0 +1,39 @@
+#pragma once
+#include "World.hh"
+
+namespace Solis::ECS
+{
+
+template<typename... Args>
+std::tuple<Args...> Query<Args...>::GetSingle()
+{
+    return std::make_tuple<Args...>();
+}
+
+template<typename... Args>
+void Query<Args...>::Test()
+{
+    auto entityMapping = mWorld.GetEntityComponentMap();
+    for(auto& [entity, components]: entityMapping)
+    {
+        bool isValid = true;
+        for(size_t i = 0; i < Query<Args...>::TypeCount; i++)
+        {
+            /*
+            ([&]
+            {
+                auto index = std::type_index(typeid(Args));
+                if(components.contains(index))
+                {
+                    isValid = false;
+                    break;
+                }
+                    
+            }(), ...);
+            */
+        }
+    }
+    
+}
+
+} // namespace Solis::ECS

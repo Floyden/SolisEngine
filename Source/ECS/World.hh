@@ -2,8 +2,10 @@
 #include "Defines.hh"
 #include "Core/Task.hh"
 #include "ComponentStorage.hh"
+#include "Query.hh"
 #include <typeindex>
 #include <typeinfo>
+#include <type_traits>
 #include <concepts>
 
 namespace Solis::ECS
@@ -29,26 +31,12 @@ struct std::hash<Solis::ECS::Entity>
 
 namespace Solis::ECS
 {
-class World;
-struct QueryBase {};
-template<typename... Args>
-struct Query : public QueryBase
-{
-public:
-    using Types = typename std::tuple<Args...>;
-    static constexpr size_t TypeCount = sizeof...(Args);
-    
-    template<int N>
-    using TypeOf = typename std::tuple_element<N, Types>::type;
-
-    Query(World& world) : mWorld(world) {};
-
-private:
-    World& mWorld;
-};
 
 template<class>
 inline constexpr bool false_type_v = false;
+
+template <typename T>
+concept CComponent = std::is_base_of<Component, T>::value;
 
 class World
 {
@@ -61,7 +49,7 @@ public:
         return Entity(++G_ENTITYID);
     }
 
-    template<typename... Args>
+    template<CComponent... Args>
     Entity CreateEntity(Args&&... values)
     {
         Entity entity = CreateEntity();
@@ -69,25 +57,26 @@ public:
         return entity;
     }
 
-    template<typename... Args>
+    template<CComponent... Args>
     World* AddComponent(Entity entity, Args&&... values)
     {
         ([&]
         {
+            auto index = std::type_index(typeid(Args));
             ComponentStorageBase* storageBase = mComponents.emplace(
-                std::type_index(typeid(Args)), 
-                std::make_unique<ComponentStorage<Args>>()).first->second.get();
+                index, std::make_unique<ComponentStorage<Args>>()
+                ).first->second.get();
             ComponentStorage<Args>* storage = reinterpret_cast<ComponentStorage<Args>*>(storageBase);
             auto* component = &storage->AddComponent(std::forward<Args>(values));
 
-            mEntityComponents[entity].emplace_back(component);
+            mEntityComponents[entity].emplace(index, component);
         }(), ...);
 
         return this;
     }
     
     template<typename... Args>
-    Query<Args...> Query()
+    Query<Args...> CreateQuery()
     {
         // [TODO]
         return Query<Args...>(*this);
@@ -134,10 +123,21 @@ public:
         
     }
 
+    using ComponentStorages = UnorderedMap<std::type_index, UPtr<ComponentStorageBase>>;
+    using EntityComponentMap = UnorderedMap<Entity, std::unordered_map<std::type_index, Component*>>;
+
+
+    template<CComponent T>
+    ComponentStorage<T>* GetComponentStorage() 
+    { 
+        return reinterpret_cast<ComponentStorage<T>*>(mComponents[std::type_index(typeid(T))]);
+    }
+    ComponentStorages& GetComponentStorages() { return mComponents; }
+    EntityComponentMap& GetEntityComponentMap() { return mEntityComponents; }
+
 private:
-    //using EntityComponentMap = UnorderedMap<Entity, UnorderedMap<std::type_index, SPtr<Component>>>;
-    UnorderedMap<std::type_index, UPtr<ComponentStorageBase>> mComponents;
-    UnorderedMap<Entity, std::vector<Component*>> mEntityComponents;
+    ComponentStorages mComponents;
+    EntityComponentMap mEntityComponents;
 };
 
 } // namespace Solis
