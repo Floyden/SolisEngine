@@ -5,6 +5,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include "ECS/ComponentStorage.hh"
 
 namespace Solis
 {
@@ -23,7 +24,7 @@ using Vec4i = glm::ivec4;
 using Quaternion = glm::quat;
 
     
-struct Transform
+struct Transform : public Solis::ECS::Component
 {
     Vec3 position = Vec3(0.0f);
     Quaternion rotation = Quaternion(1.0f, 0.0f, 0.0f, 0.0f) ;
