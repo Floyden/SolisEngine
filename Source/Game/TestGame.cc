@@ -47,7 +47,6 @@ Grid GenerateGrid(Renderable ground, Renderable walls)
             
             if(LEVEL[h][w] == '.') {
                 grid.cells.emplace_back(CellType::eGround);
-                grid.renderables.emplace_back(quad, material, trans);
             } else {
                 grid.cells.emplace_back(CellType::eWall);
                 trans.GetPosition().z = 0.25;
