@@ -10,28 +10,39 @@ std::tuple<Args...> Query<Args...>::GetSingle()
     return std::make_tuple<Args...>();
 }
 
+template<typename Q, size_t... Is>
+constexpr std::array<std::type_index, Q::TypeCount> CreateTypeIndexArray(std::integer_sequence<size_t, Is...> const &) 
+{
+    const std::array<std::type_index, Q::TypeCount> res{
+        std::type_index(typeid(typename Q::template TypeOf<Is>))...
+    };
+
+    return res;
+}
+
 template<typename... Args>
 void Query<Args...>::Test()
 {
+    const auto typeIndexArray = CreateTypeIndexArray<Query<Args...>>(
+        std::make_integer_sequence<size_t, Query<Args...>::TypeCount>{});
+
     auto entityMapping = mWorld.GetEntityComponentMap();
     for(auto& [entity, components]: entityMapping)
     {
+        std::cout << components.size() << std::endl;
         bool isValid = true;
-        for(size_t i = 0; i < Query<Args...>::TypeCount; i++)
+        
+        for(auto& index: typeIndexArray)
         {
-            /*
-            ([&]
+            if (!components.contains(index))
             {
-                auto index = std::type_index(typeid(Args));
-                if(components.contains(index))
-                {
-                    isValid = false;
-                    break;
-                }
-                    
-            }(), ...);
-            */
+                isValid = false;
+                break;
+            }
         }
+
+        if (!isValid)
+            continue;
     }
     
 }

@@ -132,8 +132,8 @@ public:
     { 
         return reinterpret_cast<ComponentStorage<T>*>(mComponents[std::type_index(typeid(T))]);
     }
-    ComponentStorages& GetComponentStorages() { return mComponents; }
-    EntityComponentMap& GetEntityComponentMap() { return mEntityComponents; }
+    ComponentStorages& GetComponentStorages();
+    EntityComponentMap& GetEntityComponentMap();
 
 private:
     ComponentStorages mComponents;
@@ -141,3 +141,5 @@ private:
 };
 
 } // namespace Solis
+
+#include "Query.cti"

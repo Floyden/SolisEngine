@@ -26,11 +26,8 @@ public:
 public:
     // Container functions
 
-
 private:
     World& mWorld;
 };
 
 } // namespace Solis::ECS
-
-#include "Query.cti"
