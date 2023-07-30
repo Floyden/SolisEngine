@@ -76,24 +76,36 @@ public:
     }
 
     template<typename... Args>
-    void AddTask(void(*task)(Args...))
+    World& AddTask(void(*task)(Args...))
     {
-        AddTaskAtStage<UpdateStage>(task);
+        return AddTaskAtStage<UpdateStage>(task);
+    }
+
+    template<typename... Args>
+    World& AddStartupTask(void(*task)(Args...))
+    {
+        return AddTaskAtStage<StartUpStage>(task);
     }
 
     template<typename Stage, typename... Args>
-    void AddTaskAtStage(void(*task)(Args...))
+    World& AddTaskAtStage(void(*task)(Args...))
     {
         auto t = std::bind(task,
         ([&]
         {   if  constexpr (std::derived_from<Args, QueryBase>) {
-                return Args(*this);
+                return Args(*this); // Returns a Query<Components&...>
             } else {
                 static_assert(false_type_v<Args>, "Argument is invalid");
             }
         }(), ...));
         
         mTaskScheduler.AddTask<Stage>(t);
+        return *this;
+    }
+
+    void Update()
+    {
+        mTaskScheduler.ExecuteAll();
     }
 
     using ComponentStorages = UnorderedMap<std::type_index, UPtr<ComponentStorageBase>>;
