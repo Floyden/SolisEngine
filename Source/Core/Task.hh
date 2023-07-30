@@ -4,6 +4,7 @@
 #include <any>
 #include <future>
 #include <typeinfo>
+#include <typeindex>
 #include "Defines.hh"
 
 class TaskBase
@@ -71,7 +72,7 @@ private:
 template<typename T>
 struct ScheduleStage 
 {
-    static constexpr std::type_index GetTypeIndex()
+    static std::type_index GetTypeIndex()
     {
         return std::type_index(typeid(T));
     }
