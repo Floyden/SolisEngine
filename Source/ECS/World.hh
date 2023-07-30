@@ -76,14 +76,24 @@ public:
     }
 
     template<typename... Args>
-    void AddTask(Task<Args...>&& task)
+    void AddTask(void(*task)(Args...))
     {
+        AddTaskAtStage<UpdateStage>(task);
     }
 
     template<typename Stage, typename... Args>
-    void AddTaskAtStage(Task<Args...>&& task)
+    void AddTaskAtStage(void(*task)(Args...))
     {
+        auto t = std::bind(task,
+        ([&]
+        {   if  constexpr (std::derived_from<Args, QueryBase>) {
+                return Args(*this);
+            } else {
+                static_assert(false_type_v<Args>, "Argument is invalid");
+            }
+        }(), ...));
         
+        mTaskScheduler.AddTask<Stage>(t);
     }
 
     using ComponentStorages = UnorderedMap<std::type_index, UPtr<ComponentStorageBase>>;
