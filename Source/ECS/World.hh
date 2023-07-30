@@ -2,32 +2,12 @@
 #include "Defines.hh"
 #include "Core/Task.hh"
 #include "ComponentStorage.hh"
+#include "Entity.hh"
 #include "Query.hh"
 #include <typeindex>
 #include <typeinfo>
 #include <type_traits>
 #include <concepts>
-
-namespace Solis::ECS
-{
-struct Entity 
-{ 
-    Entity(ssize_t id = 0) : id(id) {};
-
-    ssize_t id; 
-    bool operator==(const Entity&) const = default;
-};
-}
-
-template<>
-struct std::hash<Solis::ECS::Entity>
-{
-    std::size_t operator()(Solis::ECS::Entity const& s) const noexcept
-    {
-        std::size_t h1 = std::hash<ssize_t>{}(s.id);
-        return h1;
-    }
-};
 
 namespace Solis::ECS
 {
@@ -73,23 +53,6 @@ public:
         }(), ...);
 
         return this;
-    }
-    
-    template<typename... Args>
-    Query<Args...> CreateQuery()
-    {
-        // [TODO]
-        return Query<Args...>(*this);
-    }
-
-    template<typename Q, size_t... Is>
-    void BindQuery(std::integer_sequence<size_t, Is...> const &)
-    {
-        ([&]
-        {
-            using T = typename Q::template TypeOf<Is>;
-            std::cout << typeid(T).name() << std::endl;
-        }(), ...);
     }
 
     template<typename... Args>
@@ -138,6 +101,7 @@ public:
 private:
     ComponentStorages mComponents;
     EntityComponentMap mEntityComponents;
+    TaskScheduler mTaskScheduler;
 };
 
 } // namespace Solis
