@@ -16,6 +16,12 @@ public:
     {
         return mComponents.emplace_back(std::forward<T>(component));
     }
+
+    bool HasComponent(T const* component)
+    {
+        auto it = std::find(mComponents.begin(), mComponents.end(), *component);
+        return it != mComponents.end();
+    }
 //private:
     std::vector<T> mComponents;
 };
