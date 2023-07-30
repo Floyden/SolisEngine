@@ -1,5 +1,7 @@
 #pragma once
 #include "World.hh"
+#include "ComponentStorage.hh"
+#include <tuple>
 
 namespace Solis::ECS
 {
@@ -18,6 +20,34 @@ constexpr std::array<std::type_index, Q::TypeCount> CreateTypeIndexArray(std::in
     };
 
     return res;
+}
+
+template<typename Q, size_t... Is>
+typename Q::Types CreateTypeRefTuple(
+    std::integer_sequence<size_t, Is...> const &, 
+    std::unordered_map<std::type_index, Component*> & components) 
+{
+    return std::tie(
+        (typename Q::template TypeOf<Is>&)
+            *components.at(std::type_index(typeid(typename Q::template TypeOf<Is>)))...
+        /*([&]()
+        {
+            using T = typename Q::template TypeOf<Is>;
+            return (T&)*components.at(std::type_index(typeid(T)));
+        }()
+        , ...)*/
+    );
+    /*
+    return std::make_tuple(
+        ([&]()
+        {
+            using T = typename Q::template TypeOf<Is>;
+            return *reinterpret_cast<std::remove_reference_t<T>*>(&components.at(std::type_index(typeid(T))));
+        }()
+        , ...)
+        
+    );
+    */
 }
 
 template<typename... Args>
@@ -43,8 +73,52 @@ void Query<Args...>::Test()
 
         if (!isValid)
             continue;
-    }
+    }   
+}
+
+template<typename... Args>
+Optional<Entity> Query<Args...>::QueryIter::FindNext() const
+{
+    auto current = mQuery.mWorld.GetEntityComponentMap().begin();
+    if(mCurrent)
+        current = ++mQuery.mWorld.GetEntityComponentMap().find(*mCurrent);
     
+    const auto typeIndexArray = CreateTypeIndexArray<Query<Args...>>(
+        std::make_integer_sequence<size_t, Query<Args...>::TypeCount>{});
+
+    while(current != mQuery.mWorld.GetEntityComponentMap().end())
+    {
+        bool isValid = true;
+        
+        for(auto& index: typeIndexArray)
+        {
+            if (!current->second.contains(index))
+            {
+                isValid = false;
+                break;
+            }
+        }
+
+        if (isValid)
+            return current->first;
+        
+        current++;
+    }
+    return {};
+}
+
+template<typename... Args>
+typename Query<Args...>::Types Query<Args...>::QueryIter::CreateReference() const
+{/*
+    const auto typeIndexArray = CreateTypeIndexArray<Query<Args...>>(
+        std::make_integer_sequence<size_t, Query<Args...>::TypeCount>{});
+    
+    auto componentMap = mQuery.mWorld.GetEntityComponentMap()[*mCurrent];
+    
+    return std::make_tuple(componentMap[typeIndexArray])*/
+    return CreateTypeRefTuple<Query<Args...>>(
+        std::make_integer_sequence<size_t, Query<Args...>::TypeCount>{}, 
+        mQuery.mWorld.GetEntityComponentMap()[*mCurrent]);
 }
 
 } // namespace Solis::ECS
