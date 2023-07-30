@@ -4,6 +4,7 @@
 #include <ranges>
 #include <algorithm>
 #include "Defines.hh"
+#include "Util.hh"
 
 /**
  * Represent a module. 
@@ -75,7 +76,7 @@ public:
 
     /// Shutdown all modules in the reverse order they were added
     void Shutdown() {
-        for (auto& mod : mOrder | std::views::reverse)
+        for (auto& mod : Solis::Util::Reverse(mOrder))
             mod->Shutdown();
     }
 
