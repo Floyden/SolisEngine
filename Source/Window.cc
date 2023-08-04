@@ -1,6 +1,30 @@
 #include "Window.hh"
+#include <utility>
 
 namespace Solis {
+
+Window::Window(Window&& other) noexcept
+{
+    mWindow = other.mWindow;
+    other.mWindow = nullptr;
+    mContext = other.mContext;
+    other.mContext = nullptr;
+    mLastTimestamp = other.mLastTimestamp;
+    mFocused = other.mFocused;
+    mCloseRequested = other.mCloseRequested;
+}
+
+Window& Window::operator=(Window&& other) noexcept
+{
+    mWindow = other.mWindow;
+    other.mWindow = nullptr;
+    mContext = other.mContext;
+    other.mContext = nullptr;
+    mLastTimestamp = other.mLastTimestamp;
+    mFocused = other.mFocused;
+    mCloseRequested = other.mCloseRequested;
+    return *this;
+}
 
 UPtr<Window> Window::Create()
 {
@@ -30,6 +54,37 @@ UPtr<Window> Window::Create()
 #endif
     return window;
 }
+
+Optional<Window> Window::CreateAsComponent()
+{
+    Window window;
+    window.mWindow = SDL_CreateWindow("Title", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, 
+        SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL);
+
+    if ( window.mWindow == nullptr )
+        return {};
+        
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+
+    window.mContext = SDL_GL_CreateContext(window.mWindow);
+    
+    if(window.mContext == nullptr)
+    {
+        std::cout << SDL_GetError() << std::endl;
+        return {};
+    }
+    SDL_GL_MakeCurrent(window.mWindow, window.mContext);
+#ifndef __APPLE__
+    glewExperimental = true;
+    if ( glewInit() )
+        return nullptr;
+#endif
+    
+    return std::move(window);
+}
+
 Window::~Window()
 {
     Destroy();

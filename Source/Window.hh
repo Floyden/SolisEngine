@@ -3,6 +3,7 @@
 #include <SDL2/SDL_syswm.h>
 
 #include "Defines.hh"
+#include "ECS/ComponentStorage.hh"
 #include "Input/InputEvent.hh"
 
 namespace Solis {
@@ -20,11 +21,15 @@ struct WindowEvent : public IEvent
     WindowEventType type;
 };
 
-class Window {
+class Window : public ECS::Component {
 public:
+    Window(Window&& other) noexcept;
     ~Window();
 
+    Window& operator=(Window&& other) noexcept;
+
     static UPtr<Window> Create();
+    static Optional<Window> CreateAsComponent();
     void Destroy();
 
     void SwapWindow();
@@ -46,9 +51,10 @@ private:
 
     void SendWindowEvent(WindowEventType);
 
+    explicit Window() : mWindow(nullptr) {};
 private:
-    Window() : mWindow(nullptr) {};
     Window(const Window&) = delete;
+    Window& operator=(const Window&) = delete;
     SDL_Window* mWindow;
     SDL_GLContext mContext;
 
