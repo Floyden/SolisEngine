@@ -54,6 +54,14 @@ public:
 
         return this;
     }
+    
+
+    // Get the component C which corresponds to Entity e
+    template<CComponent C>
+    C* GetComponent(Entity e)
+    {
+        return static_cast<C*>(mEntityComponents[e][std::type_index(typeid(C))]);
+    }
 
     template<typename... Args>
     void Bind()
