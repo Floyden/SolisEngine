@@ -92,6 +92,8 @@ void UpdateInput(std::chrono::duration<float>* delta, Camera* camera, UniformBuf
 
 void TestGame::Init()
 {   
+    auto windowEnt = mWorld.CreateEntity(*Solis::Window::CreateAsComponent());
+    mWindow = mWorld.GetComponent<Window>(windowEnt);
     LoadDefaultModules();
     mModules->Init();
     auto resourceManager = mModules->GetModule<ResourceManager>();
@@ -100,7 +102,6 @@ void TestGame::Init()
     mTextureGround = Texture::Create(mImageImporter->Import("Resources/Floor/bricks.png"));
     mTextureWalls = Texture::Create(mImageImporter->Import("Resources/Cube/Cube_BaseColor.png"));
     mSceneImporter = std::make_unique<AssimpImporter>();
-
 
     Program program;
     program.LoadFrom(gBasicVertexShaderSource, gBasicFragmentShaderSource);
@@ -137,7 +138,7 @@ void TestGame::Init()
     scheduler.AddTask(
         std::bind(
             &Window::ProcessEvents,
-            mWindow.get()));
+            mWindow));
 
     scheduler.AddTask(Task<>(std::bind(
         [](float* time, Transform* transform, UniformBuffer* ubo) {
@@ -160,6 +161,23 @@ void TestGame::Init()
         UpdateInput,
         &mDelta, mCamera.get(), mCameraUBO.get(), mModules->GetModule<Input>()
     )).After(&*windowTask));
+
+    struct Foo : Solis::ECS::Component {};
+
+    ECS::World world;
+    world.CreateEntity(Transform{});
+    world.CreateEntity(Transform{}, Foo{});
+    world.CreateEntity(Transform{});
+    world.CreateEntity(Transform{}, Foo{});
+
+    auto transformTest = +[](Solis::ECS::Query<Transform&> transformQuery)
+    {
+        for(auto [transform] : transformQuery) 
+            std::cout << "Position: " << transform.GetPosition().x << "\n";
+        //transformQuery.Test(); 
+    };
+    world.AddTask(transformTest);
+    world.Update();
 }
 
 void TestGame::Update(float delta)

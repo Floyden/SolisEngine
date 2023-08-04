@@ -22,7 +22,7 @@ public:
 
 protected:
 
-    UPtr<Solis::Window> mWindow;
+    Solis::Window* mWindow;
     UPtr<ModuleManager> mModules;
     SPtr<Render::Renderer> mRender;
 

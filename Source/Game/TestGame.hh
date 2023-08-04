@@ -7,6 +7,7 @@
 #include "Plugins/assimp/AssimpImporter.hh"
 #include "Core/Task.hh"
 #include "Scene/Camera.hh"
+#include "ECS/World.hh"
 
 namespace Solis
 {
@@ -44,6 +45,7 @@ private:
 
     UPtr<AssimpImporter> mSceneImporter;
     UPtr<SDL2ImgImporter> mImageImporter;
+    ECS::World mWorld;
     TaskScheduler scheduler;
     Optional<Task<>> windowTask;
     Optional<Task<>> uniformTask;

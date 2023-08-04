@@ -11,8 +11,10 @@ namespace Solis
 
 void Game::LoadDefaultModules() 
 {
+    /*
     if(mWindow == nullptr)
         mWindow = Solis::Window::Create();
+    */
     if(mModules == nullptr)
         mModules = std::make_unique<ModuleManager>();
 
