@@ -26,36 +26,7 @@ Window& Window::operator=(Window&& other) noexcept
     return *this;
 }
 
-UPtr<Window> Window::Create()
-{
-    UPtr<Window> window(new Window());
-    window->mWindow = SDL_CreateWindow("Title", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, 
-        SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL);
-
-    if ( window->mWindow == nullptr )
-        return nullptr;
-        
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
-    window->mContext = SDL_GL_CreateContext(window->mWindow);
-    
-    if(window->mContext == nullptr)
-    {
-        std::cout << SDL_GetError() << std::endl;
-        return nullptr;
-    }
-    SDL_GL_MakeCurrent(window->mWindow, window->mContext);
-#ifndef __APPLE__
-    glewExperimental = true;
-    if ( glewInit() )
-        return nullptr;
-#endif
-    return window;
-}
-
-Optional<Window> Window::CreateAsComponent()
+Optional<Window> Window::Create()
 {
     Window window;
     window.mWindow = SDL_CreateWindow("Title", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, 

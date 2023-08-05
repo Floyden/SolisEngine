@@ -28,8 +28,7 @@ public:
 
     Window& operator=(Window&& other) noexcept;
 
-    static UPtr<Window> Create();
-    static Optional<Window> CreateAsComponent();
+    static Optional<Window> Create();
     void Destroy();
 
     void SwapWindow();
