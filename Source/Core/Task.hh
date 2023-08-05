@@ -79,6 +79,7 @@ struct ScheduleStage
 };
 
 struct StartUpStage : public ScheduleStage<StartUpStage>{};
+struct PreUpdateStage : public ScheduleStage<PreUpdateStage>{};
 struct UpdateStage : public ScheduleStage<UpdateStage>{};
 
 class TaskScheduler
