@@ -11,10 +11,9 @@ namespace Solis
 
 void Game::LoadDefaultModules() 
 {
-    /*
-    if(mWindow == nullptr)
-        mWindow = Solis::Window::Create();
-    */
+    auto windowEnt = mWorld.CreateEntity(*Solis::Window::Create());
+    mWindow = mWorld.GetComponent<Window>(windowEnt);
+    
     if(mModules == nullptr)
         mModules = std::make_unique<ModuleManager>();
 

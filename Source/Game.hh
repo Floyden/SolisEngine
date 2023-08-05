@@ -2,6 +2,7 @@
 #include "Window.hh"
 #include "Module.hh"
 #include "Render/Common/Renderer.hh"
+#include "ECS/World.hh"
 #include <chrono>
 
 namespace Solis
@@ -21,7 +22,7 @@ public:
     void Destroy();
 
 protected:
-
+    ECS::World mWorld;
     Solis::Window* mWindow;
     UPtr<ModuleManager> mModules;
     SPtr<Render::Renderer> mRender;

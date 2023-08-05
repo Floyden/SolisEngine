@@ -92,8 +92,6 @@ void UpdateInput(std::chrono::duration<float>* delta, Camera* camera, UniformBuf
 
 void TestGame::Init()
 {   
-    auto windowEnt = mWorld.CreateEntity(*Solis::Window::Create());
-    mWindow = mWorld.GetComponent<Window>(windowEnt);
     LoadDefaultModules();
     mModules->Init();
     auto resourceManager = mModules->GetModule<ResourceManager>();
