@@ -8,12 +8,20 @@
 
 namespace Solis
 {
+void ProcessWindowEvents(ECS::Query<Window&> windows)
+{
+    for(auto [window]: windows)
+        window.ProcessEvents();
+}
+
 
 void Game::LoadDefaultModules() 
 {
     auto windowEnt = mWorld.CreateEntity(*Solis::Window::Create());
     mWindow = mWorld.GetComponent<Window>(windowEnt);
-    
+    mWorld.AddTaskAtStage<PreUpdateStage>(ProcessWindowEvents);
+
+
     if(mModules == nullptr)
         mModules = std::make_unique<ModuleManager>();
 

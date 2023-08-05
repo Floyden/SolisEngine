@@ -133,11 +133,6 @@ void TestGame::Init()
     mCameraUBO->WriteData(0, 64, glm::value_ptr(mCamera->GetView()));
     mCameraUBO->WriteData(64, 64, glm::value_ptr(mCamera->GetProjection()));
 
-    scheduler.AddTask(
-        std::bind(
-            &Window::ProcessEvents,
-            mWindow));
-
     scheduler.AddTask(Task<>(std::bind(
         [](float* time, Transform* transform, UniformBuffer* ubo) {
             transform->SetPosition(Vec3(
@@ -181,6 +176,7 @@ void TestGame::Init()
 void TestGame::Update(float delta)
 {
     mTime += delta;
+    mWorld.Update();
     scheduler.ExecuteAll();
     mRunMainLoop = !mWindow->CloseRequested();
 }
