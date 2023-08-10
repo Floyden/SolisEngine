@@ -18,6 +18,7 @@ source = [
     'Source/Image.cc',
     'Source/Window.cc',
     'Source/Module.cc',
+    'Source/ECS/World.cc',
     'Source/Game.cc',
     'Source/Game/LevelGenerator.cc',
     'Source/Game/Shooter.cc',

@@ -50,7 +50,7 @@ Optional<Window> Window::Create()
 #ifndef __APPLE__
     glewExperimental = true;
     if ( glewInit() )
-        return nullptr;
+        return {};
 #endif
     
     return std::move(window);
