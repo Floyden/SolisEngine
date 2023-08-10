@@ -5,10 +5,8 @@ namespace Solis {
 
 Window::Window(Window&& other) noexcept
 {
-    mWindow = other.mWindow;
-    other.mWindow = nullptr;
-    mContext = other.mContext;
-    other.mContext = nullptr;
+    mWindow = std::exchange(other.mWindow, nullptr);
+    mContext = std::exchange(other.mContext, nullptr);
     mLastTimestamp = other.mLastTimestamp;
     mFocused = other.mFocused;
     mCloseRequested = other.mCloseRequested;
@@ -16,10 +14,8 @@ Window::Window(Window&& other) noexcept
 
 Window& Window::operator=(Window&& other) noexcept
 {
-    mWindow = other.mWindow;
-    other.mWindow = nullptr;
-    mContext = other.mContext;
-    other.mContext = nullptr;
+    mWindow = std::exchange(other.mWindow, nullptr);
+    mContext = std::exchange(other.mContext, nullptr);
     mLastTimestamp = other.mLastTimestamp;
     mFocused = other.mFocused;
     mCloseRequested = other.mCloseRequested;
