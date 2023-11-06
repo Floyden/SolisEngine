@@ -5,66 +5,75 @@
 #include <future>
 #include <typeinfo>
 #include <typeindex>
+#include <utility>
 #include "Defines.hh"
 
-class TaskBase
+class Task
 {
+    typedef void(*FnPtr)();
 public:
-    virtual ~TaskBase() = default;
+    Task(FnPtr fn) : mFn(fn), mDependencyCount(0), mHasCompleted(false) {};
+    Task(std::function<void()>&& fn) : mFn(std::move(fn)), mDependencyCount(0), mHasCompleted(false) {};
+   
+    Task(Task&& other) 
+    {
+        (void) Emplace(std::forward<Task>(other));
+    }
 
-    virtual void Execute() = 0;
-    virtual bool HasCompleted() = 0;
-    virtual bool CanExecute() = 0;
-    virtual TaskBase& Before(TaskBase* other) = 0;
-    virtual TaskBase& After(TaskBase* other) = 0;
+    Task& operator=(Task&& other) 
+    {
+        return Emplace(std::forward<Task>(other));
+    };
 
-};
+    Task(const Task& other) = delete;
+    Task& operator=(const Task& other) = delete;
 
-template<typename Out = void>
-class Task : public TaskBase
-{
-    typedef Out(*FnPtr)();
-    using PackagedTask = std::packaged_task<Out()>;
-public:
-    Task(FnPtr fn) : mFn(fn) {};
-    Task(std::function<Out()>&& fn) : mFn(std::move(fn)) {};
+    Task& Emplace(Task&& other) 
+    {
+        mFn.swap(other.mFn);
+        mDependants.swap(other.mDependants);
+        mDependencyCount.exchange(other.mDependencyCount);
+        mHasCompleted = other.mHasCompleted;
+        return *this;
+    }
 
-    Task(const Task<Out>& other) = delete;
-    Task<Out>& operator=(const Task<Out>& other) = delete;
-    Task(Task<Out>&& other) = default;
-    Task<Out>& operator=(Task<Out>&& other) = default;
-
-    void Execute() override 
+    void Execute()  
     {
         mFn();
         mHasCompleted = true;
+        for (auto * dependant: mDependants) {
+            // [TODO][MAYBE] Remove dependant from vector
+            dependant->mDependencyCount.fetch_sub(1);
+        }
     }
 
-    bool HasCompleted() override
+    bool HasCompleted() 
     {
         return mHasCompleted;
     }
 
-    bool CanExecute() override
+    bool CanExecute() 
     {
-        return std::all_of(mDependencies.begin(), mDependencies.end(), [](TaskBase* task){ return task->HasCompleted();});
+        return mDependencyCount.load() == 0;
     }
 
-    Task<Out>& Before(TaskBase* other) override 
+    Task& Before(Task* other)  
     {
-        other->After(this);
+        mDependants.emplace_back(other);
+        other->mDependencyCount.fetch_add(1);
         return *this;
     }
 
-    Task<Out>& After(TaskBase* other) override
+    Task& After(Task* other) 
     {
-        mDependencies.emplace_back(other);
+        other->Before(this);
         return *this;
     }
 
 private:
-    std::function<Out()> mFn;
-    Vector<TaskBase*> mDependencies;
+    std::function<void()> mFn;
+    Vector<Task*> mDependants;
+    std::atomic_size_t mDependencyCount;
     bool mHasCompleted;
 };
 
@@ -86,26 +95,25 @@ class TaskScheduler
 {
 public:
     template<typename Stage = UpdateStage>
-    TaskScheduler* AddTask(std::function<void()>&& fn)
+    Task& AddTask(std::function<void()>&& fn)
     {
-        mTasks.emplace_back(new Task<void>(std::move(fn)));
         mStages[Stage::GetTypeIndex()] += 1;
-        return this;
+        return mTasks.emplace_back(std::move(fn));
     }
 
-    TaskScheduler* AddTask(Task<>& task)
+    template<typename Stage = UpdateStage>
+    Task AddTask(Task&& task)
     {
-        mTasks.push_back(std::make_unique<Task<>>(std::forward<Task<>>(task)));
-        return this;
+        return mTasks.emplace_back(std::forward<Task>(task));
     }
 
     void ExecuteAll() 
     {
         for(auto& task: mTasks)
-            task->Execute();
+            task.Execute();
     }
 
-    Vector<UPtr<TaskBase>> mTasks;
+    Vector<Task> mTasks;
     UnorderedMap<std::type_index, size_t> mStages;
 
     // Store which Stages depend on other stages

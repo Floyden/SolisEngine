@@ -45,8 +45,8 @@ private:
     UPtr<AssimpImporter> mSceneImporter;
     UPtr<SDL2ImgImporter> mImageImporter;
     TaskScheduler scheduler;
-    Optional<Task<>> windowTask;
-    Optional<Task<>> uniformTask;
+    Optional<Task> windowTask;
+    Optional<Task> uniformTask;
     Grid grid;
     UPtr<Camera> mCamera;
     SPtr<UniformBuffer> mCameraUBO;

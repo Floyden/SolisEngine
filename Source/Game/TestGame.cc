@@ -3,6 +3,7 @@
 #include "RandomThings.hh"
 #include "Core/ResourceManger.hh"
 #include "Input/Input.hh"
+#include "Light/Light.hh"
 
 namespace Solis
 {
@@ -133,7 +134,7 @@ void TestGame::Init()
     mCameraUBO->WriteData(0, 64, glm::value_ptr(mCamera->GetView()));
     mCameraUBO->WriteData(64, 64, glm::value_ptr(mCamera->GetProjection()));
 
-    scheduler.AddTask(Task<>(std::bind(
+    scheduler.AddTask(std::bind(
         [](float* time, Transform* transform, UniformBuffer* ubo) {
             transform->SetPosition(Vec3(
                 glm::sin(*time * 2.0) * 0.5 + 2.,
@@ -148,12 +149,14 @@ void TestGame::Init()
             ubo->WriteData(0, ubo->Size(), glm::value_ptr(transform->GetTransform()));
         },
         &mTime, &mRenderable->GetTransform(), mUBO.get()
-    )).After(&*windowTask));
+    )).After(&*windowTask);
 
-    scheduler.AddTask(Task<>(std::bind(
+    scheduler.AddTask(std::bind(
         UpdateInput,
         &mDelta, mCamera.get(), mCameraUBO.get(), mModules->GetModule<Input>()
-    )).After(&*windowTask));
+    )).After(&*windowTask);
+
+    mWorld.CreateEntity(Transform(), PointLight());
 
     struct Foo : Solis::ECS::Component {};
 
