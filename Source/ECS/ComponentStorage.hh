@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <typeinfo>
+#include <vector>
 
 namespace Solis::ECS
 {
