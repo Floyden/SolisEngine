@@ -7,6 +7,7 @@
 #include <queue>
 #include <map>
 #include <optional>
+#include <thread>
 
 #include <unordered_set>
 #include <unordered_map>
@@ -50,3 +51,5 @@ template<class K, class V, class H = std::hash<K>, class E = std::equal_to<K>>
 using UnorderedMap = std::unordered_map<K, V, H, E>;
 
 using String = std::string;
+
+using Thread = std::jthread;

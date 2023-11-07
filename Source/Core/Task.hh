@@ -1,4 +1,6 @@
 #pragma once
+#include <cstddef>
+#include <chrono>
 #include <functional>
 #include <tuple>
 #include <any>
@@ -103,9 +105,30 @@ struct StartUpStage : public ScheduleStage<StartUpStage>{};
 struct PreUpdateStage : public ScheduleStage<PreUpdateStage>{};
 struct UpdateStage : public ScheduleStage<UpdateStage>{};
 
+struct TaskPipeline 
+{
+    TaskPipeline() = default;
+    std::mutex lock;
+    Deque<Task*> tasks;
+};
+
 class TaskScheduler
 {
 public:
+    TaskScheduler(size_t numThreads = 4) : 
+        mThreadCount(numThreads) 
+    {
+        auto workerFn = [](TaskPipeline* pipeline) {
+            
+        };
+
+        mWorkers = UPtr<Thread[]>(new Thread[numThreads]);
+        mTaskPipelines = UPtr<TaskPipeline[]>(new TaskPipeline[numThreads]);
+        for (size_t i = 0; i < mThreadCount; i++) {
+            mWorkers.get()[i] = Thread(workerFn, &mTaskPipelines.get()[i]);
+        }
+    }
+
     template<typename Stage = UpdateStage>
     Task& AddTask(std::function<void()>&& fn)
     {
@@ -124,6 +147,11 @@ public:
         for(auto& task: mTasks)
             task.Execute();
     }
+
+    size_t mThreadCount;
+
+    UPtr<Thread[]> mWorkers;
+    UPtr<TaskPipeline[]> mTaskPipelines;
 
     Vector<Task> mTasks;
     UnorderedMap<std::type_index, size_t> mStages;

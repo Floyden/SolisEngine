@@ -134,27 +134,28 @@ void TestGame::Init()
     mCameraUBO->WriteData(0, 64, glm::value_ptr(mCamera->GetView()));
     mCameraUBO->WriteData(64, 64, glm::value_ptr(mCamera->GetProjection()));
 
-    scheduler.AddTask(std::bind(
-        [](float* time, Transform* transform, UniformBuffer* ubo) {
-            transform->SetPosition(Vec3(
-                glm::sin(*time * 2.0) * 0.5 + 2.,
-                1.0,
-                glm::cos(*time * 2.0) * 1.0 - 5.5
-            ));
-            transform->Roatate(Vec3(
-                0.0,
-                1.0,
-                0.0
-            ), glm::sin(0.01));
-            ubo->WriteData(0, ubo->Size(), glm::value_ptr(transform->GetTransform()));
-        },
-        &mTime, &mRenderable->GetTransform(), mUBO.get()
-    )).After(&*windowTask);
+    scheduler.AddTask(
+        std::bind(
+            [](float* time, Transform* transform, UniformBuffer* ubo) {
+                transform->SetPosition(Vec3(
+                    glm::sin(*time * 2.0) * 0.5 + 2.,
+                    1.0,
+                    glm::cos(*time * 2.0) * 1.0 - 5.5
+                ));
+                transform->Roatate(Vec3(
+                    0.0,
+                    1.0,
+                    0.0
+                ), glm::sin(0.01));
+                ubo->WriteData(0, ubo->Size(), glm::value_ptr(transform->GetTransform()));
+            },
+            &mTime, &mRenderable->GetTransform(), mUBO.get()
+        ));
 
     scheduler.AddTask(std::bind(
         UpdateInput,
         &mDelta, mCamera.get(), mCameraUBO.get(), mModules->GetModule<Input>()
-    )).After(&*windowTask);
+    ));
 
     mWorld.CreateEntity(Transform(), PointLight());
 
