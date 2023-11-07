@@ -137,7 +137,7 @@ public:
     }
 
     template<typename Stage = UpdateStage>
-    Task AddTask(Task&& task)
+    Task& AddTask(Task&& task)
     {
         return mTasks.emplace_back(std::forward<Task>(task));
     }
