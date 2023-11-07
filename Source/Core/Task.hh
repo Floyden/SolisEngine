@@ -8,12 +8,20 @@
 #include <utility>
 #include "Defines.hh"
 
+enum class TaskStatus
+{
+    Idle,
+    Queued,
+    Running,
+    Finished,
+};
+
 class Task
 {
     typedef void(*FnPtr)();
 public:
-    Task(FnPtr fn) : mFn(fn), mDependencyCount(0), mHasCompleted(false) {};
-    Task(std::function<void()>&& fn) : mFn(std::move(fn)), mDependencyCount(0), mHasCompleted(false) {};
+    Task(FnPtr fn) : mFn(fn), mDependencyCount(0), mStatus(TaskStatus::Idle) {};
+    Task(std::function<void()>&& fn) : mFn(std::move(fn)), mDependencyCount(0), mStatus(TaskStatus::Idle) {};
    
     Task(Task&& other) 
     {
@@ -33,25 +41,27 @@ public:
         mFn.swap(other.mFn);
         mDependants.swap(other.mDependants);
         mDependencyCount.exchange(other.mDependencyCount);
-        mHasCompleted = other.mHasCompleted;
+        mStatus = other.mStatus;
         return *this;
     }
 
     void Execute()  
     {
+        mStatus = TaskStatus::Running;
         mFn();
-        mHasCompleted = true;
+        mStatus = TaskStatus::Finished;
         for (auto * dependant: mDependants) {
             // [TODO][MAYBE] Remove dependant from vector
             dependant->mDependencyCount.fetch_sub(1);
         }
     }
 
-    bool HasCompleted() 
+    TaskStatus GetStatus() 
     {
-        return mHasCompleted;
+        return mStatus;
     }
 
+    // Checks if all the dependencies are completed
     bool CanExecute() 
     {
         return mDependencyCount.load() == 0;
@@ -71,10 +81,12 @@ public:
     }
 
 private:
+    friend class TaskScheduler;
+
     std::function<void()> mFn;
     Vector<Task*> mDependants;
     std::atomic_size_t mDependencyCount;
-    bool mHasCompleted;
+    TaskStatus mStatus;
 };
 
 
