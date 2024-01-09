@@ -95,19 +95,31 @@ public:
         return AddTaskAtStage<StartUpStage>(task);
     }
 
+    template<typename... Args>
+    auto _BindTasks(void(*task)(Args...)) {
+        return std::bind(task,
+            ([&]
+            {   if  constexpr (std::derived_from<Args, QueryBase>) {
+                    return Args(*this); // Returns a Query<Components&...>
+                } else {
+                    static_assert(false_type_v<Args>, "Argument is invalid");
+                }
+            }(), ...));
+    }
+
     template<typename Stage, typename... Args>
     World& AddTaskAtStage(void(*task)(Args...))
     {
-        auto t = std::bind(task,
-        ([&]
-        {   if  constexpr (std::derived_from<Args, QueryBase>) {
-                return Args(*this); // Returns a Query<Components&...>
-            } else {
-                static_assert(false_type_v<Args>, "Argument is invalid");
-            }
-        }(), ...));
-        
+        auto t = _BindTasks(task);
         mTaskScheduler.AddTask<Stage>(t);
+        return *this;
+    }
+
+    template<typename Stage, typename... Args>
+    World& AddPinnedTaskAtStage(void(*task)(Args...))
+    {
+        auto t = _BindTasks(task);
+        mTaskScheduler.AddPinnedTask<Stage>(t);
         return *this;
     }
 

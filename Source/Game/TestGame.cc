@@ -134,7 +134,7 @@ void TestGame::Init()
     mCameraUBO->WriteData(0, 64, glm::value_ptr(mCamera->GetView()));
     mCameraUBO->WriteData(64, 64, glm::value_ptr(mCamera->GetProjection()));
 
-    scheduler.AddTask(
+    scheduler.AddPinnedTask(
         std::bind(
             [](float* time, Transform* transform, UniformBuffer* ubo) {
                 transform->SetPosition(Vec3(
@@ -152,7 +152,7 @@ void TestGame::Init()
             &mTime, &mRenderable->GetTransform(), mUBO.get()
         ));
 
-    scheduler.AddTask(std::bind(
+    scheduler.AddPinnedTask(std::bind(
         UpdateInput,
         &mDelta, mCamera.get(), mCameraUBO.get(), mModules->GetModule<Input>()
     ));

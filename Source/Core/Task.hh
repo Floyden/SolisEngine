@@ -1,4 +1,5 @@
 #pragma once
+#include <lockfree.hpp>
 #include <cstddef>
 #include <chrono>
 #include <functional>
@@ -105,28 +106,31 @@ struct StartUpStage : public ScheduleStage<StartUpStage>{};
 struct PreUpdateStage : public ScheduleStage<PreUpdateStage>{};
 struct UpdateStage : public ScheduleStage<UpdateStage>{};
 
-struct TaskPipeline 
-{
-    TaskPipeline() = default;
-    std::mutex lock;
-    Deque<Task*> tasks;
-};
-
 class TaskScheduler
 {
 public:
     TaskScheduler(size_t numThreads = 4) : 
         mThreadCount(numThreads) 
     {
-        auto workerFn = [](TaskPipeline* pipeline) {
-            
-        };
-
-        mWorkers = UPtr<Thread[]>(new Thread[numThreads]);
-        mTaskPipelines = UPtr<TaskPipeline[]>(new TaskPipeline[numThreads]);
         for (size_t i = 0; i < mThreadCount; i++) {
-            mWorkers.get()[i] = Thread(workerFn, &mTaskPipelines.get()[i]);
+            mWorkers.emplace_back([pipeline = &mTaskPipelines, shutdown = &mShutdown](){
+                    using namespace std::chrono_literals;
+                while (!shutdown){
+                    Task* task = nullptr;
+                    if (!pipeline->Pop(task)){
+                        std::this_thread::yield();
+                        continue;
+                    }
+                    task->Execute();
+                }
+            });
         }
+    }
+
+    ~TaskScheduler() {
+        mShutdown = true;
+        for (auto& worker: mWorkers)
+            worker.join();
     }
 
     template<typename Stage = UpdateStage>
@@ -137,23 +141,40 @@ public:
     }
 
     template<typename Stage = UpdateStage>
+    Task& AddPinnedTask(std::function<void()>&& fn)
+    {
+        mStages[Stage::GetTypeIndex()] += 1;
+        return mPinnedTasks.emplace_back(std::move(fn));
+    }
+
+    template<typename Stage = UpdateStage>
     Task& AddTask(Task&& task)
     {
         return mTasks.emplace_back(std::forward<Task>(task));
+    }
+    
+    template<typename Stage = UpdateStage>
+    Task& AddPinnedTask(Task&& task)
+    {
+        return mPinnedTasks.emplace_back(std::forward<Task>(task));
     }
 
     void ExecuteAll() 
     {
         for(auto& task: mTasks)
+            mTaskPipelines.Push(&task);
+        for(auto& task: mPinnedTasks)
             task.Execute();
     }
 
     size_t mThreadCount;
 
-    UPtr<Thread[]> mWorkers;
-    UPtr<TaskPipeline[]> mTaskPipelines;
+    Vector<Thread> mWorkers;
+    bool mShutdown;
+    lockfree::mpmc::Queue<Task*, 64> mTaskPipelines;
 
     Vector<Task> mTasks;
+    Vector<Task> mPinnedTasks;
     UnorderedMap<std::type_index, size_t> mStages;
 
     // Store which Stages depend on other stages

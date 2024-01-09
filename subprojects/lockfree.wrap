@@ -1,0 +1,9 @@
+[wrap-git]
+url = https://github.com/DNedic/lockfree.git
+revision = head
+depth = 1
+method = cmake
+
+[provide]
+lockfree = lockfree_dep
+lockfree_inc = "lockfree"

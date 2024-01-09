@@ -9,6 +9,9 @@ libassimp = dependency('assimp')
 libbullet = dependency('bullet')
 libvulkan = dependency('vulkan')
 
+liblockfree = subproject('lockfree')
+liblockfree_inc = liblockfree.get_variable('lockfree_inc')
+
 incdir = include_directories('./Source')
 #brew_includes = include_directories('/opt/homebrew/include')
 #bullet_includes = include_directories('C:/msys64/mingw64/include/bullet')
@@ -43,5 +46,5 @@ source = [
     'Source/Render/Vulkan/RendererVulkan.cc',
 ]
 executable('demo', source, 
-    include_directories : [incdir], 
+    include_directories : [incdir, liblockfree_inc ], 
     dependencies : [libgl, libsdl, libglew, libsdl_image, libvulkan, libassimp, libbullet])
