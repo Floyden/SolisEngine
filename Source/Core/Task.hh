@@ -161,8 +161,13 @@ public:
 
     void ExecuteAll() 
     {
-        for(auto& task: mTasks)
-            mTaskPipelines.Push(&task);
+        if(mThreadCount)
+            for(auto& task: mTasks)
+                mTaskPipelines.Push(&task);
+        else 
+            for(auto& task: mTasks)
+                task.Execute();
+
         for(auto& task: mPinnedTasks)
             task.Execute();
     }
