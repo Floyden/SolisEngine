@@ -4,6 +4,8 @@
 #include "Core/ResourceManger.hh"
 #include "Input/Input.hh"
 #include "Light/Light.hh"
+#include "Scene/Camera.hh"
+#include "Window.hh"
 
 namespace Solis
 {
@@ -129,7 +131,8 @@ void TestGame::Init()
     mUBO = UniformBuffer::Create(16 * sizeof(float));
     mCameraUBO = UniformBuffer::Create(2 * 16 * sizeof(float));
 
-    mCamera = std::make_unique<Camera>(45.f, 800.0f/600.0f, 0.01f, 1000.f);
+    float aspect = static_cast<float>(mWindow->GetWidth()) / static_cast<float>(mWindow->GetHeight());
+    mCamera = std::make_unique<Camera>(45.f, aspect, 0.01f, 1000.f);
     mCamera->SetRotation(Quaternion(0.0, 0.0, 1.0, 0.0));
     mCameraUBO->WriteData(0, 64, glm::value_ptr(mCamera->GetView()));
     mCameraUBO->WriteData(64, 64, glm::value_ptr(mCamera->GetProjection()));
@@ -173,7 +176,22 @@ void TestGame::Init()
             std::cout << "Position: " << transform.GetPosition().x << "\n";
         //transformQuery.Test(); 
     };
+
+    struct TestEvent : public ECS::IEvent {};
+    world.RegisterEvent<TestEvent>();
+    world.AddTask(+[](ECS::EventWriter<TestEvent> writer) { 
+        std::cout << "Event Sent\n";
+        writer.Send(TestEvent());
+    });
+    world.AddTask(+[](ECS::EventReader<TestEvent> reader) { 
+        std::cout << "Read Events\n";
+        while(reader.Next())
+                std::cout << "Event Registered\n";
+    });
+
+
     world.AddTask(transformTest);
+    world.Update();
     world.Update();
 }
 
