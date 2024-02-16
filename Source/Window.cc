@@ -1,4 +1,5 @@
 #include "Window.hh"
+#include "SDL_video.h"
 #include <utility>
 
 namespace Solis {
@@ -198,6 +199,10 @@ void Window::_HandleWindowEvents(SDL_WindowEvent event)
     case SDL_WINDOWEVENT_LEAVE:
         SendWindowEvent(WindowEventType::Leave);
         break;
+    case SDL_WINDOWEVENT_RESIZED:
+    case SDL_WINDOWEVENT_SIZE_CHANGED:
+        SendWindowResizedEvent(WindowEventType::Resized, event.data1, event.data2);
+        break;
     default:
         std::cout << "Unhandled Window Event: " << (uint32_t) event.event << std::endl;
         break;
@@ -207,6 +212,15 @@ void Window::SendWindowEvent(WindowEventType type)
 {
     UPtr<WindowEvent> event(new WindowEvent());
     event->type = type;
+    Events::Get()->Publish(std::move(event));
+}
+
+void Window::SendWindowResizedEvent(WindowEventType type, uint32_t width, uint32_t height)
+{
+    UPtr<WindowResizedEvent> event(new WindowResizedEvent());
+    event->type = type;
+    event->width = width;
+    event->height = height;
     Events::Get()->Publish(std::move(event));
 }
 

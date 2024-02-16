@@ -3,6 +3,7 @@
 #include "Core/Task.hh"
 #include "ComponentStorage.hh"
 #include "Entity.hh"
+#include "Event.hh"
 #include "Query.hh"
 #include <typeindex>
 #include <typeinfo>
@@ -63,6 +64,13 @@ public:
         return static_cast<C*>(mEntityComponents[e][std::type_index(typeid(C))]);
     }
 
+    template<CEvent T>
+    World* RegisterEvent()
+    {
+        mEventStorages[typeid(T)] = std::make_unique<EventStorage<T>>();
+        return this;
+    }
+
     template<typename... Args>
     void Bind()
     {
@@ -75,12 +83,17 @@ public:
             } else if  constexpr (std::derived_from<Args, QueryBase>) {
                 std::cout << "Query" << std::endl;
                 BindQuery<Args>(std::make_integer_sequence<size_t, Args::TypeCount>{});
-            } else if  constexpr (std::derived_from<Args, Component>) {
+            } else if  constexpr (std::derived_from<Args, EventWriterBase>) {
+                std::cout << "EventWriter" << std::endl;
+            } else if  constexpr (std::derived_from<Args, EventReaderBase>) {
+                std::cout << "EventReader" << std::endl;
+            }  else if  constexpr (std::derived_from<Args, Component>) {
                 std::cout << "Component" << std::endl;
             } else {
                 static_assert(false_type_v<Args>, "Argument is invalid");
             }
         }(), ...);
+
     }
 
     template<typename... Args>
@@ -95,13 +108,31 @@ public:
         return AddTaskAtStage<StartUpStage>(task);
     }
 
+    template<typename T>
+    auto BindEventReader()
+    {
+        return EventReader(static_cast<T&>(*mEventStorages[typeid(typename T::EventType)].get()));
+    }
+    
+    template<typename T>
+    auto BindEventWriter()
+    {
+        return EventWriter(static_cast<T&>(*mEventStorages[typeid(typename T::EventType)].get()));
+    }
+
     template<typename... Args>
     auto _BindTasks(void(*task)(Args...)) {
         return std::bind(task,
             ([&]
             {   if  constexpr (std::derived_from<Args, QueryBase>) {
                     return Args(*this); // Returns a Query<Components&...>
-                } else {
+                } else if  constexpr (std::derived_from<Args, EventWriterBase>) {
+                    std::cout << "EventWriter" << std::endl;
+                    return BindEventWriter<typename Args::StorageType>();
+                } else if  constexpr (std::derived_from<Args, EventReaderBase>) {
+                    std::cout << "EventReader" << std::endl;
+                    return BindEventReader<typename Args::StorageType>();
+                }  else {
                     static_assert(false_type_v<Args>, "Argument is invalid");
                 }
             }(), ...));
@@ -110,8 +141,7 @@ public:
     template<typename Stage, typename... Args>
     World& AddTaskAtStage(void(*task)(Args...))
     {
-        auto t = _BindTasks(task);
-        mTaskScheduler.AddTask<Stage>(t);
+        mTaskScheduler.AddTask<Stage>(_BindTasks(task));
         return *this;
     }
 
@@ -126,10 +156,13 @@ public:
     void Update()
     {
         mTaskScheduler.ExecuteAll();
+        for(auto& [key, events]: mEventStorages) 
+            events->Update();
     }
 
     using ComponentStorages = UnorderedMap<std::type_index, UPtr<ComponentStorageBase>>;
-    using EntityComponentMap = UnorderedMap<Entity, std::unordered_map<std::type_index, Component*>>;
+    using EntityComponentMap = UnorderedMap<Entity, UnorderedMap<std::type_index, Component*>>;
+    using EventStorageMap = UnorderedMap<std::type_index, UPtr<EventStorageBase>>;
 
 
     template<CComponent T>
@@ -143,6 +176,7 @@ public:
 private:
     ComponentStorages mComponents;
     EntityComponentMap mEntityComponents;
+    EventStorageMap mEventStorages;
     TaskScheduler mTaskScheduler;
 };
 

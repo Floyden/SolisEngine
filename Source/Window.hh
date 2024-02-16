@@ -13,12 +13,20 @@ enum class WindowEventType
     FocusLost,
     FocusGained,
     Enter,
+    Resized,
     Leave
 };
 
 struct WindowEvent : public IEvent
 {
-    WindowEventType type;
+    WindowEventType type; 
+};
+
+struct WindowResizedEvent : public IEvent
+{
+    WindowEventType type; 
+    uint32_t width;
+    uint32_t height;
 };
 
 class Window : public ECS::Component {
@@ -49,6 +57,7 @@ private:
     void _HandleWindowEvents(SDL_WindowEvent event);
 
     void SendWindowEvent(WindowEventType);
+    void SendWindowResizedEvent(WindowEventType type, uint32_t width, uint32_t height);
 
     explicit Window() : mWindow(nullptr) {};
 private:
