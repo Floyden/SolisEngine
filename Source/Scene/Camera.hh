@@ -122,7 +122,7 @@ public:
         cPos -= 1.0f;
         cPos.y *= -1.0f;
 
-        auto view = GetView();
+        // auto view = GetView();
         Vec3 ray;
 
         // Figure this out

@@ -1,4 +1,5 @@
 #pragma once
+#include "Defines.hh"
 #include "Entity.hh"
 
 namespace Solis::ECS

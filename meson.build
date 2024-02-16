@@ -1,5 +1,5 @@
 project('Solis', 'cpp',
-    default_options : 'cpp_std=c++20')
+    default_options : 'cpp_std=c++23')
 
 libsdl = dependency('SDL2')
 libsdl_image = dependency('SDL2_image')
