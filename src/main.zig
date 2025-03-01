@@ -44,7 +44,8 @@ pub fn main() !void {
     // Video subsystem & windows
     if (!c.SDL_Init(c.SDL_INIT_VIDEO)) return SDL_ERROR.Fail;
     defer c.SDL_Quit();
-    const window = c.SDL_CreateWindow("Hey", 800, 600, c.SDL_WINDOW_VULKAN) orelse return SDL_ERROR.Fail;
+    var window_size: @Vector(2, c_int) = .{ 800, 600 };
+    const window = c.SDL_CreateWindow("Hey", window_size[0], window_size[1], c.SDL_WINDOW_VULKAN | c.SDL_WINDOW_RESIZABLE) orelse return SDL_ERROR.Fail;
     defer c.SDL_DestroyWindow(window);
 
     if (!c.SDL_ShowWindow(window)) return SDL_ERROR.Fail;
@@ -160,10 +161,8 @@ pub fn main() !void {
     if (pipeline == null) return SDL_ERROR.Fail;
 
     // window textures
-    var drawable: [2]i32 = .{ 0, 0 };
-    _ = c.SDL_GetWindowSizeInPixels(window, &drawable[0], &drawable[1]);
 
-    const tex_depth = createDepthTexture(device, drawable, sample_count);
+    var tex_depth = createDepthTexture(device, window_size, sample_count);
     if (tex_depth == null) return SDL_ERROR.Fail;
     defer c.SDL_ReleaseGPUTexture(device, tex_depth);
 
@@ -184,7 +183,7 @@ pub fn main() !void {
                 else => {},
             }
         }
-        c.SDL_Delay(60);
+        c.SDL_Delay(16);
         const cmd = c.SDL_AcquireGPUCommandBuffer(device) orelse return SDL_ERROR.Fail;
         defer _ = c.SDL_SubmitGPUCommandBuffer(cmd);
 
@@ -196,6 +195,14 @@ pub fn main() !void {
         }
 
         // TODO: Resize
+        var current_window_size: @Vector(2, c_int) = .{ 0, 0 };
+        _ = c.SDL_GetWindowSizeInPixels(window, &current_window_size[0], &current_window_size[1]);
+        if (@reduce(.Or, window_size != current_window_size)) {
+            window_size = current_window_size;
+            c.SDL_ReleaseGPUTexture(device, tex_depth);
+            tex_depth = createDepthTexture(device, window_size, sample_count);
+            if (tex_depth == null) return SDL_ERROR.Fail;
+        }
 
         var color_target = std.mem.zeroInit(c.SDL_GPUColorTargetInfo, .{
             .texture = swapchainTexture,
