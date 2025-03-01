@@ -55,6 +55,178 @@ const Window = struct {
     }
 };
 
+pub const CommandBuffer = struct {
+    handle: *c.SDL_GPUCommandBuffer,
+    copy_pass: ?*c.SDL_GPUCopyPass = null,
+
+    pub fn submit(self: CommandBuffer) void {
+        _ = c.SDL_SubmitGPUCommandBuffer(self.handle);
+    }
+    pub fn cancel(self: CommandBuffer) void {
+        _ = c.SDL_CancelGPUCommandBuffer(self.handle);
+    }
+
+    pub fn beginCopyPass(self: *CommandBuffer) void {
+        self.copy_pass = c.SDL_BeginGPUCopyPass(self.handle);
+    }
+
+    pub fn acquireSwapchain(self: CommandBuffer, window: Window) ?*c.SDL_GPUTexture {
+        var swapchain_texture: ?*c.SDL_GPUTexture = null;
+        _ = c.SDL_AcquireGPUSwapchainTexture(self.handle, window.handle, &swapchain_texture, null, null);
+        return swapchain_texture;
+    }
+
+    pub fn endCopyPass(self: *CommandBuffer) void {
+        c.SDL_EndGPUCopyPass(self.copy_pass);
+        self.copy_pass = null;
+    }
+    pub fn pushVertexUniformData(self: CommandBuffer, T: type, data: []const T) void {
+        c.SDL_PushGPUVertexUniformData(self.handle, 0, data.ptr, @intCast(@sizeOf(T) * data.len));
+    }
+
+    pub fn uploadToBuffer(self: CommandBuffer, src: *c.SDL_GPUTransferBuffer, dst: *c.SDL_GPUBuffer) void {
+        const buf_location = std.mem.zeroInit(c.SDL_GPUTransferBufferLocation, .{ .transfer_buffer = src });
+        const dst_region = std.mem.zeroInit(c.SDL_GPUBufferRegion, .{
+            .buffer = dst,
+            .size = c.triangle_data_size,
+        });
+        c.SDL_UploadToGPUBuffer(self.copy_pass, &buf_location, &dst_region, false);
+    }
+};
+
+pub const Renderer = struct {
+    window: *Window,
+    device: ?*c.SDL_GPUDevice,
+    sample_count: c.SDL_GPUSampleCount,
+    pipeline: ?*c.SDL_GPUGraphicsPipeline,
+
+    pub fn init(window: *Window) !Renderer {
+        // GPU Device init
+        const device = c.SDL_CreateGPUDevice(c.SDL_GPU_SHADERFORMAT_SPIRV, true, null) orelse return SDL_ERROR.Fail;
+        if (!c.SDL_ClaimWindowForGPUDevice(device, window.handle)) return SDL_ERROR.Fail;
+
+        // Shaders, Can be destroyed after pipeline is created
+        const vertex_shader = init_shader(device, true) catch return SDL_ERROR.Fail;
+        const fragment_shader = init_shader(device, false) catch return SDL_ERROR.Fail;
+        defer c.SDL_ReleaseGPUShader(device, vertex_shader);
+        defer c.SDL_ReleaseGPUShader(device, fragment_shader);
+
+        const sample_count: c.SDL_GPUSampleCount = c.SDL_GPU_SAMPLECOUNT_1;
+
+        // Graphics Pipeline
+        const color_target_desc = std.mem.zeroInit(c.SDL_GPUColorTargetDescription, .{ .format = c.SDL_GetGPUSwapchainTextureFormat(device, window.handle) });
+
+        const vertex_buffer_desc = std.mem.zeroInit(c.SDL_GPUVertexBufferDescription, .{
+            .slot = 0,
+            .input_rate = c.SDL_GPU_VERTEXINPUTRATE_VERTEX,
+            .instance_step_rate = 0,
+            .pitch = @sizeOf(c.VertexData),
+        });
+        const vertex_attributes: [2]c.SDL_GPUVertexAttribute = .{
+            std.mem.zeroInit(c.SDL_GPUVertexAttribute, .{
+                .buffer_slot = 0,
+                .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
+                .location = 0,
+                .offset = 0,
+            }),
+            std.mem.zeroInit(c.SDL_GPUVertexAttribute, .{
+                .buffer_slot = 0,
+                .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
+                .location = 1,
+                .offset = @sizeOf(f32) * 3,
+            }),
+        };
+
+        const pipelinedesc = std.mem.zeroInit(c.SDL_GPUGraphicsPipelineCreateInfo, .{
+            .target_info = .{
+                .num_color_targets = 1,
+                .color_target_descriptions = &color_target_desc,
+                .depth_stencil_format = c.SDL_GPU_TEXTUREFORMAT_D16_UNORM,
+                .has_depth_stencil_target = true,
+            },
+
+            .depth_stencil_state = .{
+                .enable_depth_test = true,
+                .enable_depth_write = true,
+                .compare_op = c.SDL_GPU_COMPAREOP_LESS_OR_EQUAL,
+            },
+
+            .multisample_state = .{ .sample_count = sample_count },
+
+            .primitive_type = c.SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
+
+            .vertex_shader = vertex_shader,
+            .fragment_shader = fragment_shader,
+
+            .vertex_input_state = .{
+                .num_vertex_buffers = 1,
+                .vertex_buffer_descriptions = &vertex_buffer_desc,
+                .num_vertex_attributes = 2,
+                .vertex_attributes = &vertex_attributes,
+            },
+            .props = 0,
+        });
+        const pipeline = c.SDL_CreateGPUGraphicsPipeline(device, &pipelinedesc);
+        if (pipeline == null) return SDL_ERROR.Fail;
+        return .{ .window = window, .device = device, .sample_count = sample_count, .pipeline = pipeline };
+    }
+
+    pub fn deinit(self: *Renderer) void {
+        if (self.device == null) return;
+
+        if (self.pipeline) |_| {
+            c.SDL_ReleaseGPUGraphicsPipeline(self.device, self.pipeline);
+
+            self.pipeline = null;
+        }
+        c.SDL_DestroyGPUDevice(self.device);
+        self.device = null;
+    }
+
+    pub fn createBufferNamed(self: *Renderer, size: u32, usage_flags: u32, name: [:0]const u8) !*c.SDL_GPUBuffer {
+        const buffer_desc = c.SDL_GPUBufferCreateInfo{
+            .size = size,
+            .usage = usage_flags,
+            .props = c.SDL_CreateProperties(),
+        };
+        _ = c.SDL_SetStringProperty(buffer_desc.props, c.SDL_PROP_GPU_BUFFER_CREATE_NAME_STRING, name);
+        const buf_vertex = c.SDL_CreateGPUBuffer(self.device, &buffer_desc) orelse return SDL_ERROR.Fail;
+        c.SDL_DestroyProperties(buffer_desc.props);
+        return buf_vertex;
+    }
+
+    pub fn releaseBuffer(self: *Renderer, buffer: *c.SDL_GPUBuffer) void {
+        _ = c.SDL_ReleaseGPUBuffer(self.device, buffer);
+    }
+
+    pub fn createTransferBufferNamed(self: *Renderer, size: u32, usage_flags: u32, name: [:0]const u8) !*c.SDL_GPUTransferBuffer {
+        const transfer_buffer_desc = c.SDL_GPUTransferBufferCreateInfo{
+            .size = size,
+            .usage = usage_flags,
+            .props = c.SDL_CreateProperties(),
+        };
+        _ = c.SDL_SetStringProperty(transfer_buffer_desc.props, c.SDL_PROP_GPU_BUFFER_CREATE_NAME_STRING, name);
+        const buf_transfer = c.SDL_CreateGPUTransferBuffer(self.device, &transfer_buffer_desc) orelse return SDL_ERROR.Fail;
+        c.SDL_DestroyProperties(transfer_buffer_desc.props);
+        return buf_transfer;
+    }
+
+    pub fn releaseTransferBuffer(self: *Renderer, buffer: *c.SDL_GPUTransferBuffer) void {
+        _ = c.SDL_ReleaseGPUTransferBuffer(self.device, buffer);
+    }
+
+    pub fn copyToTransferBuffer(self: *Renderer, buffer: *c.SDL_GPUTransferBuffer, data: []const u8) void {
+        const map = c.SDL_MapGPUTransferBuffer(self.device, buffer, false);
+        _ = c.SDL_memcpy(map, data.ptr, data.len);
+        c.SDL_UnmapGPUTransferBuffer(self.device, buffer);
+    }
+
+    pub fn acquireCommandBuffer(self: *Renderer) ?CommandBuffer {
+        const cmd = c.SDL_AcquireGPUCommandBuffer(self.device) orelse return null;
+        return .{ .handle = cmd };
+    }
+};
+
 pub fn main() !void {
     errdefer c.SDL_Log("Error: %s", c.SDL_GetError());
     if (!c.SDL_Init(c.SDL_INIT_VIDEO)) return SDL_ERROR.Fail;
@@ -64,121 +236,33 @@ pub fn main() !void {
     var window = Window.init() catch |e| return e;
     defer window.deinit();
 
-    // GPU Device init
-    const device = c.SDL_CreateGPUDevice(c.SDL_GPU_SHADERFORMAT_SPIRV, true, null) orelse return SDL_ERROR.Fail;
-    defer c.SDL_DestroyGPUDevice(device);
-    if (!c.SDL_ClaimWindowForGPUDevice(device, window.handle)) return SDL_ERROR.Fail;
-
-    // Shaders
-    const vertex_shader = init_shader(device, true) catch return SDL_ERROR.Fail;
-    const fragment_shader = init_shader(device, false) catch return SDL_ERROR.Fail;
-    defer c.SDL_ReleaseGPUShader(device, vertex_shader);
-    defer c.SDL_ReleaseGPUShader(device, fragment_shader);
-
-    // Buffers
-    const buffer_desc = c.SDL_GPUBufferCreateInfo{
-        .size = c.triangle_data_size,
-        .usage = c.SDL_GPU_BUFFERUSAGE_VERTEX,
-        .props = c.SDL_CreateProperties(),
-    };
-    _ = c.SDL_SetStringProperty(buffer_desc.props, c.SDL_PROP_GPU_BUFFER_CREATE_NAME_STRING, "VertexBuffer");
-    const buf_vertex = c.SDL_CreateGPUBuffer(device, &buffer_desc) orelse return SDL_ERROR.Fail;
-    defer c.SDL_ReleaseGPUBuffer(device, buf_vertex);
-    c.SDL_DestroyProperties(buffer_desc.props);
-
-    // Transfer data
-    {
-        const transfer_buffer_desc = c.SDL_GPUTransferBufferCreateInfo{
-            .size = c.triangle_data_size,
-            .usage = c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-            .props = c.SDL_CreateProperties(),
-        };
-        _ = c.SDL_SetStringProperty(transfer_buffer_desc.props, c.SDL_PROP_GPU_BUFFER_CREATE_NAME_STRING, "TransferBuffer");
-        const buf_transfer = c.SDL_CreateGPUTransferBuffer(device, &transfer_buffer_desc) orelse return SDL_ERROR.Fail;
-        defer c.SDL_ReleaseGPUTransferBuffer(device, buf_transfer);
-        c.SDL_DestroyProperties(transfer_buffer_desc.props);
-
-        const map = c.SDL_MapGPUTransferBuffer(device, buf_transfer, false);
-        _ = c.SDL_memcpy(map, &c.triangle_data, c.triangle_data_size);
-        c.SDL_UnmapGPUTransferBuffer(device, buf_transfer);
-
-        const cmd = c.SDL_AcquireGPUCommandBuffer(device);
-        const copy_pass = c.SDL_BeginGPUCopyPass(cmd);
-
-        const buf_location = std.mem.zeroInit(c.SDL_GPUTransferBufferLocation, .{ .transfer_buffer = buf_transfer });
-        const dst_region = std.mem.zeroInit(c.SDL_GPUBufferRegion, .{
-            .buffer = buf_vertex,
-            .size = c.triangle_data_size,
-        });
-        c.SDL_UploadToGPUBuffer(copy_pass, &buf_location, &dst_region, false);
-        c.SDL_EndGPUCopyPass(copy_pass);
-        _ = c.SDL_SubmitGPUCommandBuffer(cmd);
-    }
-
-    const sample_count: c.SDL_GPUSampleCount = c.SDL_GPU_SAMPLECOUNT_1;
-
-    // Graphics Pipeline
-    const color_target_desc = std.mem.zeroInit(c.SDL_GPUColorTargetDescription, .{ .format = c.SDL_GetGPUSwapchainTextureFormat(device, window.handle) });
-
-    const vertex_buffer_desc = std.mem.zeroInit(c.SDL_GPUVertexBufferDescription, .{
-        .slot = 0,
-        .input_rate = c.SDL_GPU_VERTEXINPUTRATE_VERTEX,
-        .instance_step_rate = 0,
-        .pitch = @sizeOf(c.VertexData),
-    });
-    const vertex_attributes: [2]c.SDL_GPUVertexAttribute = .{
-        std.mem.zeroInit(c.SDL_GPUVertexAttribute, .{
-            .buffer_slot = 0,
-            .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
-            .location = 0,
-            .offset = 0,
-        }),
-        std.mem.zeroInit(c.SDL_GPUVertexAttribute, .{
-            .buffer_slot = 0,
-            .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
-            .location = 1,
-            .offset = @sizeOf(f32) * 3,
-        }),
-    };
-
-    const pipelinedesc = std.mem.zeroInit(c.SDL_GPUGraphicsPipelineCreateInfo, .{
-        .target_info = .{
-            .num_color_targets = 1,
-            .color_target_descriptions = &color_target_desc,
-            .depth_stencil_format = c.SDL_GPU_TEXTUREFORMAT_D16_UNORM,
-            .has_depth_stencil_target = true,
-        },
-
-        .depth_stencil_state = .{
-            .enable_depth_test = true,
-            .enable_depth_write = true,
-            .compare_op = c.SDL_GPU_COMPAREOP_LESS_OR_EQUAL,
-        },
-
-        .multisample_state = .{ .sample_count = sample_count },
-
-        .primitive_type = c.SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
-
-        .vertex_shader = vertex_shader,
-        .fragment_shader = fragment_shader,
-
-        .vertex_input_state = .{
-            .num_vertex_buffers = 1,
-            .vertex_buffer_descriptions = &vertex_buffer_desc,
-            .num_vertex_attributes = 2,
-            .vertex_attributes = &vertex_attributes,
-        },
-        .props = 0,
-    });
-    const pipeline = c.SDL_CreateGPUGraphicsPipeline(device, &pipelinedesc);
-    defer c.SDL_ReleaseGPUGraphicsPipeline(device, pipeline);
-    if (pipeline == null) return SDL_ERROR.Fail;
+    var renderer = Renderer.init(&window) catch |e| return e;
+    defer renderer.deinit();
 
     // window textures
 
-    var tex_depth = createDepthTexture(device, window.size, sample_count);
+    var tex_depth = createDepthTexture(renderer.device.?, window.size, renderer.sample_count);
     if (tex_depth == null) return SDL_ERROR.Fail;
-    defer c.SDL_ReleaseGPUTexture(device, tex_depth);
+    defer c.SDL_ReleaseGPUTexture(renderer.device, tex_depth);
+
+    // Buffers
+    const buf_vertex = renderer.createBufferNamed(c.triangle_data_size, c.SDL_GPU_BUFFERUSAGE_VERTEX, "VertexBuffer") catch |e| return e;
+    defer renderer.releaseBuffer(buf_vertex);
+
+    // Transfer data
+    {
+        const buf_transfer = renderer.createTransferBufferNamed(c.triangle_data_size, c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "TransferBuffer") catch |e| return e;
+        defer renderer.releaseTransferBuffer(buf_transfer);
+
+        renderer.copyToTransferBuffer(buf_transfer, @as(*const [c.triangle_data_size]u8, @ptrCast(&c.triangle_data))[0..c.triangle_data_size]);
+
+        var cmd = renderer.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
+        defer cmd.submit();
+
+        cmd.beginCopyPass();
+        cmd.uploadToBuffer(buf_transfer, buf_vertex);
+        cmd.endCopyPass();
+    }
 
     // Main loop
     const matrix = [16]f32{
@@ -198,22 +282,20 @@ pub fn main() !void {
             }
         }
         c.SDL_Delay(16);
-        const cmd = c.SDL_AcquireGPUCommandBuffer(device) orelse return SDL_ERROR.Fail;
-        defer _ = c.SDL_SubmitGPUCommandBuffer(cmd);
+        const cmd = renderer.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
+        defer cmd.submit();
 
-        var swapchainTexture: ?*c.SDL_GPUTexture = null;
-        if (!c.SDL_AcquireGPUSwapchainTexture(cmd, window.handle, &swapchainTexture, null, null)) return SDL_ERROR.Fail;
-        if (swapchainTexture == null) {
-            _ = c.SDL_CancelGPUCommandBuffer(cmd);
+        const swapchainTexture = cmd.acquireSwapchain(window) orelse {
+            cmd.cancel();
             continue;
-        }
+        };
 
         var current_window_size: @Vector(2, c_int) = .{ 0, 0 };
         _ = c.SDL_GetWindowSizeInPixels(window.handle, &current_window_size[0], &current_window_size[1]);
         if (@reduce(.Or, window.size != current_window_size)) {
             window.size = current_window_size;
-            c.SDL_ReleaseGPUTexture(device, tex_depth);
-            tex_depth = createDepthTexture(device, window.size, sample_count);
+            c.SDL_ReleaseGPUTexture(renderer.device, tex_depth);
+            tex_depth = createDepthTexture(renderer.device.?, window.size, renderer.sample_count);
             if (tex_depth == null) return SDL_ERROR.Fail;
         }
 
@@ -234,9 +316,9 @@ pub fn main() !void {
         });
 
         const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buf_vertex, .offset = 0 };
-        c.SDL_PushGPUVertexUniformData(cmd, 0, &matrix, @sizeOf(f32) * matrix.len);
-        const pass = c.SDL_BeginGPURenderPass(cmd, &color_target, 1, &depth_target);
-        c.SDL_BindGPUGraphicsPipeline(pass, pipeline);
+        cmd.pushVertexUniformData(f32, &matrix);
+        const pass = c.SDL_BeginGPURenderPass(cmd.handle, &color_target, 1, &depth_target);
+        c.SDL_BindGPUGraphicsPipeline(pass, renderer.pipeline);
         c.SDL_BindGPUVertexBuffers(pass, 0, &vertex_binding, 1);
         c.SDL_DrawGPUPrimitives(pass, 3, 1, 0, 0);
         c.SDL_EndGPURenderPass(pass);
