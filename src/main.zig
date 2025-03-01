@@ -38,22 +38,36 @@ fn createDepthTexture(device: *c.SDL_GPUDevice, drawable: [2]i32, sample_count: 
     return c.SDL_CreateGPUTexture(device, &createinfo);
 }
 
+const Window = struct {
+    handle: ?*c.SDL_Window,
+    size: @Vector(2, c_int),
+
+    pub fn init() !Window {
+        const window_size: @Vector(2, c_int) = .{ 800, 600 };
+        const window = c.SDL_CreateWindow("Hey", window_size[0], window_size[1], c.SDL_WINDOW_VULKAN | c.SDL_WINDOW_RESIZABLE) orelse return SDL_ERROR.Fail;
+        if (!c.SDL_ShowWindow(window)) return SDL_ERROR.Fail;
+        return .{ .handle = window, .size = window_size };
+    }
+
+    pub fn deinit(self: *Window) void {
+        c.SDL_DestroyWindow(self.handle);
+        self.handle = null;
+    }
+};
+
 pub fn main() !void {
     errdefer c.SDL_Log("Error: %s", c.SDL_GetError());
-
-    // Video subsystem & windows
     if (!c.SDL_Init(c.SDL_INIT_VIDEO)) return SDL_ERROR.Fail;
     defer c.SDL_Quit();
-    var window_size: @Vector(2, c_int) = .{ 800, 600 };
-    const window = c.SDL_CreateWindow("Hey", window_size[0], window_size[1], c.SDL_WINDOW_VULKAN | c.SDL_WINDOW_RESIZABLE) orelse return SDL_ERROR.Fail;
-    defer c.SDL_DestroyWindow(window);
 
-    if (!c.SDL_ShowWindow(window)) return SDL_ERROR.Fail;
+    // Video subsystem & windows
+    var window = Window.init() catch |e| return e;
+    defer window.deinit();
 
     // GPU Device init
     const device = c.SDL_CreateGPUDevice(c.SDL_GPU_SHADERFORMAT_SPIRV, true, null) orelse return SDL_ERROR.Fail;
     defer c.SDL_DestroyGPUDevice(device);
-    if (!c.SDL_ClaimWindowForGPUDevice(device, window)) return SDL_ERROR.Fail;
+    if (!c.SDL_ClaimWindowForGPUDevice(device, window.handle)) return SDL_ERROR.Fail;
 
     // Shaders
     const vertex_shader = init_shader(device, true) catch return SDL_ERROR.Fail;
@@ -104,7 +118,7 @@ pub fn main() !void {
     const sample_count: c.SDL_GPUSampleCount = c.SDL_GPU_SAMPLECOUNT_1;
 
     // Graphics Pipeline
-    const color_target_desc = std.mem.zeroInit(c.SDL_GPUColorTargetDescription, .{ .format = c.SDL_GetGPUSwapchainTextureFormat(device, window) });
+    const color_target_desc = std.mem.zeroInit(c.SDL_GPUColorTargetDescription, .{ .format = c.SDL_GetGPUSwapchainTextureFormat(device, window.handle) });
 
     const vertex_buffer_desc = std.mem.zeroInit(c.SDL_GPUVertexBufferDescription, .{
         .slot = 0,
@@ -162,7 +176,7 @@ pub fn main() !void {
 
     // window textures
 
-    var tex_depth = createDepthTexture(device, window_size, sample_count);
+    var tex_depth = createDepthTexture(device, window.size, sample_count);
     if (tex_depth == null) return SDL_ERROR.Fail;
     defer c.SDL_ReleaseGPUTexture(device, tex_depth);
 
@@ -188,19 +202,18 @@ pub fn main() !void {
         defer _ = c.SDL_SubmitGPUCommandBuffer(cmd);
 
         var swapchainTexture: ?*c.SDL_GPUTexture = null;
-        if (!c.SDL_AcquireGPUSwapchainTexture(cmd, window, &swapchainTexture, null, null)) return SDL_ERROR.Fail;
+        if (!c.SDL_AcquireGPUSwapchainTexture(cmd, window.handle, &swapchainTexture, null, null)) return SDL_ERROR.Fail;
         if (swapchainTexture == null) {
             _ = c.SDL_CancelGPUCommandBuffer(cmd);
             continue;
         }
 
-        // TODO: Resize
         var current_window_size: @Vector(2, c_int) = .{ 0, 0 };
-        _ = c.SDL_GetWindowSizeInPixels(window, &current_window_size[0], &current_window_size[1]);
-        if (@reduce(.Or, window_size != current_window_size)) {
-            window_size = current_window_size;
+        _ = c.SDL_GetWindowSizeInPixels(window.handle, &current_window_size[0], &current_window_size[1]);
+        if (@reduce(.Or, window.size != current_window_size)) {
+            window.size = current_window_size;
             c.SDL_ReleaseGPUTexture(device, tex_depth);
-            tex_depth = createDepthTexture(device, window_size, sample_count);
+            tex_depth = createDepthTexture(device, window.size, sample_count);
             if (tex_depth == null) return SDL_ERROR.Fail;
         }
 
