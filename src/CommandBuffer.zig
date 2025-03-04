@@ -27,8 +27,8 @@ pub fn endCopyPass(self: *CommandBuffer) void {
     c.SDL_EndGPUCopyPass(self.copy_pass);
     self.copy_pass = null;
 }
-pub fn pushVertexUniformData(self: CommandBuffer, T: type, data: []const T) void {
-    c.SDL_PushGPUVertexUniformData(self.handle, 0, data.ptr, @intCast(@sizeOf(T) * data.len));
+pub fn pushVertexUniformData(self: CommandBuffer, location: u32, T: type, data: []const T) void {
+    c.SDL_PushGPUVertexUniformData(self.handle, location, data.ptr, @intCast(@sizeOf(T) * data.len));
 }
 
 pub fn uploadToBuffer(self: CommandBuffer, src: *c.SDL_GPUTransferBuffer, dst: *c.SDL_GPUBuffer) void {

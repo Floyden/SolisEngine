@@ -110,7 +110,7 @@ pub fn main() !void {
         });
 
         const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buf_vertex, .offset = 0 };
-        cmd.pushVertexUniformData(f32, &matrix);
+        cmd.pushVertexUniformData(0, f32, &matrix);
         const pass = c.SDL_BeginGPURenderPass(cmd.handle, &color_target, 1, &depth_target);
         c.SDL_BindGPUGraphicsPipeline(pass, renderer.pipeline);
         c.SDL_BindGPUVertexBuffers(pass, 0, &vertex_binding, 1);

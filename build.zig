@@ -24,6 +24,9 @@ pub fn build(b: *std.Build) void {
 
     exe.linkLibC();
     exe.linkSystemLibrary("SDL3");
+    exe.linkSystemLibrary("glslang");
+    exe.linkSystemLibrary("glslang-default-resource-limits");
+    exe.linkSystemLibrary("spirv-cross-c-shared");
     exe.addIncludePath(b.path("src/"));
 
     // This declares intent for the executable to be installed into the
