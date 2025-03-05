@@ -48,7 +48,7 @@ pub fn main() !void {
         const buf_transfer = renderer.createTransferBufferNamed(c.triangle_data_size, c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "TransferBuffer") catch |e| return e;
         defer renderer.releaseTransferBuffer(buf_transfer);
 
-        renderer.copyToTransferBuffer(buf_transfer, @as(*const [c.triangle_data_size]u8, @ptrCast(&c.triangle_data))[0..c.triangle_data_size]);
+        renderer.copyToTransferBuffer(buf_transfer, @ptrCast(&c.triangle_data));
 
         var cmd = renderer.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
         defer cmd.submit();
