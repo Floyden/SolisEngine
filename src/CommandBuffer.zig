@@ -31,11 +31,11 @@ pub fn pushVertexUniformData(self: CommandBuffer, location: u32, T: type, data: 
     c.SDL_PushGPUVertexUniformData(self.handle, location, data.ptr, @intCast(@sizeOf(T) * data.len));
 }
 
-pub fn uploadToBuffer(self: CommandBuffer, src: *c.SDL_GPUTransferBuffer, dst: *c.SDL_GPUBuffer) void {
+pub fn uploadToBuffer(self: CommandBuffer, src: *c.SDL_GPUTransferBuffer, dst: *c.SDL_GPUBuffer, length: u32) void {
     const buf_location = std.mem.zeroInit(c.SDL_GPUTransferBufferLocation, .{ .transfer_buffer = src });
     const dst_region = std.mem.zeroInit(c.SDL_GPUBufferRegion, .{
         .buffer = dst,
-        .size = c.triangle_data_size,
+        .size = length,
     });
     c.SDL_UploadToGPUBuffer(self.copy_pass, &buf_location, &dst_region, false);
 }

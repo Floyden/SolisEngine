@@ -40,21 +40,22 @@ pub fn main() !void {
     defer c.SDL_ReleaseGPUTexture(renderer.device, tex_depth);
 
     // Buffers
-    const buf_vertex = renderer.createBufferNamed(c.triangle_data_size, c.SDL_GPU_BUFFERUSAGE_VERTEX, "VertexBuffer") catch |e| return e;
+    const current_vert: []const u8 = @ptrCast(&c.vertex_data);
+    const buf_vertex = renderer.createBufferNamed(current_vert.len, c.SDL_GPU_BUFFERUSAGE_VERTEX, "VertexBuffer") catch |e| return e;
     defer renderer.releaseBuffer(buf_vertex);
 
     // Transfer data
     {
-        const buf_transfer = renderer.createTransferBufferNamed(c.triangle_data_size, c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "TransferBuffer") catch |e| return e;
+        const buf_transfer = renderer.createTransferBufferNamed(current_vert.len, c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "TransferBuffer") catch |e| return e;
         defer renderer.releaseTransferBuffer(buf_transfer);
 
-        renderer.copyToTransferBuffer(buf_transfer, @ptrCast(&c.triangle_data));
+        renderer.copyToTransferBuffer(buf_transfer, @ptrCast(current_vert));
 
         var cmd = renderer.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
         defer cmd.submit();
 
         cmd.beginCopyPass();
-        cmd.uploadToBuffer(buf_transfer, buf_vertex);
+        cmd.uploadToBuffer(buf_transfer, buf_vertex, current_vert.len);
         cmd.endCopyPass();
     }
 
@@ -114,7 +115,7 @@ pub fn main() !void {
         const pass = c.SDL_BeginGPURenderPass(cmd.handle, &color_target, 1, &depth_target);
         c.SDL_BindGPUGraphicsPipeline(pass, renderer.pipeline);
         c.SDL_BindGPUVertexBuffers(pass, 0, &vertex_binding, 1);
-        c.SDL_DrawGPUPrimitives(pass, 3, 1, 0, 0);
+        c.SDL_DrawGPUPrimitives(pass, 36, 1, 0, 0);
         c.SDL_EndGPURenderPass(pass);
     }
 }
