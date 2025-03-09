@@ -1,6 +1,7 @@
 const std = @import("std");
 const Window = @import("Window.zig");
 const Renderer = @import("Renderer.zig");
+const matrix = @import("matrix.zig");
 const c = Renderer.c;
 const CommandBuffer = Renderer.CommandBuffer;
 const SDL_ERROR = Window.SDL_ERROR;
@@ -60,12 +61,7 @@ pub fn main() !void {
     }
 
     // Main loop
-    const matrix = [16]f32{
-        1.0, 0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0,
-    };
+    var angle: f32 = 0.0;
 
     var done = false;
     var event: c.SDL_Event = undefined;
@@ -94,6 +90,12 @@ pub fn main() !void {
             if (tex_depth == null) return SDL_ERROR.Fail;
         }
 
+        angle += 1;
+        var mvp = matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle);
+        mvp.data[14] -= 2.5;
+        const canvas_size: @Vector(2, f32) = @floatFromInt(current_window_size);
+        mvp = mvp.mult(matrix.perspective(45.0, canvas_size[0] / canvas_size[1], 0.01, 100));
+
         var color_target = std.mem.zeroInit(c.SDL_GPUColorTargetInfo, .{
             .texture = swapchainTexture,
             .clear_color = .{ .r = 0.1, .g = 0.1, .b = 0.1, .a = 1.0 },
@@ -111,7 +113,7 @@ pub fn main() !void {
         });
 
         const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buf_vertex, .offset = 0 };
-        cmd.pushVertexUniformData(0, f32, &matrix);
+        cmd.pushVertexUniformData(0, f32, &mvp.data);
         const pass = c.SDL_BeginGPURenderPass(cmd.handle, &color_target, 1, &depth_target);
         c.SDL_BindGPUGraphicsPipeline(pass, renderer.pipeline);
         c.SDL_BindGPUVertexBuffers(pass, 0, &vertex_binding, 1);
