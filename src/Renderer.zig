@@ -40,7 +40,7 @@ pub fn init(window: *Window) !Renderer {
         .pitch = @sizeOf(c.VertexData),
     });
 
-    const vertex_attributes: [2]c.SDL_GPUVertexAttribute = .{
+    const vertex_attributes: [3]c.SDL_GPUVertexAttribute = .{
         std.mem.zeroInit(c.SDL_GPUVertexAttribute, .{
             .buffer_slot = 0,
             .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
@@ -52,6 +52,12 @@ pub fn init(window: *Window) !Renderer {
             .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
             .location = 1,
             .offset = @sizeOf(f32) * 3,
+        }),
+        std.mem.zeroInit(c.SDL_GPUVertexAttribute, .{
+            .buffer_slot = 0,
+            .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
+            .location = 2,
+            .offset = @sizeOf(f32) * 6,
         }),
     };
 
@@ -78,7 +84,7 @@ pub fn init(window: *Window) !Renderer {
         .vertex_input_state = .{
             .num_vertex_buffers = 1,
             .vertex_buffer_descriptions = &vertex_buffer_desc,
-            .num_vertex_attributes = 2,
+            .num_vertex_attributes = 3,
             .vertex_attributes = &vertex_attributes,
         },
         .props = 0,
