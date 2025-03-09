@@ -84,8 +84,12 @@ pub fn init(window: *Window) !Renderer {
         .vertex_input_state = .{
             .num_vertex_buffers = 1,
             .vertex_buffer_descriptions = &vertex_buffer_desc,
-            .num_vertex_attributes = 3,
+            .num_vertex_attributes = vertex_attributes.len,
             .vertex_attributes = &vertex_attributes,
+        },
+        .rasterizer_state = .{
+            .cull_mode = c.SDL_GPU_CULLMODE_FRONT,
+            .front_face = c.SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE,
         },
         .props = 0,
     });
@@ -151,6 +155,7 @@ pub fn acquireCommandBuffer(self: *Renderer) ?CommandBuffer {
 
 const ShaderInfo = struct {
     num_inputs: usize,
+    num_outputs: usize,
     num_uniform_buffers: usize,
 };
 
@@ -179,6 +184,7 @@ pub fn analyzeSpirv(code: []const u32) ShaderInfo {
 
     // Output
     if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_STAGE_OUTPUT, &resource_list, &resource_list_size) != 0) @panic("Fail");
+    shader_info.num_outputs = resource_list_size;
 
     // uniform
     if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_UNIFORM_BUFFER, &resource_list, &resource_list_size) != 0) @panic("Fail");

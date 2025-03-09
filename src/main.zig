@@ -91,10 +91,11 @@ pub fn main() !void {
         }
 
         angle += 1;
-        var mvp = matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle);
-        mvp.data[14] -= 2.5;
+        var matrices = .{ matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle), matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle) };
+        matrices[1].data[14] -= 2.5;
+
         const canvas_size: @Vector(2, f32) = @floatFromInt(current_window_size);
-        mvp = mvp.mult(matrix.perspective(45.0, canvas_size[0] / canvas_size[1], 0.01, 100));
+        matrices[1] = matrices[1].mult(matrix.perspective(45.0, canvas_size[0] / canvas_size[1], 0.01, 100));
 
         var color_target = std.mem.zeroInit(c.SDL_GPUColorTargetInfo, .{
             .texture = swapchainTexture,
@@ -113,7 +114,8 @@ pub fn main() !void {
         });
 
         const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buf_vertex, .offset = 0 };
-        cmd.pushVertexUniformData(0, f32, &mvp.data);
+        cmd.pushVertexUniformData(0, f32, @as(*[32]f32, @ptrCast(&matrices)));
+        // cmd.pushVertexUniformData(1, f32, &model.data);
         const pass = c.SDL_BeginGPURenderPass(cmd.handle, &color_target, 1, &depth_target);
         c.SDL_BindGPUGraphicsPipeline(pass, renderer.pipeline);
         c.SDL_BindGPUVertexBuffers(pass, 0, &vertex_binding, 1);

@@ -231,20 +231,28 @@ const unsigned int vertex_data_size = sizeof(vertex_data);
 
 static const char* VERTEX_SHADER = 
 "#version 450 core \n" 
-"layout(set = 1, binding = 0) uniform UBO{ mat4 modelViewProj; } ubo;\n"
+"layout(set = 1, binding = 0) uniform UBO{ \n"
+"   mat4 modelViewProj; \n"
+"   mat4 model; \n"
+"} ubo;\n"
 "layout(location = 0) in vec3 in_position;\n"
 "layout(location = 1) in vec3 in_color;\n"
 "layout(location = 2) in vec3 in_normal;\n"
 "layout(location = 0) out vec4 out_color;\n" 
+"layout(location = 1) out vec3 out_normal;\n" 
 "void main() {\n"
 "   out_color = vec4(in_color, 1.0);"
+"   out_normal = normalize(mat3(ubo.model) * in_normal);"
 "   gl_Position = ubo.modelViewProj * vec4(in_position, 1.0);\n"
 "}\n";
 
 static const char* FRAGMENT_SHADER = 
 "#version 450 core \n" 
 "layout(location = 0) in vec4 in_color;\n"
+"layout(location = 1) in vec3 in_normal;\n"
 "layout(location = 0) out vec4 out_color;\n" 
 "void main() {\n"
-"   out_color = in_color;"
+"   vec3 lightDir = vec3(1.0, 0.0, 0.0);"
+"   float diff = clamp(dot(in_normal, normalize(-lightDir)), 0.1, 1.0);"
+"   out_color = in_color * diff;"
 "}\n";
