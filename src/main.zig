@@ -3,6 +3,7 @@ const Window = @import("Window.zig");
 const Renderer = @import("Renderer.zig");
 const matrix = @import("matrix.zig");
 const light = @import("light.zig");
+const Gltf = @import("Gltf.zig");
 const c = Renderer.c;
 const CommandBuffer = Renderer.CommandBuffer;
 const SDL_ERROR = Window.SDL_ERROR;
@@ -24,6 +25,20 @@ fn createDepthTexture(device: *c.SDL_GPUDevice, drawable: [2]i32, sample_count: 
 }
 
 pub fn main() !void {
+    if (std.os.argv.len < 2) {
+        std.log.err("Expected at least one argument", .{});
+        return;
+    }
+
+    const file_path: []const u8 = @ptrCast(std.os.argv[1][0..std.mem.len(std.os.argv[1])]);
+    const file = std.fs.cwd().openFile(file_path, .{}) catch @panic("File not Found");
+    defer file.close();
+
+    var buffer: [1024 * 4]u8 = undefined;
+    const count = file.read(&buffer) catch @panic("Failed");
+    const yeet = Gltf.parseFromSlice(std.heap.page_allocator, buffer[0..count]);
+    std.log.info("{any}", .{yeet});
+
     errdefer c.SDL_Log("Error: %s", c.SDL_GetError());
     if (!c.SDL_Init(c.SDL_INIT_VIDEO)) return SDL_ERROR.Fail;
     defer c.SDL_Quit();
