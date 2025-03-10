@@ -30,6 +30,9 @@ pub fn endCopyPass(self: *CommandBuffer) void {
 pub fn pushVertexUniformData(self: CommandBuffer, location: u32, T: type, data: []const T) void {
     c.SDL_PushGPUVertexUniformData(self.handle, location, data.ptr, @intCast(@sizeOf(T) * data.len));
 }
+pub fn pushFragmentUniformData(self: CommandBuffer, location: u32, T: type, data: []const T) void {
+    c.SDL_PushGPUFragmentUniformData(self.handle, location, data.ptr, @intCast(@sizeOf(T) * data.len));
+}
 
 pub fn uploadToBuffer(self: CommandBuffer, src: *c.SDL_GPUTransferBuffer, dst: *c.SDL_GPUBuffer, length: u32) void {
     const buf_location = std.mem.zeroInit(c.SDL_GPUTransferBufferLocation, .{ .transfer_buffer = src });

@@ -2,6 +2,7 @@ const std = @import("std");
 const Window = @import("Window.zig");
 const Renderer = @import("Renderer.zig");
 const matrix = @import("matrix.zig");
+const light = @import("light.zig");
 const c = Renderer.c;
 const CommandBuffer = Renderer.CommandBuffer;
 const SDL_ERROR = Window.SDL_ERROR;
@@ -62,6 +63,11 @@ pub fn main() !void {
 
     // Main loop
     var angle: f32 = 0.0;
+    const point_light = light.PointLight{
+        .position = .{ 5.0, 0.0, 0.0, 1.0 },
+        .color = .{ 0.5, 0.5, 0.5, 1.0 },
+        .intensity = 40.0,
+    };
 
     var done = false;
     var event: c.SDL_Event = undefined;
@@ -115,7 +121,7 @@ pub fn main() !void {
 
         const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buf_vertex, .offset = 0 };
         cmd.pushVertexUniformData(0, f32, @as(*[32]f32, @ptrCast(&matrices)));
-        // cmd.pushVertexUniformData(1, f32, &model.data);
+        cmd.pushFragmentUniformData(0, f32, point_light.toBuffer());
         const pass = c.SDL_BeginGPURenderPass(cmd.handle, &color_target, 1, &depth_target);
         c.SDL_BindGPUGraphicsPipeline(pass, renderer.pipeline);
         c.SDL_BindGPUVertexBuffers(pass, 0, &vertex_binding, 1);
