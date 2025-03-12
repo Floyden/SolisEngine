@@ -36,8 +36,8 @@ pub fn main() !void {
 
     var buffer: [1024 * 4]u8 = undefined;
     const count = file.read(&buffer) catch @panic("Failed");
-    const yeet = Gltf.parseFromSlice(std.heap.page_allocator, buffer[0..count]);
-    std.log.info("{any}", .{yeet});
+    const parsed = Gltf.parseFromSlice(std.heap.page_allocator, buffer[0..count]) catch @panic("Failed");
+    _ = parsed;
 
     errdefer c.SDL_Log("Error: %s", c.SDL_GetError());
     if (!c.SDL_Init(c.SDL_INIT_VIDEO)) return SDL_ERROR.Fail;
