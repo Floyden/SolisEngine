@@ -4,13 +4,19 @@ const json = std.json;
 const Self = @This();
 
 const Accessor = struct {
-    bufferView: i32,
-    byteOffset: i32,
-    componentType: ComponentType,
-    count: i32,
-    max: []f32,
-    min: []f32,
-    type: []const u8,
+    bufferView: ?usize = null,
+    byteOffset: u32 = 0,
+    componentType: ComponentType, // Requred
+    normalized: bool = false,
+    count: u32, // Requred
+    type: []const u8, // Requred
+    max: ?[]f32 = null,
+    min: ?[]f32 = null,
+    name: ?[]const u8 = null,
+    extensions: ?[]const u8 = null, // json
+    extras: ?[]const u8 = null, // TODO: should be json, could be any type actually
+
+    // TODO: sparse implementation,
 
     const ComponentType = enum(u32) {
         SignedByte = 5120,
@@ -20,6 +26,39 @@ const Accessor = struct {
         UnsignedInt = 5125,
         Float = 5126,
     };
+
+    pub fn componentCount(self: Accessor) ?usize {
+        if (std.mem.eql(u8, self.type, "SCALAR")) {
+            return 1;
+        } else if (std.mem.eql(u8, self.type, "VEC2")) {
+            return 2;
+        } else if (std.mem.eql(u8, self.type, "VEC3")) {
+            return 3;
+        } else if (std.mem.eql(u8, self.type, "VEC4") or std.mem.eql(u8, self.type, "MAT2")) {
+            return 4;
+        } else if (std.mem.eql(u8, self.type, "MAT3")) {
+            return 9;
+        } else if (std.mem.eql(u8, self.type, "MAT4")) {
+            return 16;
+        }
+        return null;
+    }
+};
+
+const BufferView = struct {
+    buffer: u32, // Requred
+    byteLength: u32, // Requred
+    byteOffset: u32 = 0,
+    byteStride: ?u8 = null,
+    target: ?Target = null,
+    name: ?[]const u8 = null,
+    extensions: ?[]const u8 = null, // json
+    extras: ?[]const u8 = null, // TODO: should be json, could be any type actually
+
+    const Target = enum(u32) {
+        ArrayBuffer = 34962,
+        ElementArrayBuffer = 34963,
+    };
 };
 
 accessors: []Accessor,
@@ -27,12 +66,7 @@ asset: struct {
     generator: ?[]const u8 = null,
     version: []const u8,
 },
-bufferViews: []struct {
-    buffer: i32,
-    byteLength: i32,
-    byteOffset: i32,
-    target: i32,
-},
+bufferViews: []BufferView,
 buffers: []struct {
     byteLength: i32,
     uri: []const u8,
