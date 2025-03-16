@@ -31,12 +31,8 @@ pub fn main() !void {
     }
 
     const file_path: []const u8 = @ptrCast(std.os.argv[1][0..std.mem.len(std.os.argv[1])]);
-    const file = std.fs.cwd().openFile(file_path, .{}) catch @panic("File not Found");
-    defer file.close();
 
-    var buffer: [1024 * 4]u8 = undefined;
-    const count = file.read(&buffer) catch @panic("Failed");
-    const parsed = Gltf.parseFromSlice(std.heap.page_allocator, buffer[0..count]) catch @panic("Failed");
+    const parsed = Gltf.parseFromFile(std.heap.page_allocator, file_path) catch @panic("Failed");
     _ = parsed;
 
     errdefer c.SDL_Log("Error: %s", c.SDL_GetError());

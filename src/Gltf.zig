@@ -61,6 +61,8 @@ const BufferView = struct {
     };
 };
 
+_resource_path: ?[]const u8 = null, // Relative path to load other resources if needed
+_buffer: ?[]const u8 = null, // Buffer of the json file
 accessors: []Accessor,
 asset: struct {
     generator: ?[]const u8 = null,
@@ -82,12 +84,7 @@ materials: ?[]struct {
 meshes: []struct {
     name: ?[]const u8 = null,
     primitives: []struct {
-        attributes: struct {
-            NORMAL: ?i32 = null,
-            POSITION: ?i32 = null,
-            TANGENT: ?i32 = null,
-            TEXCOORD_0: ?i32 = null,
-        },
+        attributes: std.json.ArrayHashMap(u32),
         indices: ?i32 = null,
         material: ?i32 = null,
         mode: ?i32 = null,
@@ -99,8 +96,21 @@ scene: i32,
 scenes: []struct { nodes: []i32 },
 textures: ?[]struct { sampler: i32, source: i32 } = null,
 
+pub fn parseFromFile(allocator: std.mem.Allocator, path: []const u8) !Self {
+    const file = try std.fs.cwd().openFile(path, .{});
+    defer file.close();
+
+    const stat = try file.stat();
+    const buffer = allocator.alloc(u8, stat.size) catch @panic("OOM");
+    const count = try file.read(buffer);
+
+    var self = try parseFromSlice(allocator, buffer[0..count]);
+    self._buffer = buffer;
+    self._resource_path = path;
+    return self;
+}
+
 pub fn parseFromSlice(allocator: std.mem.Allocator, buffer: []const u8) !Self {
     const res = std.json.parseFromSlice(Self, allocator, buffer, .{ .ignore_unknown_fields = true }) catch |e| return e;
     return res.value;
-
 }
