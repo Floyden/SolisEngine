@@ -1,4 +1,6 @@
 const std = @import("std");
+const Mesh = @import("Mesh.zig");
+const vertex_data = @import("vertex_data.zig");
 const json = std.json;
 
 const Self = @This();
@@ -60,7 +62,6 @@ const BufferView = struct {
         ElementArrayBuffer = 34963,
     };
 };
-
 _resource_path: ?[]const u8 = null, // Relative path to load other resources if needed
 _buffer: ?[]const u8 = null, // Buffer of the json file
 accessors: []Accessor,
@@ -70,7 +71,7 @@ asset: struct {
 },
 bufferViews: []BufferView,
 buffers: []struct {
-    byteLength: i32,
+    byteLength: u32,
     uri: []const u8,
 },
 images: ?[]struct { uri: []const u8 } = null,
@@ -85,9 +86,11 @@ meshes: []struct {
     name: ?[]const u8 = null,
     primitives: []struct {
         attributes: std.json.ArrayHashMap(u32),
-        indices: ?i32 = null,
-        material: ?i32 = null,
-        mode: ?i32 = null,
+        indices: ?u32 = null,
+        material: ?u32 = null,
+        mode: Mode = .triangles,
+
+        const Mode = enum(u8) { points, lines, line_loop, line_strip, triangles, triangle_strip, triangle_fan };
     },
 },
 nodes: []struct { mesh: i32, name: ?[]const u8 = null },
@@ -106,11 +109,165 @@ pub fn parseFromFile(allocator: std.mem.Allocator, path: []const u8) !Self {
 
     var self = try parseFromSlice(allocator, buffer[0..count]);
     self._buffer = buffer;
-    self._resource_path = path;
+    self._resource_path = std.fs.path.dirname(path).?;
     return self;
 }
 
 pub fn parseFromSlice(allocator: std.mem.Allocator, buffer: []const u8) !Self {
     const res = std.json.parseFromSlice(Self, allocator, buffer, .{ .ignore_unknown_fields = true }) catch |e| return e;
     return res.value;
+}
+
+pub fn parseVertexUsage(value: []const u8) ?struct { vertex_data.ElementUsage, u32 } {
+    if (std.mem.eql(u8, value, "POSITION")) {
+        return .{ vertex_data.ElementUsage.position, 0 };
+    } else if (std.mem.eql(u8, value, "NORMAL")) {
+        return .{ vertex_data.ElementUsage.normal, 0 };
+    } else if (std.mem.eql(u8, value, "TANGENT")) {
+        return .{ vertex_data.ElementUsage.tangent, 0 };
+    } else if (std.mem.startsWith(u8, value, "TEXCOORD_")) {
+        const index = std.fmt.parseInt(u32, value[9..], 10) catch return null;
+        return .{ vertex_data.ElementUsage.texcoord, index };
+    }
+    std.log.err("Unknown vertex usage: {s}", .{value});
+    return null;
+}
+
+pub fn loadBufferFromFile(self: Self, allocator: std.mem.Allocator, index: usize) ![]u8 {
+    std.debug.assert(self._resource_path != null);
+    std.debug.assert(self.buffers.len > index);
+
+    const path = try std.fs.path.join(allocator, &[2][]const u8{ self._resource_path.?, self.buffers[index].uri });
+
+    const file = try std.fs.cwd().openFile(path, .{});
+    defer file.close();
+
+    const buffer = try allocator.alloc(u8, self.buffers[index].byteLength);
+    _ = try file.readAll(buffer);
+    return buffer;
+}
+
+pub fn parseMeshData(self: Self, mesh_index: usize, allocator: std.mem.Allocator) !Mesh {
+    const attributes = &self.meshes[mesh_index].primitives[0].attributes.map;
+    var mesh = Mesh.init(allocator);
+
+    var num_vertices: ?u32 = null;
+    const buffer_offsets: []u32 = allocator.alloc(u32, attributes.count()) catch @panic("OOM");
+    for (attributes.keys(), buffer_offsets) |attr_key, *offset| {
+        const accessor = self.accessors[attributes.get(attr_key).?];
+        var element_desc: vertex_data.ElementDesc = undefined;
+        const view = self.bufferViews[accessor.bufferView.?];
+        // TODO: This is probably really hacky and only works if the entire mesh uses one buffer
+        offset.* = accessor.byteOffset + view.byteOffset;
+        element_desc.type = blk: switch (accessor.componentType) {
+            .Float => {
+                switch (accessor.componentCount().?) {
+                    1 => break :blk vertex_data.ElementType.float1,
+                    2 => break :blk vertex_data.ElementType.float2,
+                    3 => break :blk vertex_data.ElementType.float3,
+                    4 => break :blk vertex_data.ElementType.float4,
+                    else => return error.InvalidMesh,
+                }
+            },
+            else => return error.InvalidMesh,
+        };
+        const usage = parseVertexUsage(attr_key) orelse return error.InvalidMesh;
+        element_desc.usage = usage[0];
+        element_desc.index = usage[1];
+        num_vertices = accessor.count;
+
+        mesh.vertex_description.append(element_desc) catch @panic("OOM");
+    }
+    if (num_vertices == null) return error.NoVertices;
+    mesh.num_vertices = num_vertices.?;
+
+    const indices_opt = self.meshes[mesh_index].primitives[0].indices;
+    var index_buffer_opt: ?Mesh.IndexBuffer = null;
+    if (indices_opt) |indices| {
+        const accessor = self.accessors[indices];
+        if (accessor.bufferView == null)
+            return error.NotImplemented;
+
+        if (!std.mem.eql(u8, accessor.type, "SCALAR"))
+            return error.WrongType;
+
+        const length = accessor.count;
+
+        switch (accessor.componentType) {
+            .UnsignedByte => index_buffer_opt = .{ .byte = allocator.alloc(u8, length) catch @panic("OOM") },
+            .UnsignedShort => index_buffer_opt = .{ .short = allocator.alloc(u16, length) catch @panic("OOM") },
+            .UnsignedInt => index_buffer_opt = .{ .int = allocator.alloc(u32, length) catch @panic("OOM") },
+            else => return error.WrongType,
+        }
+    }
+
+    const uri = self.buffers[mesh_index].uri;
+    const DATA_PREFIX = "data:application/octet-stream;base64,";
+    if (!std.mem.startsWith(u8, uri, DATA_PREFIX)) {
+        // mesh.data = try self.loadBufferFromFile(allocator, 0);
+        const data = try self.loadBufferFromFile(allocator, 0);
+        mesh.data = allocator.alloc(u8, data.len) catch @panic("OOM");
+        var vertex_size: usize = 0;
+        for (mesh.vertex_description.items) |desc| {
+            vertex_size += desc.type.size();
+        }
+
+        var vertex_offset: u32 = 0;
+        for (mesh.vertex_description.items, buffer_offsets) |*desc, offset| {
+            const elem_size = desc.type.size();
+            desc.offset = vertex_offset;
+            defer vertex_offset += elem_size;
+
+            for (0..num_vertices.?) |i| {
+                const dst_start = i * vertex_size + vertex_offset;
+                const src_start = offset + i * elem_size;
+
+                @memcpy(mesh.data.?[dst_start .. dst_start + elem_size], data[src_start .. src_start + elem_size]);
+            }
+        }
+
+        const target_desc = [_]vertex_data.ElementDesc{
+            .{ .usage = .position, .type = .float3, .offset = 0, .index = 0 },
+            .{ .usage = .color, .type = .float3, .offset = 3 * @sizeOf(f32), .index = 0 },
+            .{ .usage = .normal, .type = .float3, .offset = 6 * @sizeOf(f32), .index = 0 },
+        };
+        try mesh.rearrange(&target_desc);
+
+        if (index_buffer_opt) |index_buffer| {
+            const view = self.bufferViews[self.accessors[indices_opt.?].bufferView.?];
+            switch (index_buffer) {
+                .byte => @memcpy(index_buffer.byte, mesh.data.?[view.byteOffset .. view.byteOffset + view.byteLength]),
+                .short => @memcpy(@as([]u8, @ptrCast(index_buffer.short)), mesh.data.?[view.byteOffset .. view.byteOffset + view.byteLength]),
+                .int => @memcpy(@as([]u8, @ptrCast(index_buffer.int)), mesh.data.?[view.byteOffset .. view.byteOffset + view.byteLength]),
+            }
+            mesh.index_buffer = index_buffer;
+        }
+
+        return mesh;
+    }
+
+    return error.e;
+    //
+    // _ = std.base64.standard.Decoder.decode(buffer, uri[DATA_PREFIX.len..]) catch @panic("Fail");
+    // for (self.accessors) |accessor| {
+    //     if (accessor.bufferView == null) return;
+    //     const view = self.bufferViews[accessor.bufferView.?];
+    //     switch (accessor.componentType) {
+    //         Accessor.ComponentType.UnsignedShort => {
+    //             const end = view.byteOffset + view.byteLength;
+    //             std.log.info("{any}", .{@as([]u16, @alignCast(@ptrCast(buffer[view.byteOffset..end])))});
+    //         },
+    //         Accessor.ComponentType.Float => {
+    //             const end = view.byteOffset + view.byteLength;
+    //             std.log.info("{any}", .{@as([]f32, @alignCast(@ptrCast(buffer[view.byteOffset..end])))});
+    //         },
+    //         else => {},
+    //     }
+    //     std.log.info("{any} {any}", .{ accessor, accessor.componentCount() });
+    //     std.log.info("{any}", .{view});
+    // }
+
+    // std.log.info("{any}", .{@as([]const u16, @alignCast(@ptrCast(buffer)))});
+    // std.log.info("{any}", .{@as([]const f32, @alignCast(@ptrCast(buffer)))});
+    // std.log.info("{any}", .{self.buffers[index].byteLength});
 }

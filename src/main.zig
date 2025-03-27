@@ -33,7 +33,7 @@ pub fn main() !void {
     const file_path: []const u8 = @ptrCast(std.os.argv[1][0..std.mem.len(std.os.argv[1])]);
 
     const parsed = Gltf.parseFromFile(std.heap.page_allocator, file_path) catch @panic("Failed");
-    _ = parsed;
+    const mesh = parsed.parseMeshData(0, std.heap.page_allocator) catch @panic("Mesh Failed");
 
     errdefer c.SDL_Log("Error: %s", c.SDL_GetError());
     if (!c.SDL_Init(c.SDL_INIT_VIDEO)) return SDL_ERROR.Fail;
@@ -53,13 +53,16 @@ pub fn main() !void {
     defer c.SDL_ReleaseGPUTexture(renderer.device, tex_depth);
 
     // Buffers
-    const current_vert: []const u8 = @ptrCast(&c.vertex_data);
-    const buf_vertex = renderer.createBufferNamed(current_vert.len, c.SDL_GPU_BUFFERUSAGE_VERTEX, "VertexBuffer") catch |e| return e;
+    // const current_vert: []const u8 = @ptrCast(&c.quad_data);
+    const current_vert: []const u8 = mesh.data.?;
+    // const current_vert: []const u8 = @ptrCast(&c.vertex_data);
+    // std.log.info("{any}", .{@as([]const f32, @alignCast(@ptrCast(current_vert)))});
+    const buf_vertex = renderer.createBufferNamed(@intCast(current_vert.len), c.SDL_GPU_BUFFERUSAGE_VERTEX, "VertexBuffer") catch |e| return e;
     defer renderer.releaseBuffer(buf_vertex);
 
     // Transfer data
     {
-        const buf_transfer = renderer.createTransferBufferNamed(current_vert.len, c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "TransferBuffer") catch |e| return e;
+        const buf_transfer = renderer.createTransferBufferNamed(@intCast(current_vert.len), c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "TransferBuffer") catch |e| return e;
         defer renderer.releaseTransferBuffer(buf_transfer);
 
         renderer.copyToTransferBuffer(buf_transfer, @ptrCast(current_vert));
@@ -68,7 +71,7 @@ pub fn main() !void {
         defer cmd.submit();
 
         cmd.beginCopyPass();
-        cmd.uploadToBuffer(buf_transfer, buf_vertex, current_vert.len);
+        cmd.uploadToBuffer(buf_transfer, buf_vertex, @intCast(current_vert.len));
         cmd.endCopyPass();
     }
 
@@ -108,7 +111,9 @@ pub fn main() !void {
         }
 
         angle += 1;
-        var matrices = .{ matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle), matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle) };
+        var matrices = .{ matrix.Matrix4f.diagonal_init(0.5), matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle) };
+        matrices[0].atMut(3, 3).* = 1.0;
+        matrices[0] = matrices[0].mult(matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle));
         matrices[1].data[14] -= 2.5;
 
         const canvas_size: @Vector(2, f32) = @floatFromInt(current_window_size);

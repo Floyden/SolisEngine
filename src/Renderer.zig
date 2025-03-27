@@ -37,7 +37,7 @@ pub fn init(window: *Window) !Renderer {
         .slot = 0,
         .input_rate = c.SDL_GPU_VERTEXINPUTRATE_VERTEX,
         .instance_step_rate = 0,
-        .pitch = @sizeOf(c.VertexData),
+        .pitch = @sizeOf(f32) * 9,
     });
 
     const vertex_attributes: [3]c.SDL_GPUVertexAttribute = .{
@@ -51,13 +51,13 @@ pub fn init(window: *Window) !Renderer {
             .buffer_slot = 0,
             .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
             .location = 1,
-            .offset = @sizeOf(f32) * 3,
+            .offset = 4 * 3, //@sizeOf(f32) * 3,
         }),
         std.mem.zeroInit(c.SDL_GPUVertexAttribute, .{
             .buffer_slot = 0,
             .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
             .location = 2,
-            .offset = @sizeOf(f32) * 6,
+            .offset = 2 * 4 * 3, //@sizeOf(f32) * 6,
         }),
     };
 
