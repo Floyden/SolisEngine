@@ -18,10 +18,14 @@ fn createDepthTexture(device: *c.SDL_GPUDevice, drawable: [2]i32, sample_count: 
         .num_levels = 1,
         .sample_count = sample_count,
         .usage = c.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
-        .props = 0,
+        .props = c.SDL_CreateProperties(),
     };
+    _ = c.SDL_SetStringProperty(createinfo.props, c.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, "Depth Texture");
 
-    return c.SDL_CreateGPUTexture(device, &createinfo);
+    const texture = c.SDL_CreateGPUTexture(device, &createinfo);
+    c.SDL_DestroyProperties(createinfo.props);
+
+    return texture; 
 }
 
 pub fn main() !void {
@@ -34,6 +38,8 @@ pub fn main() !void {
 
     const parsed = Gltf.parseFromFile(std.heap.page_allocator, file_path) catch @panic("Failed");
     const mesh = parsed.parseMeshData(0, std.heap.page_allocator) catch @panic("Mesh Failed");
+    var base_image = try parsed.loadImageFromFile(0, std.heap.page_allocator);
+    defer base_image.deinit();
 
     errdefer c.SDL_Log("Error: %s", c.SDL_GetError());
     if (!c.SDL_Init(c.SDL_INIT_VIDEO)) return SDL_ERROR.Fail;
@@ -55,14 +61,12 @@ pub fn main() !void {
     // Buffers
     // const current_vert: []const u8 = @ptrCast(&c.quad_data);
     const current_vert: []const u8 = mesh.data.?;
-    // const current_vert: []const u8 = @ptrCast(&c.vertex_data);
-    // std.log.info("{any}", .{@as([]const f32, @alignCast(@ptrCast(current_vert)))});
-    const buf_vertex = renderer.createBufferNamed(@intCast(current_vert.len), c.SDL_GPU_BUFFERUSAGE_VERTEX, "VertexBuffer") catch |e| return e;
+    const buf_vertex = renderer.createBufferNamed(@intCast(current_vert.len), c.SDL_GPU_BUFFERUSAGE_VERTEX, "Vertex Buffer") catch |e| return e;
     defer renderer.releaseBuffer(buf_vertex);
 
     // Transfer data
     {
-        const buf_transfer = renderer.createTransferBufferNamed(@intCast(current_vert.len), c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "TransferBuffer") catch |e| return e;
+        const buf_transfer = renderer.createTransferBufferNamed(@intCast(current_vert.len), c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "Transfer Buffer") catch |e| return e;
         defer renderer.releaseTransferBuffer(buf_transfer);
 
         renderer.copyToTransferBuffer(buf_transfer, @ptrCast(current_vert));
@@ -74,6 +78,71 @@ pub fn main() !void {
         cmd.uploadToBuffer(buf_transfer, buf_vertex, @intCast(current_vert.len));
         cmd.endCopyPass();
     }
+
+    // Image Texture
+    const createinfo = c.SDL_GPUTextureCreateInfo{
+        .type = c.SDL_GPU_TEXTURETYPE_2D,
+        .format = c.SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+        .width = @intCast(base_image.width),
+        .height = @intCast(base_image.height),
+        .layer_count_or_depth = 1,
+        .num_levels = 1,
+        .sample_count = renderer.sample_count,
+        .usage = c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
+        .props = c.SDL_CreateProperties(),
+    };
+    _ = c.SDL_SetStringProperty(createinfo.props, c.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, "Base Image");
+
+    const texture = c.SDL_CreateGPUTexture(renderer.device, &createinfo);
+    c.SDL_DestroyProperties(createinfo.props);
+    defer c.SDL_ReleaseGPUTexture(renderer.device, texture);
+
+    // Transfer image data
+    {
+        const buf_transfer = renderer.createTransferBufferNamed(@intCast(base_image.imageByteSize()), c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "TexTransferBuffer") catch |e| return e;
+        defer renderer.releaseTransferBuffer(buf_transfer);
+
+        renderer.copyToTransferBuffer(buf_transfer, @ptrCast(base_image.rawBytes()));
+
+        var cmd = renderer.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
+        defer cmd.submit();
+
+        cmd.beginCopyPass();
+        const source = c.SDL_GPUTextureTransferInfo{
+            .transfer_buffer = buf_transfer,
+            .offset = 0,
+            .pixels_per_row = @intCast(base_image.width),
+            .rows_per_layer = @intCast(base_image.height),
+        };
+        const destination = std.mem.zeroInit(c.SDL_GPUTextureRegion, .{
+            .texture = texture,
+            .w = @as(u32,@intCast(base_image.width)),
+            .h = @as(u32,@intCast(base_image.height)),
+            .d = 1,
+        });
+
+        c.SDL_UploadToGPUTexture(cmd.copy_pass, &source, &destination, true);
+
+        cmd.endCopyPass();
+    }
+
+    const sampler_create_info = c.SDL_GPUSamplerCreateInfo {
+        .min_filter = c.SDL_GPU_FILTER_LINEAR,
+        .mag_filter = c.SDL_GPU_FILTER_LINEAR,
+        .mipmap_mode = c.SDL_GPU_SAMPLERMIPMAPMODE_LINEAR,
+        .address_mode_u = c.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+        .address_mode_v = c.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+        .address_mode_w = c.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+        .mip_lod_bias = 0.0,
+        .enable_anisotropy = false,
+        .max_anisotropy = 0.0,
+        .enable_compare = true,
+        .compare_op = c.SDL_GPU_COMPAREOP_ALWAYS,
+        .min_lod = 0.0,
+        .max_lod = 0.0,
+    };
+    const sampler = c.SDL_CreateGPUSampler(renderer.device, &sampler_create_info);
+    defer c.SDL_ReleaseGPUSampler(renderer.device, sampler);
 
     // Main loop
     var angle: f32 = 0.0;
@@ -135,11 +204,18 @@ pub fn main() !void {
             .cycle = true,
         });
 
+
+        const sampler_binding = c.SDL_GPUTextureSamplerBinding {
+            .sampler = sampler,
+            .texture = texture
+        };
+
         const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buf_vertex, .offset = 0 };
         cmd.pushVertexUniformData(0, f32, @as(*[32]f32, @ptrCast(&matrices)));
         cmd.pushFragmentUniformData(0, f32, point_light.toBuffer());
         const pass = c.SDL_BeginGPURenderPass(cmd.handle, &color_target, 1, &depth_target);
         c.SDL_BindGPUGraphicsPipeline(pass, renderer.pipeline);
+        c.SDL_BindGPUFragmentSamplers(pass, 0, &sampler_binding, 1);
         c.SDL_BindGPUVertexBuffers(pass, 0, &vertex_binding, 1);
         c.SDL_DrawGPUPrimitives(pass, 36, 1, 0, 0);
         c.SDL_EndGPURenderPass(pass);

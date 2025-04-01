@@ -15,6 +15,11 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
+    const zigimg_dependency = b.dependency("zigimg", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const exe = b.addExecutable(.{
         .name = "Solis",
         .root_source_file = b.path("src/main.zig"),
@@ -22,6 +27,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    exe.root_module.addImport("zigimg", zigimg_dependency.module("zigimg"));
     exe.linkLibC();
     exe.linkSystemLibrary("SDL3");
     exe.linkSystemLibrary("glslang");

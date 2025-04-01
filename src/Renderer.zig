@@ -2,6 +2,7 @@ const std = @import("std");
 const Window = @import("Window.zig");
 const CommandBuffer = @import("CommandBuffer.zig");
 const SDL_ERROR = Window.SDL_ERROR;
+const Image = @import("zigimg").Image;
 pub const c = Window.c;
 const spirv = @cImport({
     // @cInclude("shaderc/shaderc.h");
@@ -37,10 +38,11 @@ pub fn init(window: *Window) !Renderer {
         .slot = 0,
         .input_rate = c.SDL_GPU_VERTEXINPUTRATE_VERTEX,
         .instance_step_rate = 0,
-        .pitch = @sizeOf(f32) * 9,
+        .pitch = @sizeOf(f32) * 11,
     });
 
-    const vertex_attributes: [3]c.SDL_GPUVertexAttribute = .{
+    const vertex_attributes = [_]c.SDL_GPUVertexAttribute{
+
         std.mem.zeroInit(c.SDL_GPUVertexAttribute, .{
             .buffer_slot = 0,
             .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
@@ -58,6 +60,12 @@ pub fn init(window: *Window) !Renderer {
             .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
             .location = 2,
             .offset = 2 * 4 * 3, //@sizeOf(f32) * 6,
+        }),
+        std.mem.zeroInit(c.SDL_GPUVertexAttribute, .{
+            .buffer_slot = 0,
+            .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
+            .location = 3,
+            .offset = 3 * 4 * 3, //@sizeOf(f32) * 9,
         }),
     };
 
@@ -110,6 +118,28 @@ pub fn deinit(self: *Renderer) void {
     self.device = null;
 }
 
+pub fn createTextureFromImage(self: *Renderer, image: Image) !*c.SDL_GPUTexture {
+    const image_format = switch (image.pixelFormat()) {
+        .rgba32 => c.SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+        else => return error.NotImplemented,
+    };
+    const texture_desc = c.SDL_GPUTextureCreateInfo{
+        .type = c.SDL_GPU_TEXTURETYPE_2D,
+        .format = image_format,
+        .usage = c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
+        .width = image.width,
+        .height = image.height,
+        .layer_count_or_depth = 1,
+        .num_levels = 1,
+        .sample_count = c.SDL_GPU_SAMPLECOUNT_1,
+        .props = 0,
+    };
+
+    const texture = c.SDL_CreateGPUTexture(self.device, texture_desc);
+
+    return texture;
+}
+
 pub fn createBufferNamed(self: *Renderer, size: u32, usage_flags: u32, name: [:0]const u8) !*c.SDL_GPUBuffer {
     const buffer_desc = c.SDL_GPUBufferCreateInfo{
         .size = size,
@@ -132,7 +162,7 @@ pub fn createTransferBufferNamed(self: *Renderer, size: u32, usage_flags: u32, n
         .usage = usage_flags,
         .props = c.SDL_CreateProperties(),
     };
-    _ = c.SDL_SetStringProperty(transfer_buffer_desc.props, c.SDL_PROP_GPU_BUFFER_CREATE_NAME_STRING, name);
+    _ = c.SDL_SetStringProperty(transfer_buffer_desc.props, c.SDL_PROP_GPU_TRANSFERBUFFER_CREATE_NAME_STRING, name);
     const buf_transfer = c.SDL_CreateGPUTransferBuffer(self.device, &transfer_buffer_desc) orelse return SDL_ERROR.Fail;
     c.SDL_DestroyProperties(transfer_buffer_desc.props);
     return buf_transfer;
@@ -143,7 +173,7 @@ pub fn releaseTransferBuffer(self: *Renderer, buffer: *c.SDL_GPUTransferBuffer) 
 }
 
 pub fn copyToTransferBuffer(self: *Renderer, buffer: *c.SDL_GPUTransferBuffer, data: []const u8) void {
-    const map = c.SDL_MapGPUTransferBuffer(self.device, buffer, false);
+    const map = c.SDL_MapGPUTransferBuffer(self.device, buffer, true);
     _ = c.SDL_memcpy(map, data.ptr, data.len);
     c.SDL_UnmapGPUTransferBuffer(self.device, buffer);
 }
@@ -157,6 +187,7 @@ const ShaderInfo = struct {
     num_inputs: usize,
     num_outputs: usize,
     num_uniform_buffers: usize,
+    num_samplers: usize,
 };
 
 pub fn analyzeSpirv(code: []const u32) ShaderInfo {
@@ -190,6 +221,9 @@ pub fn analyzeSpirv(code: []const u32) ShaderInfo {
     if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_UNIFORM_BUFFER, &resource_list, &resource_list_size) != 0) @panic("Fail");
     shader_info.num_uniform_buffers = resource_list_size;
 
+    // num_samplers
+    if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_SAMPLED_IMAGE, &resource_list, &resource_list_size) != 0) @panic("Fail");
+    shader_info.num_samplers = resource_list_size;
     return shader_info;
 }
 
@@ -261,6 +295,7 @@ pub fn loadSPIRVShader(device: *c.SDL_GPUDevice, _code: []const u32, name: [:0]c
     const code: []const u8 = @ptrCast(_code);
     const sci = std.mem.zeroInit(c.SDL_GPUShaderCreateInfo, .{
         .num_uniform_buffers = numBuffers,
+        .num_samplers = @as(u32, @intCast(shader_info.num_samplers)),
 
         .format = c.SDL_GPU_SHADERFORMAT_SPIRV,
         .code = code.ptr,

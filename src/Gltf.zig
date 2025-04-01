@@ -2,6 +2,7 @@ const std = @import("std");
 const Mesh = @import("Mesh.zig");
 const vertex_data = @import("vertex_data.zig");
 const json = std.json;
+const Image = @import("zigimg").Image;
 
 const Self = @This();
 
@@ -147,6 +148,19 @@ pub fn loadBufferFromFile(self: Self, allocator: std.mem.Allocator, index: usize
     return buffer;
 }
 
+pub fn loadImageFromFile(self: Self, index: usize, allocator: std.mem.Allocator) !Image {
+    if (self.images == null) return error.NoImages;
+
+    std.debug.assert(self._resource_path != null);
+    std.debug.assert(self.images.?.len > index);
+
+    const path = try std.fs.path.join(allocator, &[2][]const u8{ self._resource_path.?, self.images.?[index].uri });
+
+    const image = Image.fromFilePath(allocator, path);
+
+    return image;
+}
+
 pub fn parseMeshData(self: Self, mesh_index: usize, allocator: std.mem.Allocator) !Mesh {
     const attributes = &self.meshes[mesh_index].primitives[0].attributes.map;
     var mesh = Mesh.init(allocator);
@@ -230,6 +244,7 @@ pub fn parseMeshData(self: Self, mesh_index: usize, allocator: std.mem.Allocator
             .{ .usage = .position, .type = .float3, .offset = 0, .index = 0 },
             .{ .usage = .color, .type = .float3, .offset = 3 * @sizeOf(f32), .index = 0 },
             .{ .usage = .normal, .type = .float3, .offset = 6 * @sizeOf(f32), .index = 0 },
+            .{ .usage = .texcoord, .type = .float2, .offset = 9 * @sizeOf(f32), .index = 0 },
         };
         try mesh.rearrange(&target_desc);
 
