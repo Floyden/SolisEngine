@@ -42,7 +42,7 @@ pub fn main() !void {
         .usage = c.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
         .label = "Depth Texture",
     });
-    defer c.SDL_ReleaseGPUTexture(renderer.device, tex_depth);
+    defer renderer.releaseTexture(tex_depth);
 
     // Buffers
     // const current_vert: []const u8 = @ptrCast(&c.quad_data);
@@ -74,7 +74,7 @@ pub fn main() !void {
         .usage = c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
         .label = "Base Image",
     });
-    defer c.SDL_ReleaseGPUTexture(renderer.device, texture);
+    defer renderer.releaseTexture(texture);
 
     // Transfer image data
     {
@@ -110,7 +110,7 @@ pub fn main() !void {
         .address_mode_v = c.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
         .address_mode_w = c.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
     });
-    defer c.SDL_ReleaseGPUSampler(renderer.device, sampler);
+    defer renderer.releaseSampler(sampler);
 
     // Main loop
     var angle: f32 = 0.0;
@@ -142,7 +142,7 @@ pub fn main() !void {
         _ = c.SDL_GetWindowSizeInPixels(window.handle, &current_window_size[0], &current_window_size[1]);
         if (@reduce(.Or, window.size != current_window_size)) {
             window.size = current_window_size;
-            c.SDL_ReleaseGPUTexture(renderer.device, tex_depth);
+            renderer.releaseTexture(tex_depth);
             tex_depth = try renderer.createTexture(.{
                 .width = @intCast(window.size[0]),
                 .height = @intCast(window.size[1]),

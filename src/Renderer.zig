@@ -177,6 +177,10 @@ pub fn createTexture(self: *Renderer, desc: TextureDescription) !*c.SDL_GPUTextu
     return texture;
 }
 
+pub fn releaseTexture(self: *Renderer, texture: *c.SDL_GPUTexture) void {
+    _ = c.SDL_ReleaseGPUTexture(self.device, texture);
+}
+
 pub const SamplerDescription = struct {
     min_filter: u32 = c.SDL_GPU_FILTER_NEAREST,
     mag_filter: u32 = c.SDL_GPU_FILTER_NEAREST,
@@ -218,7 +222,10 @@ pub fn createSampler(self: *Renderer, desc: SamplerDescription) !*c.SDL_GPUSampl
     c.SDL_DestroyProperties(sampler_create_info.props);
 
     return sampler;
+}
 
+pub fn releaseSampler(self: *Renderer, sampler: *c.SDL_GPUSampler) void {
+    _ = c.SDL_ReleaseGPUSampler(self.device, sampler);
 }
 
 pub fn createBufferNamed(self: *Renderer, size: u32, usage_flags: u32, name: [:0]const u8) !*c.SDL_GPUBuffer {
