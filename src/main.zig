@@ -8,26 +8,6 @@ const c = Renderer.c;
 const CommandBuffer = Renderer.CommandBuffer;
 const SDL_ERROR = Window.SDL_ERROR;
 
-fn createDepthTexture(device: *c.SDL_GPUDevice, drawable: [2]i32, sample_count: anytype) ?*c.SDL_GPUTexture {
-    const createinfo = c.SDL_GPUTextureCreateInfo{
-        .type = c.SDL_GPU_TEXTURETYPE_2D,
-        .format = c.SDL_GPU_TEXTUREFORMAT_D16_UNORM,
-        .width = @intCast(drawable[0]),
-        .height = @intCast(drawable[1]),
-        .layer_count_or_depth = 1,
-        .num_levels = 1,
-        .sample_count = sample_count,
-        .usage = c.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
-        .props = c.SDL_CreateProperties(),
-    };
-    _ = c.SDL_SetStringProperty(createinfo.props, c.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, "Depth Texture");
-
-    const texture = c.SDL_CreateGPUTexture(device, &createinfo);
-    c.SDL_DestroyProperties(createinfo.props);
-
-    return texture; 
-}
-
 pub fn main() !void {
     if (std.os.argv.len < 2) {
         std.log.err("Expected at least one argument", .{});
@@ -54,8 +34,14 @@ pub fn main() !void {
 
     // window textures
 
-    var tex_depth = createDepthTexture(renderer.device.?, window.size, renderer.sample_count);
-    if (tex_depth == null) return SDL_ERROR.Fail;
+    var tex_depth = try renderer.createTexture(.{
+        .width = @intCast(window.size[0]),
+        .height = @intCast(window.size[1]),
+        .depth = 1,
+        .format = Renderer.PixelFormat.grayscale16,
+        .usage = c.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
+        .label = "Depth Texture",
+    });
     defer c.SDL_ReleaseGPUTexture(renderer.device, tex_depth);
 
     // Buffers
@@ -80,21 +66,14 @@ pub fn main() !void {
     }
 
     // Image Texture
-    const createinfo = c.SDL_GPUTextureCreateInfo{
-        .type = c.SDL_GPU_TEXTURETYPE_2D,
-        .format = c.SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+    const texture = try renderer.createTexture(.{
         .width = @intCast(base_image.width),
         .height = @intCast(base_image.height),
-        .layer_count_or_depth = 1,
-        .num_levels = 1,
-        .sample_count = renderer.sample_count,
+        .depth = 1,
+        .format = base_image.pixelFormat(),
         .usage = c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
-        .props = c.SDL_CreateProperties(),
-    };
-    _ = c.SDL_SetStringProperty(createinfo.props, c.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, "Base Image");
-
-    const texture = c.SDL_CreateGPUTexture(renderer.device, &createinfo);
-    c.SDL_DestroyProperties(createinfo.props);
+        .label = "Base Image",
+    });
     defer c.SDL_ReleaseGPUTexture(renderer.device, texture);
 
     // Transfer image data
@@ -175,8 +154,14 @@ pub fn main() !void {
         if (@reduce(.Or, window.size != current_window_size)) {
             window.size = current_window_size;
             c.SDL_ReleaseGPUTexture(renderer.device, tex_depth);
-            tex_depth = createDepthTexture(renderer.device.?, window.size, renderer.sample_count);
-            if (tex_depth == null) return SDL_ERROR.Fail;
+            tex_depth = try renderer.createTexture(.{
+                .width = @intCast(window.size[0]),
+                .height = @intCast(window.size[1]),
+                .depth = 1,
+                .format = Renderer.PixelFormat.grayscale16,
+                .usage = c.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
+                .label = "Depth Texture",
+            });
         }
 
         angle += 1;

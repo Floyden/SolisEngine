@@ -3,6 +3,7 @@ const Window = @import("Window.zig");
 const CommandBuffer = @import("CommandBuffer.zig");
 const SDL_ERROR = Window.SDL_ERROR;
 const Image = @import("zigimg").Image;
+pub const PixelFormat = @import("zigimg").PixelFormat;
 pub const c = Window.c;
 const spirv = @cImport({
     // @cInclude("shaderc/shaderc.h");
@@ -138,6 +139,43 @@ pub fn createTextureFromImage(self: *Renderer, image: Image) !*c.SDL_GPUTexture 
     const texture = c.SDL_CreateGPUTexture(self.device, texture_desc);
 
     return texture;
+}
+
+pub const TextureDescription = struct {
+    width: u32,
+    height: u32,
+    depth: u32, // depth or layercount
+    usage: u32,
+    format: PixelFormat,
+    label: ?[]const u8 = null,
+};
+
+pub fn createTexture(self: *Renderer, desc: TextureDescription) !*c.SDL_GPUTexture {
+    const image_format : u32 = switch (desc.format) {
+        .rgba32 => c.SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+        .grayscale16 => c.SDL_GPU_TEXTUREFORMAT_D16_UNORM,
+        else => return error.NotImplemented,
+    };
+    const texture_desc = c.SDL_GPUTextureCreateInfo{
+        .type = c.SDL_GPU_TEXTURETYPE_2D,
+        .format = image_format,
+        .usage = desc.usage,
+        .width = desc.width,
+        .height = desc.height,
+        .layer_count_or_depth = desc.depth,
+        .num_levels = 1,
+        .sample_count = c.SDL_GPU_SAMPLECOUNT_1,
+        .props = c.SDL_CreateProperties(),
+    };
+
+    if(desc.label) |label|
+        _ = c.SDL_SetStringProperty(texture_desc.props, c.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, label.ptr);
+
+    const texture = c.SDL_CreateGPUTexture(self.device, &texture_desc) orelse return SDL_ERROR.Fail;
+    c.SDL_DestroyProperties(texture_desc.props);
+
+    return texture;
+    
 }
 
 pub fn createBufferNamed(self: *Renderer, size: u32, usage_flags: u32, name: [:0]const u8) !*c.SDL_GPUBuffer {
