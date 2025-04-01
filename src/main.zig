@@ -105,22 +105,11 @@ pub fn main() !void {
         cmd.endCopyPass();
     }
 
-    const sampler_create_info = c.SDL_GPUSamplerCreateInfo {
-        .min_filter = c.SDL_GPU_FILTER_LINEAR,
-        .mag_filter = c.SDL_GPU_FILTER_LINEAR,
-        .mipmap_mode = c.SDL_GPU_SAMPLERMIPMAPMODE_LINEAR,
+    const sampler = try renderer.createSampler(.{
         .address_mode_u = c.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
         .address_mode_v = c.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
         .address_mode_w = c.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
-        .mip_lod_bias = 0.0,
-        .enable_anisotropy = false,
-        .max_anisotropy = 0.0,
-        .enable_compare = true,
-        .compare_op = c.SDL_GPU_COMPAREOP_ALWAYS,
-        .min_lod = 0.0,
-        .max_lod = 0.0,
-    };
-    const sampler = c.SDL_CreateGPUSampler(renderer.device, &sampler_create_info);
+    });
     defer c.SDL_ReleaseGPUSampler(renderer.device, sampler);
 
     // Main loop

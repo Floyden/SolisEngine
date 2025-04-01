@@ -175,7 +175,50 @@ pub fn createTexture(self: *Renderer, desc: TextureDescription) !*c.SDL_GPUTextu
     c.SDL_DestroyProperties(texture_desc.props);
 
     return texture;
-    
+}
+
+pub const SamplerDescription = struct {
+    min_filter: u32 = c.SDL_GPU_FILTER_NEAREST,
+    mag_filter: u32 = c.SDL_GPU_FILTER_NEAREST,
+    mipmap_mode: u32 = c.SDL_GPU_SAMPLERMIPMAPMODE_NEAREST,
+    address_mode_u: u32 = c.SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
+    address_mode_v: u32 = c.SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
+    address_mode_w: u32 = c.SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
+    mip_lod_bias: f32 = 0.0,
+    max_anisotropy: ?f32 = null,
+    compare_op: ?u32 = null,
+    min_lod: f32 = 0.0,
+    max_lod: f32 = 32.0,
+
+    label: ?[]const u8 = null,
+};
+
+pub fn createSampler(self: *Renderer, desc: SamplerDescription) !*c.SDL_GPUSampler {
+    const sampler_create_info = c.SDL_GPUSamplerCreateInfo {
+        .min_filter = desc.min_filter,
+        .mag_filter = desc.mag_filter,
+        .mipmap_mode = desc.mipmap_mode,
+        .address_mode_u = desc.address_mode_u,
+        .address_mode_v = desc.address_mode_v,
+        .address_mode_w = desc.address_mode_w,
+        .mip_lod_bias = desc.mip_lod_bias,
+        .enable_anisotropy = desc.max_anisotropy != null,
+        .max_anisotropy = if(desc.max_anisotropy) |max| max else 0.0,
+        .enable_compare = desc.compare_op != null,
+        .compare_op = if(desc.compare_op) |op| op else 0,
+        .min_lod = desc.min_lod,
+        .max_lod = desc.max_lod,
+        .props = c.SDL_CreateProperties(),
+    };
+
+    if(desc.label) |label|
+        _ = c.SDL_SetStringProperty(sampler_create_info.props, c.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, label.ptr);
+
+    const sampler = c.SDL_CreateGPUSampler(self.device, &sampler_create_info) orelse return SDL_ERROR.Fail;
+    c.SDL_DestroyProperties(sampler_create_info.props);
+
+    return sampler;
+
 }
 
 pub fn createBufferNamed(self: *Renderer, size: u32, usage_flags: u32, name: [:0]const u8) !*c.SDL_GPUBuffer {
