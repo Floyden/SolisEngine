@@ -183,7 +183,7 @@ pub fn main() !void {
 
 
         const sampler_binding = c.SDL_GPUTextureSamplerBinding {
-            .sampler = sampler,
+            .sampler = sampler.id,
             .texture = texture
         };
 

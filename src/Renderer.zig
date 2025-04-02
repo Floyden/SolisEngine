@@ -6,6 +6,7 @@ const Image = @import("zigimg").Image;
 pub const PixelFormat = @import("zigimg").PixelFormat;
 const c = @import("solis").external.c;
 const spirv = @import("solis").external.spirv;
+const sampler = @import("renderer/sampler.zig");
 
 const Renderer = @This();
 window: *Window,
@@ -175,23 +176,7 @@ pub fn releaseTexture(self: *Renderer, texture: *c.SDL_GPUTexture) void {
     _ = c.SDL_ReleaseGPUTexture(self.device, texture);
 }
 
-pub const SamplerDescription = struct {
-    min_filter: u32 = c.SDL_GPU_FILTER_NEAREST,
-    mag_filter: u32 = c.SDL_GPU_FILTER_NEAREST,
-    mipmap_mode: u32 = c.SDL_GPU_SAMPLERMIPMAPMODE_NEAREST,
-    address_mode_u: u32 = c.SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
-    address_mode_v: u32 = c.SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
-    address_mode_w: u32 = c.SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
-    mip_lod_bias: f32 = 0.0,
-    max_anisotropy: ?f32 = null,
-    compare_op: ?u32 = null,
-    min_lod: f32 = 0.0,
-    max_lod: f32 = 32.0,
-
-    label: ?[]const u8 = null,
-};
-
-pub fn createSampler(self: *Renderer, desc: SamplerDescription) !*c.SDL_GPUSampler {
+pub fn createSampler(self: *Renderer, desc: sampler.Description) !sampler.Handle {
     const sampler_create_info = c.SDL_GPUSamplerCreateInfo {
         .min_filter = desc.min_filter,
         .mag_filter = desc.mag_filter,
@@ -212,14 +197,14 @@ pub fn createSampler(self: *Renderer, desc: SamplerDescription) !*c.SDL_GPUSampl
     if(desc.label) |label|
         _ = c.SDL_SetStringProperty(sampler_create_info.props, c.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, label.ptr);
 
-    const sampler = c.SDL_CreateGPUSampler(self.device, &sampler_create_info) orelse return SDL_ERROR.Fail;
+    const sdl_sampler = c.SDL_CreateGPUSampler(self.device, &sampler_create_info) orelse return SDL_ERROR.Fail;
     c.SDL_DestroyProperties(sampler_create_info.props);
 
-    return sampler;
+    return sampler.Handle{.id = sdl_sampler};
 }
 
-pub fn releaseSampler(self: *Renderer, sampler: *c.SDL_GPUSampler) void {
-    _ = c.SDL_ReleaseGPUSampler(self.device, sampler);
+pub fn releaseSampler(self: *Renderer, handle: sampler.Handle) void {
+    _ = c.SDL_ReleaseGPUSampler(self.device, handle.id);
 }
 
 pub fn createBufferNamed(self: *Renderer, size: u32, usage_flags: u32, name: [:0]const u8) !*c.SDL_GPUBuffer {
