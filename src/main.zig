@@ -97,7 +97,7 @@ pub fn main() !void {
             .rows_per_layer = @intCast(base_image.height),
         };
         const destination = std.mem.zeroInit(c.SDL_GPUTextureRegion, .{
-            .texture = texture,
+            .texture = texture.id,
             .w = @as(u32,@intCast(base_image.width)),
             .h = @as(u32,@intCast(base_image.height)),
             .d = 1,
@@ -177,14 +177,14 @@ pub fn main() !void {
             .store_op = c.SDL_GPU_STOREOP_DONT_CARE,
             .stencil_load_op = c.SDL_GPU_LOADOP_DONT_CARE,
             .stencil_store_op = c.SDL_GPU_STOREOP_DONT_CARE,
-            .texture = tex_depth,
+            .texture = tex_depth.id,
             .cycle = true,
         });
 
 
         const sampler_binding = c.SDL_GPUTextureSamplerBinding {
             .sampler = sampler.id,
-            .texture = texture
+            .texture = texture.id,
         };
 
         const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buf_vertex, .offset = 0 };

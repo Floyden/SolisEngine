@@ -7,6 +7,7 @@ pub const PixelFormat = @import("zigimg").PixelFormat;
 const c = @import("solis").external.c;
 const spirv = @import("solis").external.spirv;
 const sampler = @import("renderer/sampler.zig");
+const texture = @import("renderer/texture.zig");
 
 const Renderer = @This();
 window: *Window,
@@ -114,7 +115,7 @@ pub fn deinit(self: *Renderer) void {
     self.device = null;
 }
 
-pub fn createTextureFromImage(self: *Renderer, image: Image) !*c.SDL_GPUTexture {
+pub fn createTextureFromImage(self: *Renderer, image: Image) !texture.Handle {
     const image_format = switch (image.pixelFormat()) {
         .rgba32 => c.SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
         else => return error.NotImplemented,
@@ -131,21 +132,12 @@ pub fn createTextureFromImage(self: *Renderer, image: Image) !*c.SDL_GPUTexture 
         .props = 0,
     };
 
-    const texture = c.SDL_CreateGPUTexture(self.device, texture_desc);
+    const texture_sdl = c.SDL_CreateGPUTexture(self.device, texture_desc);
 
-    return texture;
+    return texture.Handle{.id = texture_sdl};
 }
 
-pub const TextureDescription = struct {
-    width: u32,
-    height: u32,
-    depth: u32, // depth or layercount
-    usage: u32,
-    format: PixelFormat,
-    label: ?[]const u8 = null,
-};
-
-pub fn createTexture(self: *Renderer, desc: TextureDescription) !*c.SDL_GPUTexture {
+pub fn createTexture(self: *Renderer, desc: texture.Description) !texture.Handle {
     const image_format : u32 = switch (desc.format) {
         .rgba32 => c.SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
         .grayscale16 => c.SDL_GPU_TEXTUREFORMAT_D16_UNORM,
@@ -166,14 +158,14 @@ pub fn createTexture(self: *Renderer, desc: TextureDescription) !*c.SDL_GPUTextu
     if(desc.label) |label|
         _ = c.SDL_SetStringProperty(texture_desc.props, c.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, label.ptr);
 
-    const texture = c.SDL_CreateGPUTexture(self.device, &texture_desc) orelse return SDL_ERROR.Fail;
+    const texture_sdl = c.SDL_CreateGPUTexture(self.device, &texture_desc) orelse return SDL_ERROR.Fail;
     c.SDL_DestroyProperties(texture_desc.props);
 
-    return texture;
+    return texture.Handle{.id = texture_sdl};
 }
 
-pub fn releaseTexture(self: *Renderer, texture: *c.SDL_GPUTexture) void {
-    _ = c.SDL_ReleaseGPUTexture(self.device, texture);
+pub fn releaseTexture(self: *Renderer, handle: texture.Handle) void {
+    _ = c.SDL_ReleaseGPUTexture(self.device, handle.id);
 }
 
 pub fn createSampler(self: *Renderer, desc: sampler.Description) !sampler.Handle {
