@@ -1,10 +1,13 @@
+pub const external = @import("external.zig");
+
 const std = @import("std");
 const Window = @import("Window.zig");
 const Renderer = @import("Renderer.zig");
 const matrix = @import("matrix.zig");
 const light = @import("light.zig");
 const Gltf = @import("Gltf.zig");
-const c = Renderer.c;
+const c = external.c;
+
 const CommandBuffer = Renderer.CommandBuffer;
 const SDL_ERROR = Window.SDL_ERROR;
 

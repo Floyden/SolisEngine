@@ -1,6 +1,7 @@
 const std = @import("std");
 const Window = @import("Window.zig");
-const c = Window.c;
+const Image = @import("zigimg").Image;
+const c = @import("solis").external.c;
 
 const CommandBuffer = @This();
 handle: *c.SDL_GPUCommandBuffer,
@@ -27,9 +28,11 @@ pub fn endCopyPass(self: *CommandBuffer) void {
     c.SDL_EndGPUCopyPass(self.copy_pass);
     self.copy_pass = null;
 }
+
 pub fn pushVertexUniformData(self: CommandBuffer, location: u32, T: type, data: []const T) void {
     c.SDL_PushGPUVertexUniformData(self.handle, location, data.ptr, @intCast(@sizeOf(T) * data.len));
 }
+
 pub fn pushFragmentUniformData(self: CommandBuffer, location: u32, T: type, data: []const T) void {
     c.SDL_PushGPUFragmentUniformData(self.handle, location, data.ptr, @intCast(@sizeOf(T) * data.len));
 }

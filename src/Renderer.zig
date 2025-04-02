@@ -4,14 +4,8 @@ const CommandBuffer = @import("CommandBuffer.zig");
 const SDL_ERROR = Window.SDL_ERROR;
 const Image = @import("zigimg").Image;
 pub const PixelFormat = @import("zigimg").PixelFormat;
-pub const c = Window.c;
-const spirv = @cImport({
-    // @cInclude("shaderc/shaderc.h");
-    @cInclude("glslang/Include/glslang_c_interface.h");
-    @cInclude("glslang/Include/glslang_c_shader_types.h");
-    @cInclude("glslang/Public/resource_limits_c.h");
-    @cInclude("spirv_cross/spirv_cross_c.h");
-});
+const c = @import("solis").external.c;
+const spirv = @import("solis").external.spirv;
 
 const Renderer = @This();
 window: *Window,
@@ -54,19 +48,19 @@ pub fn init(window: *Window) !Renderer {
             .buffer_slot = 0,
             .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
             .location = 1,
-            .offset = 4 * 3, //@sizeOf(f32) * 3,
+            .offset = @sizeOf(f32) * 3,
         }),
         std.mem.zeroInit(c.SDL_GPUVertexAttribute, .{
             .buffer_slot = 0,
             .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
             .location = 2,
-            .offset = 2 * 4 * 3, //@sizeOf(f32) * 6,
+            .offset = @sizeOf(f32) * 3 * 2,
         }),
         std.mem.zeroInit(c.SDL_GPUVertexAttribute, .{
             .buffer_slot = 0,
             .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
             .location = 3,
-            .offset = 3 * 4 * 3, //@sizeOf(f32) * 9,
+            .offset = @sizeOf(f32) * 3 * 3,
         }),
     };
 

@@ -27,6 +27,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    exe.root_module.addImport("solis", exe.root_module);
     exe.root_module.addImport("zigimg", zigimg_dependency.module("zigimg"));
     exe.linkLibC();
     exe.linkSystemLibrary("SDL3");
