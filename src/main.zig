@@ -21,8 +21,6 @@ pub fn main() !void {
 
     const parsed = Gltf.parseFromFile(std.heap.page_allocator, file_path) catch @panic("Failed");
     const mesh = parsed.parseMeshData(0, std.heap.page_allocator) catch @panic("Mesh Failed");
-    var base_image = try parsed.loadImageFromFile(0, std.heap.page_allocator);
-    defer base_image.deinit();
 
     errdefer c.SDL_Log("Error: %s", c.SDL_GetError());
     if (!c.SDL_Init(c.SDL_INIT_VIDEO)) return SDL_ERROR.Fail;
@@ -69,44 +67,17 @@ pub fn main() !void {
     }
 
     // Image Texture
-    const texture = try renderer.createTexture(.{
+    var base_image = try parsed.loadImageFromFile(0, std.heap.page_allocator);
+    defer base_image.deinit();
+    const texture = try renderer.createTextureWithData(.{
         .width = @intCast(base_image.width),
         .height = @intCast(base_image.height),
         .depth = 1,
         .format = base_image.pixelFormat(),
         .usage = c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
         .label = "Base Image",
-    });
+    }, base_image.rawBytes());
     defer renderer.releaseTexture(texture);
-
-    // Transfer image data
-    {
-        const buf_transfer = renderer.createTransferBufferNamed(@intCast(base_image.imageByteSize()), c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "TexTransferBuffer") catch |e| return e;
-        defer renderer.releaseTransferBuffer(buf_transfer);
-
-        renderer.copyToTransferBuffer(buf_transfer, @ptrCast(base_image.rawBytes()));
-
-        var cmd = renderer.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
-        defer cmd.submit();
-
-        cmd.beginCopyPass();
-        const source = c.SDL_GPUTextureTransferInfo{
-            .transfer_buffer = buf_transfer,
-            .offset = 0,
-            .pixels_per_row = @intCast(base_image.width),
-            .rows_per_layer = @intCast(base_image.height),
-        };
-        const destination = std.mem.zeroInit(c.SDL_GPUTextureRegion, .{
-            .texture = texture.id,
-            .w = @as(u32,@intCast(base_image.width)),
-            .h = @as(u32,@intCast(base_image.height)),
-            .d = 1,
-        });
-
-        c.SDL_UploadToGPUTexture(cmd.copy_pass, &source, &destination, true);
-
-        cmd.endCopyPass();
-    }
 
     const sampler = try renderer.createSampler(.{
         .address_mode_u = c.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,

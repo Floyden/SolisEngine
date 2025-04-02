@@ -115,26 +115,38 @@ pub fn deinit(self: *Renderer) void {
     self.device = null;
 }
 
-pub fn createTextureFromImage(self: *Renderer, image: Image) !texture.Handle {
-    const image_format = switch (image.pixelFormat()) {
-        .rgba32 => c.SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
-        else => return error.NotImplemented,
-    };
-    const texture_desc = c.SDL_GPUTextureCreateInfo{
-        .type = c.SDL_GPU_TEXTURETYPE_2D,
-        .format = image_format,
-        .usage = c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
-        .width = image.width,
-        .height = image.height,
-        .layer_count_or_depth = 1,
-        .num_levels = 1,
-        .sample_count = c.SDL_GPU_SAMPLECOUNT_1,
-        .props = 0,
-    };
+pub fn createTextureWithData(self: *Renderer, desc: texture.Description, data: []const u8) !texture.Handle {
+    const handle = try self.createTexture(desc);
 
-    const texture_sdl = c.SDL_CreateGPUTexture(self.device, texture_desc);
+    // Transfer image data
+    {
+        const buf_transfer = self.createTransferBufferNamed(@intCast(data.len), c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "TexTransferBuffer") catch |e| return e;
+        defer self.releaseTransferBuffer(buf_transfer);
 
-    return texture.Handle{.id = texture_sdl};
+        self.copyToTransferBuffer(buf_transfer, data);
+
+        var cmd = self.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
+        defer cmd.submit();
+
+        cmd.beginCopyPass();
+        const source = c.SDL_GPUTextureTransferInfo{
+            .transfer_buffer = buf_transfer,
+            .offset = 0,
+            .pixels_per_row = desc.width,
+            .rows_per_layer = desc.height,
+        };
+        const destination = std.mem.zeroInit(c.SDL_GPUTextureRegion, .{
+            .texture = handle.id,
+            .w = desc.width,
+            .h = desc.height,
+            .d = desc.depth,
+        });
+
+        c.SDL_UploadToGPUTexture(cmd.copy_pass, &source, &destination, true);
+
+        cmd.endCopyPass();
+    }
+    return handle;
 }
 
 pub fn createTexture(self: *Renderer, desc: texture.Description) !texture.Handle {
