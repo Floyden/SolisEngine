@@ -254,6 +254,7 @@ static const char* VERTEX_SHADER =
 static const char* FRAGMENT_SHADER = 
 "#version 450 core \n" 
 "layout(set = 2, binding = 0) uniform sampler2D textureSampler;\n"
+"layout(set = 2, binding = 1) uniform sampler2D metallicSampler;\n"
 "layout(set = 3, binding = 0) uniform Light { \n"
 "   vec4 position; \n"
 "   vec4 color; \n"
@@ -265,9 +266,9 @@ static const char* FRAGMENT_SHADER =
 "layout(location = 3) in vec2 in_uv;\n"
 "layout(location = 0) out vec4 out_color;\n" 
 "void main() {\n"
+"   vec4 texColor = texture(textureSampler, in_uv);\n"
 "   vec4 lightDir = light.position - in_position;"
 "   float distance = dot(lightDir, lightDir);"
 "   float diff = clamp(dot(in_normal, normalize(-lightDir.xyz)), 0.1, 1.0);"
-"   vec4 texColor = texture(textureSampler, in_uv);\n"
 "   out_color = in_color * light.color * diff * light.intensity / distance * texColor;"
 "}\n";

@@ -153,7 +153,10 @@ pub fn createTexture(self: *Renderer, desc: texture.Description) !texture.Handle
     const image_format : u32 = switch (desc.format) {
         .rgba32 => c.SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
         .grayscale16 => c.SDL_GPU_TEXTUREFORMAT_D16_UNORM,
-        else => return error.NotImplemented,
+        else => {
+            std.log.err("Following format is not implemented: {any}", .{desc.format});
+            return error.NotImplemented;
+        },
     };
     const texture_desc = c.SDL_GPUTextureCreateInfo{
         .type = c.SDL_GPU_TEXTURETYPE_2D,

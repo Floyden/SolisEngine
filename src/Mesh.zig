@@ -15,7 +15,7 @@ allocator: std.mem.Allocator,
 vertex_description: std.ArrayList(vertex_data.ElementDesc),
 index_buffer: ?IndexBuffer,
 data: ?[]u8,
-num_vertices: usize,
+num_vertices: u32,
 
 pub fn init(allocator: std.mem.Allocator) Self {
     return .{

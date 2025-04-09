@@ -7,6 +7,7 @@ const matrix = @import("matrix.zig");
 const light = @import("light.zig");
 const Gltf = @import("Gltf.zig");
 const c = external.c;
+const zigimg = @import("zigimg");
 
 const CommandBuffer = Renderer.CommandBuffer;
 const SDL_ERROR = Window.SDL_ERROR;
@@ -78,6 +79,19 @@ pub fn main() !void {
         .label = "Base Image",
     }, base_image.rawBytes());
     defer renderer.releaseTexture(texture);
+
+    var metallic_image = try parsed.loadImageFromFile(1, std.heap.page_allocator);
+    defer metallic_image.deinit();
+    try metallic_image.convert(Renderer.PixelFormat.rgba32);
+    const metallic_texture = try renderer.createTextureWithData(.{
+        .width = @intCast(metallic_image.width),
+        .height = @intCast(metallic_image.height),
+        .depth = 1,
+        .format = metallic_image.pixelFormat(),
+        .usage = c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
+        .label = "Metallic Image",
+    }, metallic_image.rawBytes());
+    defer renderer.releaseTexture(metallic_texture);
 
     const sampler = try renderer.createSampler(.{
         .address_mode_u = c.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
@@ -152,20 +166,19 @@ pub fn main() !void {
             .cycle = true,
         });
 
-
-        const sampler_binding = c.SDL_GPUTextureSamplerBinding {
-            .sampler = sampler.id,
-            .texture = texture.id,
-        };
+        const sampler_binding = [_]c.SDL_GPUTextureSamplerBinding{
+            .{ .sampler = sampler.id, .texture = texture.id },
+            .{ .sampler = sampler.id, .texture = metallic_texture.id },
+        }; 
 
         const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buf_vertex, .offset = 0 };
         cmd.pushVertexUniformData(0, f32, @as(*[32]f32, @ptrCast(&matrices)));
         cmd.pushFragmentUniformData(0, f32, point_light.toBuffer());
         const pass = c.SDL_BeginGPURenderPass(cmd.handle, &color_target, 1, &depth_target);
         c.SDL_BindGPUGraphicsPipeline(pass, renderer.pipeline);
-        c.SDL_BindGPUFragmentSamplers(pass, 0, &sampler_binding, 1);
+        c.SDL_BindGPUFragmentSamplers(pass, 0, &sampler_binding, sampler_binding.len);
         c.SDL_BindGPUVertexBuffers(pass, 0, &vertex_binding, 1);
-        c.SDL_DrawGPUPrimitives(pass, 36, 1, 0, 0);
+        c.SDL_DrawGPUPrimitives(pass, mesh.num_vertices, 1, 0, 0);
         c.SDL_EndGPURenderPass(pass);
     }
 }
