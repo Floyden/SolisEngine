@@ -9,6 +9,7 @@ const light = @import("light.zig");
 const Gltf = @import("Gltf.zig");
 const c = external.c;
 const zigimg = @import("zigimg");
+const Image = @import("Image.zig");
 const TextureFormat = @import("renderer/texture.zig").Format;
 
 const CommandBuffer = Renderer.CommandBuffer;
@@ -70,23 +71,13 @@ pub fn main() !void {
     // Image Texture
     var base_image = try parsed.loadImageFromFile(0, std.heap.page_allocator);
     defer base_image.deinit();
-    const texture = try renderer.createTextureWithData(.{
-        .extent = .{ .width = @intCast(base_image.width), .height = @intCast(base_image.height) },
-        .format = TextureFormat.fromPixelFormat(base_image.pixelFormat()),
-        .usage = c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
-        .label = "Base Image",
-    }, base_image.rawBytes());
+    const texture = try renderer.createTextureFromImage(base_image);
     defer renderer.releaseTexture(texture);
 
     var metallic_image = try parsed.loadImageFromFile(1, std.heap.page_allocator);
     defer metallic_image.deinit();
-    try metallic_image.convert(Renderer.PixelFormat.rgba32);
-    const metallic_texture = try renderer.createTextureWithData(.{
-        .extent = .{ .width = @intCast(metallic_image.width), .height = @intCast(metallic_image.height) },
-        .format = TextureFormat.fromPixelFormat(metallic_image.pixelFormat()),
-        .usage = c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
-        .label = "Metallic Image",
-    }, metallic_image.rawBytes());
+    const metallic_texture = 
+    try renderer.createTextureFromImage(metallic_image);
     defer renderer.releaseTexture(metallic_texture);
 
     const sampler = try renderer.createSampler(.{});

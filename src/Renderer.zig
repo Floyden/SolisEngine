@@ -2,7 +2,7 @@ const std = @import("std");
 const Window = @import("Window.zig");
 const CommandBuffer = @import("CommandBuffer.zig");
 const SDL_ERROR = Window.SDL_ERROR;
-const Image = @import("zigimg").Image;
+const Image = @import("Image.zig");
 pub const PixelFormat = @import("zigimg").PixelFormat;
 const c = @import("solis").external.c;
 const spirv = @import("solis").external.spirv;
@@ -112,6 +112,16 @@ pub fn deinit(self: *Renderer) void {
     }
     c.SDL_DestroyGPUDevice(self.device);
     self.device = null;
+}
+
+pub fn createTextureFromImage(self: *Renderer, image: Image) !texture.Handle {
+    return self.createTextureWithData(
+    .{
+        .extent = image.extent,
+        .format = image.format,
+        .usage = c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
+
+    }, image.rawBytes());
 }
 
 pub fn createTextureWithData(self: *Renderer, desc: texture.Description, data: []const u8) !texture.Handle {

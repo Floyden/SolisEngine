@@ -1,4 +1,4 @@
-pub const PixelFormat = @import("zigimg").PixelFormat;
+const PixelFormat = @import("zigimg").PixelFormat;
 const std = @import("std");
 const c = @import("solis").external.c;
 const Extent3d = @import("solis").Extent3d;
