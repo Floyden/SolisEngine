@@ -115,12 +115,10 @@ pub fn deinit(self: *Renderer) void {
 }
 
 pub fn createTextureFromImage(self: *Renderer, image: Image) !texture.Handle {
-    return self.createTextureWithData(
-    .{
+    return self.createTextureWithData(.{
         .extent = image.extent,
         .format = image.format,
         .usage = c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
-
     }, image.rawBytes());
 }
 

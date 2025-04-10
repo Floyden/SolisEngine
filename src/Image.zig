@@ -7,7 +7,7 @@ const Self = @This();
 
 extent: Extent3d,
 format: TextureFormat,
-// If it is null, use the default sampler. 
+// If it is null, use the default sampler.
 sampler: ?SamplerDescription,
 
 allocator: std.mem.Allocator,
@@ -28,14 +28,14 @@ pub fn init_fill(data: []const u8, extent: Extent3d, format: TextureFormat, allo
     var self = init_empty(extent, format, allocator);
 
     var remaining = self.data.capacity;
-    while(remaining >= data.len) : (remaining -= data.len) {
+    while (remaining >= data.len) : (remaining -= data.len) {
         self.data.appendSliceAssumeCapacity(data);
     }
 
     if (remaining > 0) {
         self.data.appendSliceAssumeCapacity(data[0..remaining]);
     }
-    
+
     return self;
 }
 

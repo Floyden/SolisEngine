@@ -158,11 +158,15 @@ pub fn loadImageFromFile(self: Self, index: usize, allocator: std.mem.Allocator)
     const path = try std.fs.path.join(allocator, &[2][]const u8{ self._resource_path.?, self.images.?[index].uri });
 
     var image = try zigimg.Image.fromFilePath(allocator, path);
-    if(image.pixelFormat() != .rgba32) 
+    if (image.pixelFormat() != .rgba32)
         try image.convert(.rgba32);
-    
 
-    const res = Image.init_fill(image.rawBytes(), .{.width = @intCast(image.width), .height = @intCast(image.height)}, Image.TextureFormat.fromPixelFormat(image.pixelFormat()), allocator,);
+    const res = Image.init_fill(
+        image.rawBytes(),
+        .{ .width = @intCast(image.width), .height = @intCast(image.height) },
+        Image.TextureFormat.fromPixelFormat(image.pixelFormat()),
+        allocator,
+    );
     return res;
 }
 
