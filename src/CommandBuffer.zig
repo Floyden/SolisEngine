@@ -1,6 +1,7 @@
 const std = @import("std");
 const Window = @import("Window.zig");
-const Image = @import("zigimg").Image;
+const texture = @import("renderer/texture.zig");
+const RenderPass = @import("renderer/RenderPass.zig");
 const c = @import("solis").external.c;
 
 const CommandBuffer = @This();
@@ -18,10 +19,10 @@ pub fn beginCopyPass(self: *CommandBuffer) void {
     self.copy_pass = c.SDL_BeginGPUCopyPass(self.handle);
 }
 
-pub fn acquireSwapchain(self: CommandBuffer, window: Window) ?*c.SDL_GPUTexture {
+pub fn acquireSwapchain(self: CommandBuffer, window: Window) ?texture.Handle {
     var swapchain_texture: ?*c.SDL_GPUTexture = null;
     _ = c.SDL_AcquireGPUSwapchainTexture(self.handle, window.handle, &swapchain_texture, null, null);
-    return swapchain_texture;
+    return if (swapchain_texture) |handle| .{ .id = handle } else null;
 }
 
 pub fn endCopyPass(self: *CommandBuffer) void {
@@ -45,3 +46,24 @@ pub fn uploadToBuffer(self: CommandBuffer, src: *c.SDL_GPUTransferBuffer, dst: *
     });
     c.SDL_UploadToGPUBuffer(self.copy_pass, &buf_location, &dst_region, false);
 }
+
+pub fn createRenderPass(self: CommandBuffer, colorTarget: RenderPass.ColorTarget, depth_target: RenderPass.DepthStencilTarget) ?RenderPass {
+    const color = colorTarget.clear_color;
+    const sdl_color_target = std.mem.zeroInit(c.SDL_GPUColorTargetInfo, .{
+        .texture = colorTarget.texture.id,
+        .clear_color = .{ .r = color[0], .g = color[1], .b = color[2], .a = color[3] },
+        .load_op = colorTarget.load_op,
+        .store_op = colorTarget.store_op,
+    });
+    const sdl_depth_target = std.mem.zeroInit(c.SDL_GPUDepthStencilTargetInfo, .{
+        .texture = depth_target.texture.id,
+        .load_op = depth_target.load_op,
+        .store_op = depth_target.store_op,
+        .stencil_load_op = depth_target.stencil_load_op,
+        .stencil_store_op = depth_target.stencil_store_op,
+        .clear_depth = depth_target.clear_depth,
+        .cycle = depth_target.cycle,
+    });
+    return if(c.SDL_BeginGPURenderPass(self.handle, &sdl_color_target, 1, &sdl_depth_target)) |handle| return RenderPass{.handle = handle} else null;
+}
+

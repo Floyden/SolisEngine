@@ -11,8 +11,9 @@ const c = external.c;
 const zigimg = @import("zigimg");
 const Image = @import("Image.zig");
 const TextureFormat = @import("renderer/texture.zig").Format;
+const RenderPass = @import("renderer/RenderPass.zig");
 
-const CommandBuffer = Renderer.CommandBuffer;
+const CommandBuffer = @import("CommandBuffer.zig");
 const SDL_ERROR = Window.SDL_ERROR;
 
 pub fn main() !void {
@@ -104,7 +105,7 @@ pub fn main() !void {
         const cmd = renderer.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
         defer cmd.submit();
 
-        const swapchainTexture = cmd.acquireSwapchain(window) orelse {
+        const swapchain_texture = cmd.acquireSwapchain(window) orelse {
             cmd.cancel();
             continue;
         };
@@ -125,24 +126,11 @@ pub fn main() !void {
         matrices[0] = matrices[0].mult(matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle));
         matrices[1].data[14] -= 2.5;
 
-        const canvas_size: [2]f32 = .{ @floatFromInt(window.size[0]), @floatFromInt(window.size[1]) };
+        const canvas_size: [2]f32 = .{@floatFromInt(window.size[0]), @floatFromInt(window.size[1])};
         matrices[1] = matrices[1].mult(matrix.perspective(45.0, canvas_size[0] / canvas_size[1], 0.01, 100));
 
-        var color_target = std.mem.zeroInit(c.SDL_GPUColorTargetInfo, .{
-            .texture = swapchainTexture,
-            .clear_color = .{ .r = 0.1, .g = 0.1, .b = 0.1, .a = 1.0 },
-            .load_op = c.SDL_GPU_LOADOP_CLEAR,
-            .store_op = c.SDL_GPU_STOREOP_STORE,
-        });
-        var depth_target = std.mem.zeroInit(c.SDL_GPUDepthStencilTargetInfo, .{
-            .clear_depth = 1.0,
-            .load_op = c.SDL_GPU_LOADOP_CLEAR,
-            .store_op = c.SDL_GPU_STOREOP_DONT_CARE,
-            .stencil_load_op = c.SDL_GPU_LOADOP_DONT_CARE,
-            .stencil_store_op = c.SDL_GPU_STOREOP_DONT_CARE,
-            .texture = tex_depth.id,
-            .cycle = true,
-        });
+        const color_target = RenderPass.ColorTarget{.texture = swapchain_texture, .clear_color = .{0.1, 0.1, 0.1, 1.0}};
+        const depth_target = RenderPass.DepthStencilTarget{.texture = tex_depth };
 
         const sampler_binding = [_]c.SDL_GPUTextureSamplerBinding{
             .{ .sampler = sampler.id, .texture = texture.id },
@@ -152,11 +140,12 @@ pub fn main() !void {
         const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buf_vertex, .offset = 0 };
         cmd.pushVertexUniformData(0, f32, @as(*[32]f32, @ptrCast(&matrices)));
         cmd.pushFragmentUniformData(0, f32, point_light.toBuffer());
-        const pass = c.SDL_BeginGPURenderPass(cmd.handle, &color_target, 1, &depth_target);
-        c.SDL_BindGPUGraphicsPipeline(pass, renderer.pipeline);
-        c.SDL_BindGPUFragmentSamplers(pass, 0, &sampler_binding, sampler_binding.len);
-        c.SDL_BindGPUVertexBuffers(pass, 0, &vertex_binding, 1);
-        c.SDL_DrawGPUPrimitives(pass, mesh.num_vertices, 1, 0, 0);
-        c.SDL_EndGPURenderPass(pass);
+
+        const pass = cmd.createRenderPass(color_target, depth_target) orelse @panic("Could not create RenderPass");
+        pass.bindGraphicsPipeline(renderer.pipeline.?);
+        pass.bindFragmentSamplers(0, &sampler_binding);
+        pass.bindVertexBuffers(0, &.{vertex_binding});
+        pass.drawPrimitives(mesh.num_vertices);
+        pass.end();
     }
 }
