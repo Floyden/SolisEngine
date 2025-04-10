@@ -48,7 +48,6 @@ pub fn main() !void {
     defer renderer.releaseTexture(tex_depth);
 
     // Buffers
-    // const current_vert: []const u8 = @ptrCast(&c.quad_data);
     const current_vert: []const u8 = mesh.data.?;
     const buf_vertex = renderer.createBufferNamed(@intCast(current_vert.len), c.SDL_GPU_BUFFERUSAGE_VERTEX, "Vertex Buffer") catch |e| return e;
     defer renderer.releaseBuffer(buf_vertex);
@@ -94,6 +93,7 @@ pub fn main() !void {
     var done = false;
     var event: c.SDL_Event = undefined;
     while (!done) {
+        window.update();
         while (c.SDL_PollEvent(&event) and !done) {
             switch (event.type) {
                 c.SDL_EVENT_QUIT, c.SDL_EVENT_WINDOW_CLOSE_REQUESTED => done = true,
@@ -109,10 +109,7 @@ pub fn main() !void {
             continue;
         };
 
-        var current_window_size: @Vector(2, c_int) = .{ 0, 0 };
-        _ = c.SDL_GetWindowSizeInPixels(window.handle, &current_window_size[0], &current_window_size[1]);
-        if (@reduce(.Or, window.size != current_window_size)) {
-            window.size = current_window_size;
+        if (window.has_resized) {
             renderer.releaseTexture(tex_depth);
             tex_depth = try renderer.createTexture(.{
                 .extent = .{ .width = @intCast(window.size[0]), .height = @intCast(window.size[1]) },
@@ -128,7 +125,7 @@ pub fn main() !void {
         matrices[0] = matrices[0].mult(matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle));
         matrices[1].data[14] -= 2.5;
 
-        const canvas_size: @Vector(2, f32) = @floatFromInt(current_window_size);
+        const canvas_size: [2]f32 = .{ @floatFromInt(window.size[0]), @floatFromInt(window.size[1]) };
         matrices[1] = matrices[1].mult(matrix.perspective(45.0, canvas_size[0] / canvas_size[1], 0.01, 100));
 
         var color_target = std.mem.zeroInit(c.SDL_GPUColorTargetInfo, .{
