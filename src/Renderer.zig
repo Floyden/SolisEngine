@@ -225,6 +225,23 @@ pub fn createBufferNamed(self: *Renderer, size: u32, usage_flags: u32, name: [:0
     return buf_vertex;
 }
 
+pub fn createBufferFromData(self: *Renderer, data: []const u8, usage_flags: u32, name: [:0]const u8)  !*c.SDL_GPUBuffer {
+    const buffer_size : u32  = @intCast(data.len);
+    const buffer = try self.createBufferNamed(buffer_size, usage_flags, name);
+    const buf_transfer = self.createTransferBufferNamed(buffer_size, c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "Transfer Buffer") catch |e| return e;
+    defer self.releaseTransferBuffer(buf_transfer);
+
+    self.copyToTransferBuffer(buf_transfer, data);
+
+    var cmd = self.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
+    defer cmd.submit();
+
+    cmd.beginCopyPass();
+    cmd.uploadToBuffer(buf_transfer, buffer, buffer_size);
+    cmd.endCopyPass();
+    return buffer;
+}
+
 pub fn releaseBuffer(self: *Renderer, buffer: *c.SDL_GPUBuffer) void {
     _ = c.SDL_ReleaseGPUBuffer(self.device, buffer);
 }

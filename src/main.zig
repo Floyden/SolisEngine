@@ -50,23 +50,9 @@ pub fn main() !void {
 
     // Buffers
     const current_vert: []const u8 = mesh.data.?;
-    const buf_vertex = renderer.createBufferNamed(@intCast(current_vert.len), c.SDL_GPU_BUFFERUSAGE_VERTEX, "Vertex Buffer") catch |e| return e;
+    const buf_vertex = renderer.createBufferFromData(current_vert, c.SDL_GPU_BUFFERUSAGE_VERTEX, "Vertex Buffer") catch |e| return e;
     defer renderer.releaseBuffer(buf_vertex);
 
-    // Transfer data
-    {
-        const buf_transfer = renderer.createTransferBufferNamed(@intCast(current_vert.len), c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "Transfer Buffer") catch |e| return e;
-        defer renderer.releaseTransferBuffer(buf_transfer);
-
-        renderer.copyToTransferBuffer(buf_transfer, @ptrCast(current_vert));
-
-        var cmd = renderer.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
-        defer cmd.submit();
-
-        cmd.beginCopyPass();
-        cmd.uploadToBuffer(buf_transfer, buf_vertex, @intCast(current_vert.len));
-        cmd.endCopyPass();
-    }
 
     // Image Texture
     var base_image = try parsed.loadImageFromFile(0, std.heap.page_allocator);
