@@ -1,4 +1,5 @@
 pub const external = @import("external.zig");
+pub const Extent3d = @import("Extent3d.zig");
 
 const std = @import("std");
 const Window = @import("Window.zig");
@@ -8,6 +9,7 @@ const light = @import("light.zig");
 const Gltf = @import("Gltf.zig");
 const c = external.c;
 const zigimg = @import("zigimg");
+const TextureFormat = @import("renderer/texture.zig").Format;
 
 const CommandBuffer = Renderer.CommandBuffer;
 const SDL_ERROR = Window.SDL_ERROR;
@@ -37,10 +39,8 @@ pub fn main() !void {
     // window textures
 
     var tex_depth = try renderer.createTexture(.{
-        .width = @intCast(window.size[0]),
-        .height = @intCast(window.size[1]),
-        .depth = 1,
-        .format = Renderer.PixelFormat.grayscale16,
+        .extent = .{ .width = @intCast(window.size[0]), .height = @intCast(window.size[1]) },
+        .format = TextureFormat.depth16unorm,
         .usage = c.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
         .label = "Depth Texture",
     });
@@ -71,10 +71,8 @@ pub fn main() !void {
     var base_image = try parsed.loadImageFromFile(0, std.heap.page_allocator);
     defer base_image.deinit();
     const texture = try renderer.createTextureWithData(.{
-        .width = @intCast(base_image.width),
-        .height = @intCast(base_image.height),
-        .depth = 1,
-        .format = base_image.pixelFormat(),
+        .extent = .{ .width = @intCast(base_image.width), .height = @intCast(base_image.height) },
+        .format = TextureFormat.fromPixelFormat(base_image.pixelFormat()),
         .usage = c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
         .label = "Base Image",
     }, base_image.rawBytes());
@@ -84,20 +82,14 @@ pub fn main() !void {
     defer metallic_image.deinit();
     try metallic_image.convert(Renderer.PixelFormat.rgba32);
     const metallic_texture = try renderer.createTextureWithData(.{
-        .width = @intCast(metallic_image.width),
-        .height = @intCast(metallic_image.height),
-        .depth = 1,
-        .format = metallic_image.pixelFormat(),
+        .extent = .{ .width = @intCast(metallic_image.width), .height = @intCast(metallic_image.height) },
+        .format = TextureFormat.fromPixelFormat(metallic_image.pixelFormat()),
         .usage = c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
         .label = "Metallic Image",
     }, metallic_image.rawBytes());
     defer renderer.releaseTexture(metallic_texture);
 
-    const sampler = try renderer.createSampler(.{
-        .address_mode_u = c.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
-        .address_mode_v = c.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
-        .address_mode_w = c.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
-    });
+    const sampler = try renderer.createSampler(.{});
     defer renderer.releaseSampler(sampler);
 
     // Main loop
@@ -132,10 +124,8 @@ pub fn main() !void {
             window.size = current_window_size;
             renderer.releaseTexture(tex_depth);
             tex_depth = try renderer.createTexture(.{
-                .width = @intCast(window.size[0]),
-                .height = @intCast(window.size[1]),
-                .depth = 1,
-                .format = Renderer.PixelFormat.grayscale16,
+                .extent = .{ .width = @intCast(window.size[0]), .height = @intCast(window.size[1]) },
+                .format = TextureFormat.depth16unorm,
                 .usage = c.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
                 .label = "Depth Texture",
             });
@@ -169,7 +159,7 @@ pub fn main() !void {
         const sampler_binding = [_]c.SDL_GPUTextureSamplerBinding{
             .{ .sampler = sampler.id, .texture = texture.id },
             .{ .sampler = sampler.id, .texture = metallic_texture.id },
-        }; 
+        };
 
         const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buf_vertex, .offset = 0 };
         cmd.pushVertexUniformData(0, f32, @as(*[32]f32, @ptrCast(&matrices)));

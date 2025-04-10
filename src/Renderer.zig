@@ -6,8 +6,8 @@ const Image = @import("zigimg").Image;
 pub const PixelFormat = @import("zigimg").PixelFormat;
 const c = @import("solis").external.c;
 const spirv = @import("solis").external.spirv;
-const sampler = @import("renderer/sampler.zig");
-const texture = @import("renderer/texture.zig");
+pub const sampler = @import("renderer/sampler.zig");
+pub const texture = @import("renderer/texture.zig");
 
 const Renderer = @This();
 window: *Window,
@@ -39,7 +39,6 @@ pub fn init(window: *Window) !Renderer {
     });
 
     const vertex_attributes = [_]c.SDL_GPUVertexAttribute{
-
         std.mem.zeroInit(c.SDL_GPUVertexAttribute, .{
             .buffer_slot = 0,
             .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
@@ -132,14 +131,14 @@ pub fn createTextureWithData(self: *Renderer, desc: texture.Description, data: [
         const source = c.SDL_GPUTextureTransferInfo{
             .transfer_buffer = buf_transfer,
             .offset = 0,
-            .pixels_per_row = desc.width,
-            .rows_per_layer = desc.height,
+            .pixels_per_row = desc.extent.width,
+            .rows_per_layer = desc.extent.height,
         };
         const destination = std.mem.zeroInit(c.SDL_GPUTextureRegion, .{
             .texture = handle.id,
-            .w = desc.width,
-            .h = desc.height,
-            .d = desc.depth,
+            .w = desc.extent.width,
+            .h = desc.extent.height,
+            .d = desc.extent.depth,
         });
 
         c.SDL_UploadToGPUTexture(cmd.copy_pass, &source, &destination, true);
@@ -150,33 +149,25 @@ pub fn createTextureWithData(self: *Renderer, desc: texture.Description, data: [
 }
 
 pub fn createTexture(self: *Renderer, desc: texture.Description) !texture.Handle {
-    const image_format : u32 = switch (desc.format) {
-        .rgba32 => c.SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
-        .grayscale16 => c.SDL_GPU_TEXTUREFORMAT_D16_UNORM,
-        else => {
-            std.log.err("Following format is not implemented: {any}", .{desc.format});
-            return error.NotImplemented;
-        },
-    };
     const texture_desc = c.SDL_GPUTextureCreateInfo{
         .type = c.SDL_GPU_TEXTURETYPE_2D,
-        .format = image_format,
+        .format = desc.format.toSDLFormat(),
         .usage = desc.usage,
-        .width = desc.width,
-        .height = desc.height,
-        .layer_count_or_depth = desc.depth,
+        .width = desc.extent.width,
+        .height = desc.extent.height,
+        .layer_count_or_depth = desc.extent.depth,
         .num_levels = 1,
         .sample_count = c.SDL_GPU_SAMPLECOUNT_1,
         .props = c.SDL_CreateProperties(),
     };
 
-    if(desc.label) |label|
+    if (desc.label) |label|
         _ = c.SDL_SetStringProperty(texture_desc.props, c.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, label.ptr);
 
     const texture_sdl = c.SDL_CreateGPUTexture(self.device, &texture_desc) orelse return SDL_ERROR.Fail;
     c.SDL_DestroyProperties(texture_desc.props);
 
-    return texture.Handle{.id = texture_sdl};
+    return texture.Handle{ .id = texture_sdl };
 }
 
 pub fn releaseTexture(self: *Renderer, handle: texture.Handle) void {
@@ -184,7 +175,7 @@ pub fn releaseTexture(self: *Renderer, handle: texture.Handle) void {
 }
 
 pub fn createSampler(self: *Renderer, desc: sampler.Description) !sampler.Handle {
-    const sampler_create_info = c.SDL_GPUSamplerCreateInfo {
+    const sampler_create_info = c.SDL_GPUSamplerCreateInfo{
         .min_filter = desc.min_filter,
         .mag_filter = desc.mag_filter,
         .mipmap_mode = desc.mipmap_mode,
@@ -193,21 +184,21 @@ pub fn createSampler(self: *Renderer, desc: sampler.Description) !sampler.Handle
         .address_mode_w = desc.address_mode_w,
         .mip_lod_bias = desc.mip_lod_bias,
         .enable_anisotropy = desc.max_anisotropy != null,
-        .max_anisotropy = if(desc.max_anisotropy) |max| max else 0.0,
+        .max_anisotropy = if (desc.max_anisotropy) |max| max else 0.0,
         .enable_compare = desc.compare_op != null,
-        .compare_op = if(desc.compare_op) |op| op else 0,
+        .compare_op = if (desc.compare_op) |op| op else 0,
         .min_lod = desc.min_lod,
         .max_lod = desc.max_lod,
         .props = c.SDL_CreateProperties(),
     };
 
-    if(desc.label) |label|
+    if (desc.label) |label|
         _ = c.SDL_SetStringProperty(sampler_create_info.props, c.SDL_PROP_GPU_TEXTURE_CREATE_NAME_STRING, label.ptr);
 
     const sdl_sampler = c.SDL_CreateGPUSampler(self.device, &sampler_create_info) orelse return SDL_ERROR.Fail;
     c.SDL_DestroyProperties(sampler_create_info.props);
 
-    return sampler.Handle{.id = sdl_sampler};
+    return sampler.Handle{ .id = sdl_sampler };
 }
 
 pub fn releaseSampler(self: *Renderer, handle: sampler.Handle) void {
