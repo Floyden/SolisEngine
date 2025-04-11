@@ -53,7 +53,6 @@ pub fn main() !void {
     const buf_vertex = renderer.createBufferFromData(current_vert, c.SDL_GPU_BUFFERUSAGE_VERTEX, "Vertex Buffer") catch |e| return e;
     defer renderer.releaseBuffer(buf_vertex);
 
-
     // Image Texture
     var base_image = try parsed.loadImageFromFile(0, std.heap.page_allocator);
     defer base_image.deinit();
@@ -62,8 +61,7 @@ pub fn main() !void {
 
     var metallic_image = try parsed.loadImageFromFile(1, std.heap.page_allocator);
     defer metallic_image.deinit();
-    const metallic_texture = 
-    try renderer.createTextureFromImage(metallic_image);
+    const metallic_texture = try renderer.createTextureFromImage(metallic_image);
     defer renderer.releaseTexture(metallic_texture);
 
     const sampler = try renderer.createSampler(.{});
@@ -112,11 +110,11 @@ pub fn main() !void {
         matrices[0] = matrices[0].mult(matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle));
         matrices[1].data[14] -= 2.5;
 
-        const canvas_size: [2]f32 = .{@floatFromInt(window.size[0]), @floatFromInt(window.size[1])};
+        const canvas_size: [2]f32 = .{ @floatFromInt(window.size[0]), @floatFromInt(window.size[1]) };
         matrices[1] = matrices[1].mult(matrix.perspective(45.0, canvas_size[0] / canvas_size[1], 0.01, 100));
 
-        const color_target = RenderPass.ColorTarget{.texture = swapchain_texture, .clear_color = .{0.1, 0.1, 0.1, 1.0}};
-        const depth_target = RenderPass.DepthStencilTarget{.texture = tex_depth };
+        const color_target = RenderPass.ColorTarget{ .texture = swapchain_texture, .clear_color = .{ 0.1, 0.1, 0.1, 1.0 } };
+        const depth_target = RenderPass.DepthStencilTarget{ .texture = tex_depth };
 
         const sampler_binding = [_]c.SDL_GPUTextureSamplerBinding{
             .{ .sampler = sampler.id, .texture = texture.id },
