@@ -64,6 +64,5 @@ pub fn createRenderPass(self: CommandBuffer, colorTarget: RenderPass.ColorTarget
         .clear_depth = depth_target.clear_depth,
         .cycle = depth_target.cycle,
     });
-    return if(c.SDL_BeginGPURenderPass(self.handle, &sdl_color_target, 1, &sdl_depth_target)) |handle| return RenderPass{.handle = handle} else null;
+    return if (c.SDL_BeginGPURenderPass(self.handle, &sdl_color_target, 1, &sdl_depth_target)) |handle| return RenderPass{ .handle = handle } else null;
 }
-

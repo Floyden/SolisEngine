@@ -9,6 +9,7 @@ const spirv = @import("solis").external.spirv;
 pub const sampler = @import("renderer/sampler.zig");
 pub const texture = @import("renderer/texture.zig");
 pub const GraphicsPipeline = @import("renderer/GraphicsPipeline.zig");
+pub const Shader = @import("renderer/Shader.zig");
 
 const Renderer = @This();
 window: *Window,
@@ -29,11 +30,13 @@ pub fn deinit(self: *Renderer) void {
     c.SDL_DestroyGPUDevice(self.device);
 }
 
-pub fn createGraphicsPipeline(self: Renderer) !GraphicsPipeline {
+pub fn createGraphicsPipeline(self: Renderer, desc: GraphicsPipeline.Description) !GraphicsPipeline {
     // Shaders, Can be destroyed after pipeline is created
-    const v_shader = loadGlslShader(self.device, c.VERTEX_SHADER, "Simple Vertex", c.SDL_GPU_SHADERSTAGE_VERTEX) catch |e| return e;
+    // const v_shader = loadGlslShader(self.device, c.VERTEX_SHADER, "Simple Vertex", c.SDL_GPU_SHADERSTAGE_VERTEX) catch |e| return e;
+    const v_shader = loadSPIRVShader(self.device, desc.vertex_shader) catch |e| return e;
     defer c.SDL_ReleaseGPUShader(self.device, v_shader);
-    const f_shader = loadGlslShader(self.device, c.FRAGMENT_SHADER, "Simple Fragment", c.SDL_GPU_SHADERSTAGE_FRAGMENT) catch |e| return e;
+    // const f_shader = loadGlslShader(self.device, c.FRAGMENT_SHADER, "Simple Fragment", c.SDL_GPU_SHADERSTAGE_FRAGMENT) catch |e| return e;
+    const f_shader = loadSPIRVShader(self.device, desc.fragment_shader) catch |e| return e;
     defer c.SDL_ReleaseGPUShader(self.device, f_shader);
 
     // Graphics Pipeline
@@ -107,7 +110,7 @@ pub fn createGraphicsPipeline(self: Renderer) !GraphicsPipeline {
     });
     const pipeline = c.SDL_CreateGPUGraphicsPipeline(self.device, &pipelinedesc);
     if (pipeline == null) return SDL_ERROR.Fail;
-    return GraphicsPipeline{.handle = pipeline.?};
+    return GraphicsPipeline{ .handle = pipeline.? };
 }
 
 pub fn destroyGraphicsPipeline(self: Renderer, pipeline: GraphicsPipeline) void {
@@ -225,8 +228,8 @@ pub fn createBufferNamed(self: *Renderer, size: u32, usage_flags: u32, name: [:0
     return buf_vertex;
 }
 
-pub fn createBufferFromData(self: *Renderer, data: []const u8, usage_flags: u32, name: [:0]const u8)  !*c.SDL_GPUBuffer {
-    const buffer_size : u32  = @intCast(data.len);
+pub fn createBufferFromData(self: *Renderer, data: []const u8, usage_flags: u32, name: [:0]const u8) !*c.SDL_GPUBuffer {
+    const buffer_size: u32 = @intCast(data.len);
     const buffer = try self.createBufferNamed(buffer_size, usage_flags, name);
     const buf_transfer = self.createTransferBufferNamed(buffer_size, c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "Transfer Buffer") catch |e| return e;
     defer self.releaseTransferBuffer(buf_transfer);
@@ -273,119 +276,17 @@ pub fn acquireCommandBuffer(self: *Renderer) ?CommandBuffer {
     return .{ .handle = cmd };
 }
 
-const ShaderInfo = struct {
-    num_inputs: usize,
-    num_outputs: usize,
-    num_uniform_buffers: usize,
-    num_samplers: usize,
-};
-
-pub fn analyzeSpirv(code: []const u32) ShaderInfo {
-    var context: spirv.spvc_context = undefined;
-    if (spirv.spvc_context_create(&context) != 0) @panic("Fail");
-    defer spirv.spvc_context_destroy(context);
-
-    var parsed: spirv.spvc_parsed_ir = undefined;
-    if (spirv.spvc_context_parse_spirv(context, code.ptr, code.len, &parsed) != 0) @panic("Fail");
-
-    var compiler: spirv.spvc_compiler = undefined;
-    if (spirv.spvc_context_create_compiler(context, spirv.SPVC_BACKEND_GLSL, parsed, spirv.SPVC_CAPTURE_MODE_TAKE_OWNERSHIP, &compiler) != 0) @panic("Fail");
-
-    var resources: spirv.spvc_resources = undefined;
-    if (spirv.spvc_compiler_create_shader_resources(compiler, &resources) != 0) @panic("Fail");
-
-    var resource_list: [*c]const spirv.spvc_reflected_resource = undefined;
-    var resource_list_size: usize = 0;
-
-    var shader_info = std.mem.zeroInit(ShaderInfo, .{});
-
-    // Input
-    if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_STAGE_INPUT, &resource_list, &resource_list_size) != 0) @panic("Fail");
-    shader_info.num_inputs = resource_list_size;
-
-    // Output
-    if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_STAGE_OUTPUT, &resource_list, &resource_list_size) != 0) @panic("Fail");
-    shader_info.num_outputs = resource_list_size;
-
-    // uniform
-    if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_UNIFORM_BUFFER, &resource_list, &resource_list_size) != 0) @panic("Fail");
-    shader_info.num_uniform_buffers = resource_list_size;
-
-    // num_samplers
-    if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_SAMPLED_IMAGE, &resource_list, &resource_list_size) != 0) @panic("Fail");
-    shader_info.num_samplers = resource_list_size;
-    return shader_info;
-}
-
-pub fn loadGlslShader(device: *c.SDL_GPUDevice, code: [*:0]const u8, name: [:0]const u8, stage: c_uint) !?*c.SDL_GPUShader {
-    _ = spirv.glslang_initialize_process();
-    defer spirv.glslang_finalize_process();
-
-    const glslang_stage: c_uint = switch (stage) {
-        c.SDL_GPU_SHADERSTAGE_VERTEX => spirv.GLSLANG_STAGE_VERTEX,
-        c.SDL_GPU_SHADERSTAGE_FRAGMENT => spirv.GLSLANG_STAGE_FRAGMENT,
-        else => return error.Fail,
+pub fn loadSPIRVShader(device: *c.SDL_GPUDevice, shader: Shader) !?*c.SDL_GPUShader {
+    const numBuffers: u32 = @intCast(shader.uniforms.items.len);
+    const stage: u32 = switch (shader.stage) {
+        .Vertex => c.SDL_GPU_SHADERSTAGE_VERTEX,
+        .Fragment => c.SDL_GPU_SHADERSTAGE_FRAGMENT,
     };
 
-    const input = spirv.glslang_input_t{
-        .language = spirv.GLSLANG_SOURCE_GLSL,
-        .stage = glslang_stage,
-        .client = spirv.GLSLANG_CLIENT_VULKAN,
-        .client_version = spirv.GLSLANG_TARGET_VULKAN_1_4,
-        .target_language = spirv.GLSLANG_TARGET_SPV,
-        .target_language_version = spirv.GLSLANG_TARGET_SPV_1_0,
-        .code = code,
-        .default_version = 100,
-        .default_profile = spirv.GLSLANG_NO_PROFILE,
-        .force_default_version_and_profile = 0,
-        .forward_compatible = 0,
-        .messages = spirv.GLSLANG_MSG_DEFAULT_BIT,
-        .resource = spirv.glslang_default_resource(),
-    };
-
-    const shader = spirv.glslang_shader_create(&input);
-
-    defer spirv.glslang_shader_delete(shader);
-
-    if (spirv.glslang_shader_preprocess(shader, &input) == 0) {
-        std.log.warn("Preprocess failed", .{});
-        std.log.warn("{s}", .{spirv.glslang_shader_get_info_log(shader)});
-        std.log.warn("{s}", .{spirv.glslang_shader_get_info_debug_log(shader)});
-        std.log.warn("{s}", .{input.code});
-        return null;
-    }
-    if (spirv.glslang_shader_parse(shader, &input) == 0) {
-        std.log.warn("Parse failed", .{});
-        std.log.warn("{s}", .{spirv.glslang_shader_get_info_log(shader)});
-        std.log.warn("{s}", .{spirv.glslang_shader_get_info_debug_log(shader)});
-        std.log.warn("{s}", .{spirv.glslang_shader_get_preprocessed_code(shader)});
-        return null;
-    }
-    const program = spirv.glslang_program_create();
-    spirv.glslang_program_add_shader(program, shader);
-
-    if (spirv.glslang_program_link(program, spirv.GLSLANG_MSG_SPV_RULES_BIT | spirv.GLSLANG_MSG_VULKAN_RULES_BIT) == 0) {
-        std.log.warn("Link failed", .{});
-        return null;
-    }
-    spirv.glslang_program_SPIRV_generate(program, glslang_stage);
-    const length = spirv.glslang_program_SPIRV_get_size(program);
-    const res = std.heap.page_allocator.alloc(u32, length) catch @panic("OOM");
-    defer std.heap.page_allocator.free(res);
-    spirv.glslang_program_SPIRV_get(program, res.ptr);
-
-    return loadSPIRVShader(device, res, name, stage);
-}
-
-pub fn loadSPIRVShader(device: *c.SDL_GPUDevice, _code: []const u32, name: [:0]const u8, stage: c_uint) !?*c.SDL_GPUShader {
-    _ = name;
-    const shader_info = analyzeSpirv(_code);
-    const numBuffers: u32 = @intCast(shader_info.num_uniform_buffers);
-
-    const code: []const u8 = @ptrCast(_code);
+    const code: []const u8 = @ptrCast(shader.code.items);
     const sci = std.mem.zeroInit(c.SDL_GPUShaderCreateInfo, .{
         .num_uniform_buffers = numBuffers,
-        .num_samplers = @as(u32, @intCast(shader_info.num_samplers)),
+        .num_samplers = @as(u32, @intCast(shader.samplers.items.len)),
 
         .format = c.SDL_GPU_SHADERFORMAT_SPIRV,
         .code = code.ptr,

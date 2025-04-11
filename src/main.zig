@@ -12,6 +12,7 @@ const zigimg = @import("zigimg");
 const Image = @import("Image.zig");
 const TextureFormat = @import("renderer/texture.zig").Format;
 const RenderPass = @import("renderer/RenderPass.zig");
+const Shader = @import("renderer/Shader.zig");
 
 const CommandBuffer = @import("CommandBuffer.zig");
 const SDL_ERROR = Window.SDL_ERROR;
@@ -22,6 +23,7 @@ pub fn main() !void {
         return;
     }
 
+    const allocator = std.heap.page_allocator;
     const file_path: []const u8 = @ptrCast(std.os.argv[1][0..std.mem.len(std.os.argv[1])]);
 
     const parsed = Gltf.parseFromFile(std.heap.page_allocator, file_path) catch @panic("Failed");
@@ -38,7 +40,17 @@ pub fn main() !void {
     var renderer = Renderer.init(&window) catch |e| return e;
     defer renderer.deinit();
 
-    const pipeline = try renderer.createGraphicsPipeline();
+    const vs_length = std.mem.len(c.VERTEX_SHADER);
+    var vertex_shader = try Shader.init(.{ .code = c.VERTEX_SHADER[0..vs_length], .source_type = Shader.SourceType.glsl, .stage = Shader.Stage.Vertex }, allocator);
+    defer vertex_shader.deinit();
+    const fs_length = std.mem.len(c.FRAGMENT_SHADER);
+    var fragment_shader = try Shader.init(.{ .code = c.FRAGMENT_SHADER[0..fs_length], .source_type = Shader.SourceType.glsl, .stage = Shader.Stage.Fragment }, allocator);
+    defer fragment_shader.deinit();
+
+    const pipeline = try renderer.createGraphicsPipeline(.{
+        .vertex_shader = vertex_shader,
+        .fragment_shader = fragment_shader,
+    });
     defer renderer.destroyGraphicsPipeline(pipeline);
 
     // window textures
