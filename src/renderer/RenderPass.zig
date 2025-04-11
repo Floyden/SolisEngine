@@ -1,4 +1,5 @@
 const texture = @import("texture.zig");
+const GraphicsPipeline = @import("GraphicsPipeline.zig");
 const c = @import("solis").external.c;
 const Self = @This();
 
@@ -25,8 +26,8 @@ pub fn end(self: Self) void {
     c.SDL_EndGPURenderPass(self.handle);
 }
 
-pub fn bindGraphicsPipeline(self: Self, pipeline: *c.SDL_GPUGraphicsPipeline) void {
-    c.SDL_BindGPUGraphicsPipeline(self.handle, pipeline);
+pub fn bindGraphicsPipeline(self: Self, pipeline: GraphicsPipeline) void {
+    c.SDL_BindGPUGraphicsPipeline(self.handle, pipeline.handle);
 }
 
 pub fn bindFragmentSamplers(self: Self, index: u32, samplers: []const c.SDL_GPUTextureSamplerBinding) void {

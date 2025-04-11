@@ -8,28 +8,36 @@ const c = @import("solis").external.c;
 const spirv = @import("solis").external.spirv;
 pub const sampler = @import("renderer/sampler.zig");
 pub const texture = @import("renderer/texture.zig");
+pub const GraphicsPipeline = @import("renderer/GraphicsPipeline.zig");
 
 const Renderer = @This();
 window: *Window,
-device: ?*c.SDL_GPUDevice,
+device: *c.SDL_GPUDevice,
 sample_count: c.SDL_GPUSampleCount,
-pipeline: ?*c.SDL_GPUGraphicsPipeline,
 
 pub fn init(window: *Window) !Renderer {
     // GPU Device init
     const device = c.SDL_CreateGPUDevice(c.SDL_GPU_SHADERFORMAT_SPIRV, true, null) orelse return SDL_ERROR.Fail;
     if (!c.SDL_ClaimWindowForGPUDevice(device, window.handle)) return SDL_ERROR.Fail;
 
-    // Shaders, Can be destroyed after pipeline is created
-    const v_shader = loadGlslShader(device, c.VERTEX_SHADER, "Simple Vertex", c.SDL_GPU_SHADERSTAGE_VERTEX) catch |e| return e;
-    defer c.SDL_ReleaseGPUShader(device, v_shader);
-    const f_shader = loadGlslShader(device, c.FRAGMENT_SHADER, "Simple Fragment", c.SDL_GPU_SHADERSTAGE_FRAGMENT) catch |e| return e;
-    defer c.SDL_ReleaseGPUShader(device, f_shader);
-
     const sample_count: c.SDL_GPUSampleCount = c.SDL_GPU_SAMPLECOUNT_1;
 
+    return .{ .window = window, .device = device, .sample_count = sample_count };
+}
+
+pub fn deinit(self: *Renderer) void {
+    c.SDL_DestroyGPUDevice(self.device);
+}
+
+pub fn createGraphicsPipeline(self: Renderer) !GraphicsPipeline {
+    // Shaders, Can be destroyed after pipeline is created
+    const v_shader = loadGlslShader(self.device, c.VERTEX_SHADER, "Simple Vertex", c.SDL_GPU_SHADERSTAGE_VERTEX) catch |e| return e;
+    defer c.SDL_ReleaseGPUShader(self.device, v_shader);
+    const f_shader = loadGlslShader(self.device, c.FRAGMENT_SHADER, "Simple Fragment", c.SDL_GPU_SHADERSTAGE_FRAGMENT) catch |e| return e;
+    defer c.SDL_ReleaseGPUShader(self.device, f_shader);
+
     // Graphics Pipeline
-    const color_target_desc = std.mem.zeroInit(c.SDL_GPUColorTargetDescription, .{ .format = c.SDL_GetGPUSwapchainTextureFormat(device, window.handle) });
+    const color_target_desc = std.mem.zeroInit(c.SDL_GPUColorTargetDescription, .{ .format = c.SDL_GetGPUSwapchainTextureFormat(self.device, self.window.handle) });
 
     const vertex_buffer_desc = std.mem.zeroInit(c.SDL_GPUVertexBufferDescription, .{
         .slot = 0,
@@ -79,7 +87,7 @@ pub fn init(window: *Window) !Renderer {
             .compare_op = c.SDL_GPU_COMPAREOP_LESS_OR_EQUAL,
         },
 
-        .multisample_state = .{ .sample_count = sample_count },
+        .multisample_state = .{ .sample_count = self.sample_count },
         .primitive_type = c.SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
 
         .vertex_shader = v_shader,
@@ -97,21 +105,13 @@ pub fn init(window: *Window) !Renderer {
         },
         .props = 0,
     });
-    const pipeline = c.SDL_CreateGPUGraphicsPipeline(device, &pipelinedesc);
+    const pipeline = c.SDL_CreateGPUGraphicsPipeline(self.device, &pipelinedesc);
     if (pipeline == null) return SDL_ERROR.Fail;
-    return .{ .window = window, .device = device, .sample_count = sample_count, .pipeline = pipeline };
+    return GraphicsPipeline{.handle = pipeline.?};
 }
 
-pub fn deinit(self: *Renderer) void {
-    if (self.device == null) return;
-
-    if (self.pipeline) |_| {
-        c.SDL_ReleaseGPUGraphicsPipeline(self.device, self.pipeline);
-
-        self.pipeline = null;
-    }
-    c.SDL_DestroyGPUDevice(self.device);
-    self.device = null;
+pub fn destroyGraphicsPipeline(self: Renderer, pipeline: GraphicsPipeline) void {
+    c.SDL_ReleaseGPUGraphicsPipeline(self.device, pipeline.handle);
 }
 
 pub fn createTextureFromImage(self: *Renderer, image: Image) !texture.Handle {

@@ -38,6 +38,9 @@ pub fn main() !void {
     var renderer = Renderer.init(&window) catch |e| return e;
     defer renderer.deinit();
 
+    const pipeline = try renderer.createGraphicsPipeline();
+    defer renderer.destroyGraphicsPipeline(pipeline);
+
     // window textures
 
     var tex_depth = try renderer.createTexture(.{
@@ -126,7 +129,7 @@ pub fn main() !void {
         cmd.pushFragmentUniformData(0, f32, point_light.toBuffer());
 
         const pass = cmd.createRenderPass(color_target, depth_target) orelse @panic("Could not create RenderPass");
-        pass.bindGraphicsPipeline(renderer.pipeline.?);
+        pass.bindGraphicsPipeline(pipeline);
         pass.bindFragmentSamplers(0, &sampler_binding);
         pass.bindVertexBuffers(0, &.{vertex_binding});
         pass.drawPrimitives(mesh.num_vertices);
