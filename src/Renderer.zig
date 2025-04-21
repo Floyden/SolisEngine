@@ -32,10 +32,8 @@ pub fn deinit(self: *Renderer) void {
 
 pub fn createGraphicsPipeline(self: Renderer, desc: GraphicsPipeline.Description) !GraphicsPipeline {
     // Shaders, Can be destroyed after pipeline is created
-    // const v_shader = loadGlslShader(self.device, c.VERTEX_SHADER, "Simple Vertex", c.SDL_GPU_SHADERSTAGE_VERTEX) catch |e| return e;
     const v_shader = loadSPIRVShader(self.device, desc.vertex_shader) catch |e| return e;
     defer c.SDL_ReleaseGPUShader(self.device, v_shader);
-    // const f_shader = loadGlslShader(self.device, c.FRAGMENT_SHADER, "Simple Fragment", c.SDL_GPU_SHADERSTAGE_FRAGMENT) catch |e| return e;
     const f_shader = loadSPIRVShader(self.device, desc.fragment_shader) catch |e| return e;
     defer c.SDL_ReleaseGPUShader(self.device, f_shader);
 
@@ -110,7 +108,7 @@ pub fn createGraphicsPipeline(self: Renderer, desc: GraphicsPipeline.Description
     });
     const pipeline = c.SDL_CreateGPUGraphicsPipeline(self.device, &pipelinedesc);
     if (pipeline == null) return SDL_ERROR.Fail;
-    return GraphicsPipeline{ .handle = pipeline.? };
+    return GraphicsPipeline{ .handle = pipeline.?, .vertex_shader = desc.vertex_shader, .fragment_shader = desc.fragment_shader};
 }
 
 pub fn destroyGraphicsPipeline(self: Renderer, pipeline: GraphicsPipeline) void {
