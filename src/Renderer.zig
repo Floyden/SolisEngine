@@ -108,7 +108,7 @@ pub fn createGraphicsPipeline(self: Renderer, desc: GraphicsPipeline.Description
     });
     const pipeline = c.SDL_CreateGPUGraphicsPipeline(self.device, &pipelinedesc);
     if (pipeline == null) return SDL_ERROR.Fail;
-    return GraphicsPipeline{ .handle = pipeline.?, .vertex_shader = desc.vertex_shader, .fragment_shader = desc.fragment_shader};
+    return GraphicsPipeline{ .handle = pipeline.?, .vertex_shader = desc.vertex_shader, .fragment_shader = desc.fragment_shader };
 }
 
 pub fn destroyGraphicsPipeline(self: Renderer, pipeline: GraphicsPipeline) void {

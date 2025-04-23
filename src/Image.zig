@@ -13,6 +13,7 @@ sampler: ?SamplerDescription,
 allocator: std.mem.Allocator,
 data: std.ArrayList(u8),
 
+// TODO: convert between image formats
 pub fn init_empty(extent: Extent3d, format: TextureFormat, allocator: std.mem.Allocator) Self {
     return Self{
         .extent = extent,
