@@ -15,14 +15,13 @@ pub fn new() Uuid {
 }
 
 pub fn serialize(uuid: Uuid) [36]u8 {
-    var buf : [36]u8 = undefined;
+    var buf: [36]u8 = undefined;
     _ = std.fmt.bufPrint(&buf, "{x:0>8}-{x:0>4}-{x:0>4}-{x:0>4}-{x:0>12}", .{
         @byteSwap(@as(u32, @intCast(uuid & 0xFFFFFFFF))),
         @byteSwap(@as(u16, @intCast((uuid >> 32) & 0xFFFF))),
         @byteSwap(@as(u16, @intCast((uuid >> 48) & 0xFFFF))),
         @byteSwap(@as(u16, @intCast((uuid >> 64) & 0xFFFF))),
         @byteSwap(@as(u48, @intCast((uuid >> 80) & 0xFFFFFFFFFFFF))),
-
     }) catch unreachable;
     return buf;
 }
@@ -31,7 +30,7 @@ test "uuid" {
     const uuid = new();
     const uuid2 = new();
 
-    std.testing.expect(uuid != uuid2) catch @panic("If you can read this, you either got really lucky or something is really wrong. Try running the test again."message: []const u8) ;
+    std.testing.expect(uuid != uuid2) catch @panic("If you can read this, you either got really lucky or something is really wrong. Try running the test again.");
 }
 
 test "serialize" {

@@ -10,7 +10,6 @@ pub const TypeId = *const struct {
 
 pub inline fn typeId(comptime T: type) TypeId {
     return &struct {
-        var id: @typeInfo(TypeId).pointer.child = .{.name = @typeName(T)};
+        var id: @typeInfo(TypeId).pointer.child = .{ .name = @typeName(T) };
     }.id;
 }
-

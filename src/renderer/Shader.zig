@@ -30,12 +30,14 @@ samplers: std.ArrayList(u32),
 pub fn init(desc: Description, allocator: std.mem.Allocator) !Self {
     var code = std.ArrayList(u32).init(allocator);
     switch (desc.source_type) {
-        .spirv => { try code.appendSlice(@alignCast(@ptrCast(desc.code))); },
+        .spirv => {
+            try code.appendSlice(@alignCast(@ptrCast(desc.code)));
+        },
         .glsl => {
             try compileGlslShader(desc.code, desc.stage, &code);
         },
     }
-    var res = Self {
+    var res = Self{
         .code = code,
         .stage = desc.stage,
         .inputs = std.ArrayList(u32).init(allocator),
@@ -128,7 +130,6 @@ fn analyze(self: *Self) void {
 
     var resource_list: [*c]const spirv.spvc_reflected_resource = undefined;
     var resource_list_size: usize = 0;
-
 
     // Input
     if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_STAGE_INPUT, &resource_list, &resource_list_size) != 0) @panic("Fail");
