@@ -7,6 +7,7 @@ const Renderer = @import("Renderer.zig");
 const matrix = @import("matrix.zig");
 const light = @import("light.zig");
 const Gltf = @import("Gltf.zig");
+const Material = @import("PBRMaterial.zig");
 const c = external.c;
 const zigimg = @import("zigimg");
 pub const type_id = @import("type_id.zig");
@@ -89,6 +90,12 @@ pub fn main() !void {
     const sampler = try renderer.createSampler(.{});
     defer renderer.releaseSampler(sampler);
 
+    const material = Material{
+        .base_color = .{1.0, 0.5, 0.5, 1.0},
+        .metallic = 0.0,
+    };
+    const binding = material.createUniformBinding();
+
     // Main loop
     var angle: f32 = 0.0;
     const point_light = light.PointLight{
@@ -127,7 +134,7 @@ pub fn main() !void {
         }
 
         angle += 1;
-        var matrices = .{ matrix.Matrix4f.diagonal_init(0.5), matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle) };
+        var matrices = .{ matrix.Matrix4f.diagonal_init(0.25), matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle) };
         matrices[0].atMut(3, 3).* = 1.0;
         matrices[0] = matrices[0].mult(matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle));
         matrices[1].data[14] -= 2.5;
@@ -145,7 +152,8 @@ pub fn main() !void {
 
         const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buf_vertex, .offset = 0 };
         cmd.pushVertexUniformData(0, f32, @as(*[32]f32, @ptrCast(&matrices)));
-        cmd.pushFragmentUniformData(0, f32, point_light.toBuffer());
+        cmd.pushFragmentUniformData(0, u8, binding.toBuffer());
+        cmd.pushFragmentUniformData(1, f32, point_light.toBuffer());
 
         const pass = cmd.createRenderPass(color_target, depth_target) orelse @panic("Could not create RenderPass");
         pass.bindGraphicsPipeline(pipeline);

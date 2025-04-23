@@ -2,7 +2,13 @@
 
 layout(set = 2, binding = 0) uniform sampler2D textureSampler;
 layout(set = 2, binding = 1) uniform sampler2D metallicSampler;
-layout(set = 3, binding = 0) uniform Light { 
+
+layout(set = 3, binding = 0) uniform MaterialValues {
+   vec4 color;
+   float metallic;
+} material; 
+
+layout(set = 3, binding = 1) uniform Light { 
    vec4 position; 
    vec4 color; 
    float intensity; 
@@ -15,10 +21,19 @@ layout(location = 3) in vec2 in_uv;
 
 layout(location = 0) out vec4 out_color; 
 
+const vec3 F0 = vec3(0.04);
+
 void main() {
-   vec4 texColor = texture(textureSampler, in_uv);
-   vec4 lightDir = light.position - in_position;
-   float distance = dot(lightDir, lightDir);
-   float diff = clamp(dot(in_normal, normalize(-lightDir.xyz)), 0.1, 1.0);
-   out_color = in_color * light.color * diff * light.intensity / distance * texColor;
+   vec4 base_color = texture(textureSampler, in_uv) * material.color * in_color;
+   float metallic = texture(metallicSampler, in_uv).g * material.metallic;
+   vec3 diffuse_color = (base_color.rgb * (vec3(1.0) - F0)) * (1.0 - metallic);
+   vec3 spec_color = mix(F0, base_color.rgb, metallic);
+   vec4 ambient = vec4(diffuse_color + spec_color, 1.0);
+
+
+   vec4 light_dir = light.position - in_position;
+   float distance = dot(light_dir, light_dir);
+   float diff = clamp(dot(in_normal, normalize(-light_dir.xyz)), 0.1, 1.0);
+   // out_color = base_color * light.color * diff * light.intensity / distance;
+   out_color = base_color * ambient * light.color * diff * light.intensity / distance;
 }
