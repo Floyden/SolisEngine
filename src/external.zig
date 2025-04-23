@@ -1,7 +1,6 @@
 pub const c = @cImport({
     @cInclude("SDL3/SDL.h");
     @cInclude("SDL3/SDL_gpu.h");
-    @cInclude("shader.h");
 });
 
 pub const spirv = @cImport({

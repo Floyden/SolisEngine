@@ -31,6 +31,7 @@ pub fn register_importer(self: *Self, comptime T: type, comptime importer: type)
 
 pub fn load(self: *Self, comptime T: type, path: []const u8) !Handle(T) {
     // TODO: check if the asset has been loaded already.
+    // TODO: Figure out error handling
     const importer = @as(*const fn (std.mem.Allocator, path: []const u8) ?T, @ptrCast(self.importers.get(type_id.typeId(T)) orelse return error.ImporterNotFound));
     const handle = Handle(T).new();
     const dest = try self.allocator.create(T);
