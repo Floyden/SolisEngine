@@ -3,6 +3,8 @@ const Mesh = @import("Mesh.zig");
 const vertex_data = @import("vertex_data.zig");
 const json = std.json;
 const zigimg = @import("zigimg");
+const Handle = @import("assets/handle.zig").Handle;
+const AssetServer = @import("assets/Server.zig");
 const Image = @import("Image.zig");
 
 const Self = @This();
@@ -168,6 +170,18 @@ pub fn loadImageFromFile(self: Self, index: usize, allocator: std.mem.Allocator)
         allocator,
     );
     return res;
+}
+
+pub fn loadImage(self: Self, index: usize, asset_server: *AssetServer) !Handle(Image) {
+    if (self.images == null) return error.NoImages;
+
+    std.debug.assert(self._resource_path != null);
+    std.debug.assert(self.images.?.len > index);
+
+    const path = try std.fs.path.join(asset_server.allocator, &[2][]const u8{ self._resource_path.?, self.images.?[index].uri });
+    const handle = try asset_server.load(Image, path);
+
+    return handle;
 }
 
 pub fn parseMeshData(self: Self, mesh_index: usize, allocator: std.mem.Allocator) !Mesh {

@@ -26,6 +26,10 @@ pub fn main() !void {
         return;
     }
 
+    var asset_server = assets.Server.init(std.heap.page_allocator);
+    defer asset_server.deinit();
+    try asset_server.register_importer(Image, assets.ImageImporter);
+
     const allocator = std.heap.page_allocator;
     const file_path: []const u8 = @ptrCast(std.os.argv[1][0..std.mem.len(std.os.argv[1])]);
 
@@ -72,14 +76,14 @@ pub fn main() !void {
     defer renderer.releaseBuffer(buf_vertex);
 
     // Image Texture
-    var base_image = try parsed.loadImageFromFile(0, std.heap.page_allocator);
-    defer base_image.deinit();
-    const texture = try renderer.createTextureFromImage(base_image);
+    const base_image_handle = try parsed.loadImage(0, &asset_server);
+    defer asset_server.unload(Image, base_image_handle);
+    const texture = try renderer.createTextureFromImage(asset_server.get(Image, base_image_handle).?.*);
     defer renderer.releaseTexture(texture);
 
-    var metallic_image = try parsed.loadImageFromFile(1, std.heap.page_allocator);
-    defer metallic_image.deinit();
-    const metallic_texture = try renderer.createTextureFromImage(metallic_image);
+    const metallic_image_handle = try parsed.loadImage(0, &asset_server);
+    defer asset_server.unload(Image, metallic_image_handle);
+    const metallic_texture = try renderer.createTextureFromImage(asset_server.get(Image, base_image_handle).?.*);
     defer renderer.releaseTexture(metallic_texture);
 
     const sampler = try renderer.createSampler(.{});
