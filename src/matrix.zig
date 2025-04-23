@@ -64,6 +64,18 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             return res;
         }
 
+        pub fn transpose(self: Self) Matrix(T, cols, rows) {
+            var res = Matrix(T, cols, rows).zero;
+
+            for(0..rows) |y| {
+                for(0..cols) |x| {
+                    res.atMut(y, x).* = self.at(x, y);
+                }
+            }
+
+            return res;
+        }
+
         pub const zero: Self = std.mem.zeroes(@This());
         pub const identity = diagonal_init(1);
     };
@@ -91,9 +103,9 @@ pub fn perspective(fovy: f32, aspect: f32, znear: f32, zfar: f32) Matrix4f {
 
     res.data[0] = f / aspect;
     res.data[5] = f;
-    res.data[10] = (znear + zfar) / (znear - zfar);
+    res.data[10] = ( zfar) / (znear - zfar);
     res.data[11] = -1.0;
-    res.data[14] = (2.0 * znear * zfar) / (znear - zfar);
+    res.data[14] = ( znear * zfar) / (znear - zfar);
     res.data[15] = 0.0;
 
     return res;

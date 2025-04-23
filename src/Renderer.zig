@@ -102,7 +102,7 @@ pub fn createGraphicsPipeline(self: Renderer, desc: GraphicsPipeline.Description
         },
         .rasterizer_state = .{
             .cull_mode = c.SDL_GPU_CULLMODE_FRONT,
-            .front_face = c.SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE,
+            .front_face = c.SDL_GPU_FRONTFACE_CLOCKWISE,
         },
         .props = 0,
     });

@@ -3,6 +3,7 @@ pub const Extent3d = @import("Extent3d.zig");
 
 const std = @import("std");
 const Window = @import("Window.zig");
+const Camera = @import("Camera.zig");
 const Renderer = @import("Renderer.zig");
 const matrix = @import("matrix.zig");
 const light = @import("light.zig");
@@ -91,10 +92,13 @@ pub fn main() !void {
     defer renderer.releaseSampler(sampler);
 
     const material = Material{
-        .base_color = .{1.0, 0.5, 0.5, 1.0},
+        .base_color = .{ 1.0, 0.5, 0.5, 1.0 },
         .metallic = 0.0,
     };
     const binding = material.createUniformBinding();
+
+    var camera = Camera{ .aspect = window.getAspect() };
+    camera.position[2] = -1.5;
 
     // Main loop
     var angle: f32 = 0.0;
@@ -131,16 +135,19 @@ pub fn main() !void {
                 .usage = c.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
                 .label = "Depth Texture",
             });
+            camera.aspect = window.getAspect();
         }
 
         angle += 1;
-        var matrices = .{ matrix.Matrix4f.diagonal_init(0.25), matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle) };
-        matrices[0].atMut(3, 3).* = 1.0;
-        matrices[0] = matrices[0].mult(matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle));
-        matrices[1].data[14] -= 2.5;
 
-        const canvas_size: [2]f32 = .{ @floatFromInt(window.size[0]), @floatFromInt(window.size[1]) };
-        matrices[1] = matrices[1].mult(matrix.perspective(45.0, canvas_size[0] / canvas_size[1], 0.01, 100));
+        var model_matrix = matrix.Matrix4f.diagonal_init(0.25);
+        model_matrix.atMut(3, 3).* = 1.0;
+        model_matrix = model_matrix.mult(matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle));
+        model_matrix.atMut(2, 3).* = -1.0;
+
+        var matrices = .{ model_matrix, model_matrix };
+        matrices[0] = matrices[0].mult(camera.viewMatrix());
+        matrices[0] = matrices[0].mult(camera.projectionMatrix());
 
         const color_target = RenderPass.ColorTarget{ .texture = swapchain_texture, .clear_color = .{ 0.1, 0.1, 0.1, 1.0 } };
         const depth_target = RenderPass.DepthStencilTarget{ .texture = tex_depth };

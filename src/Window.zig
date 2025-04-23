@@ -28,3 +28,9 @@ pub fn update(self: *Window) void {
         self.has_resized = false;
     }
 }
+
+pub fn getAspect(self: Window) f32 {
+    const width: f32 = @floatFromInt(self.size[0]);
+    const height: f32 = @floatFromInt(self.size[1]);
+    return width / height;
+}
