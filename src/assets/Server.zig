@@ -41,13 +41,12 @@ pub fn load(self: *Self, comptime T: type, path: []const u8) !Handle(T) {
         return Handle(T).empty;
     };
 
-
     try self.loaded_assets.put(self.allocator, handle.inner, dest);
     return handle;
 }
 
 pub fn unload(self: *Self, comptime T: type, handle: Handle(T)) void {
-    if(self.loaded_assets.fetchRemove(handle.inner)) |kv| {
+    if (self.loaded_assets.fetchRemove(handle.inner)) |kv| {
         self.allocator.destroy(@as(*T, @alignCast(@ptrCast(kv.value))));
     }
 }

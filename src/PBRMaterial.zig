@@ -13,10 +13,10 @@ metallic: f32 = 0.0,
 metallic_texture: ?texture.Handle = null,
 
 pub const UniformBinding = extern struct {
-    base_color: [4] f32,
+    base_color: [4]f32,
     metallic: f32,
 
-    pub fn toBuffer(self: *const UniformBinding) *const [@sizeOf(UniformBinding)] u8 {
+    pub fn toBuffer(self: *const UniformBinding) *const [@sizeOf(UniformBinding)]u8 {
         return @ptrCast(self);
     }
 };

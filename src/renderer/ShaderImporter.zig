@@ -27,7 +27,7 @@ pub fn import(allocator: Allocator, path: []const u8) ?Shader {
         return null;
     };
 
-    const desc = Shader.Description {
+    const desc = Shader.Description{
         .code = code,
         .stage = stage,
         .source_type = Shader.SourceType.glsl,

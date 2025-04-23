@@ -58,7 +58,7 @@ pub fn deinit(self: *Self) void {
     self.samplers.deinit();
 }
 
-// TODO:Implement a preprocessor which calls glslang_shader_preprocess to handle includes 
+// TODO:Implement a preprocessor which calls glslang_shader_preprocess to handle includes
 pub fn compileGlslShader(code: []const u8, stage: Stage, destination: *std.ArrayList(u32)) !void {
     _ = spirv.glslang_initialize_process();
     defer spirv.glslang_finalize_process();
