@@ -2,7 +2,7 @@
 
 layout(set = 2, binding = 0) uniform sampler2D textureSampler;
 layout(set = 2, binding = 1) uniform sampler2D normalSampler;
-layout(set = 2, binding = 2) uniform sampler2D metallicSampler;
+layout(set = 2, binding = 2) uniform sampler2D metallicSampler; // contains (ao, metalic, roughness)
 
 layout(set = 3, binding = 0) uniform MaterialValues {
    vec4 color;
@@ -29,12 +29,17 @@ void main() {
    float metallic = texture(metallicSampler, in_uv).g * material.metallic;
    vec3 diffuse_color = (base_color.rgb * (vec3(1.0) - F0)) * (1.0 - metallic);
    vec3 spec_color = mix(F0, base_color.rgb, metallic);
-   vec4 ambient = vec4(diffuse_color + spec_color, 1.0);
-
+   vec3 ambient = 0.1 * (diffuse_color * spec_color);
 
    vec4 light_dir = light.position - in_position;
-   float distance = dot(light_dir, light_dir);
-   vec3 normal = texture(normalSampler, in_uv).rgb * in_normal;
-   float diff = clamp(dot(normal, normalize(-light_dir.xyz)), 0.1, 1.0);
-   out_color = base_color * ambient * light.color * diff * light.intensity / distance;
+   float distance = length(light_dir);
+   vec3 normal = (in_normal * 0.5 + 0.5) * texture(normalSampler, in_uv).xyz;
+   float diff = clamp(dot(normal, normalize(light_dir.xyz)), 0.1, 1.0);
+   float attenuation = light.intensity / (distance * distance);
+
+   vec3 diffuse = diffuse_color * light.color.rgb * attenuation * diff;
+   out_color = vec4(diffuse + ambient, base_color.a);
+   // out_color = vec4(normal, base_color.a);
+   // out_color = texture(normalSampler, in_uv);
+
 }

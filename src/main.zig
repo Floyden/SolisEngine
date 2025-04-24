@@ -115,9 +115,9 @@ pub fn main() !void {
     // Main loop
     var angle: f32 = 0.0;
     const point_light = light.PointLight{
-        .position = .{ 3.0, 0.0, -1.0, 1.0 },
+        .position = .{ 5.0, 0.0, 2.0, 1.0 },
         .color = .{ 0.5, 0.5, 0.5, 1.0 },
-        .intensity = 40.0,
+        .intensity = 80.0,
     };
 
     var done = false;
@@ -152,10 +152,11 @@ pub fn main() !void {
 
         angle += 1;
 
-        var model_matrix = matrix.Matrix4f.diagonal_init(0.25);
+        var model_matrix = matrix.Matrix4f.diagonal_init(1);
         model_matrix.atMut(3, 3).* = 1.0;
         // model_matrix = model_matrix.mult(matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle));
-        model_matrix.atMut(2, 3).* = -1.0;
+        // model_matrix = model_matrix.mult(matrix.Matrix4f.rotation(.{ 0.0, 1.0, 0.0 }, 180));
+        model_matrix.atMut(2, 3).* = -2.5;
 
         var matrices = .{ model_matrix, model_matrix };
         matrices[0] = matrices[0].mult(camera.viewMatrix());

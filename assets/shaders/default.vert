@@ -18,7 +18,7 @@ layout(location = 3) out vec2 out_uv;
 void main() {
    out_color = vec4(in_color, 1.0);
    out_normal = normalize(mat3(ubo.model) * in_normal);
-   out_position = ubo.modelViewProj * vec4(in_position, 1.0);
+   out_position = ubo.model * vec4(in_position, 1.0);
    out_uv = in_uv;
-   gl_Position = out_position;
+   gl_Position = ubo.modelViewProj * vec4(in_position, 1.0);
 }

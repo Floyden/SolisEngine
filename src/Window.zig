@@ -7,7 +7,7 @@ size: [2]u32,
 has_resized: bool,
 
 pub fn init() !Window {
-    const window_size = [2]u32{ 800, 600 };
+    const window_size = [2]u32{ 1600, 900 };
     const window = c.SDL_CreateWindow("Hey", window_size[0], window_size[1], c.SDL_WINDOW_VULKAN | c.SDL_WINDOW_RESIZABLE) orelse return SDL_ERROR.Fail;
     if (!c.SDL_ShowWindow(window)) return SDL_ERROR.Fail;
     return .{ .handle = window, .size = window_size, .has_resized = true };
