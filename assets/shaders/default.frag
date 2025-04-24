@@ -16,9 +16,9 @@ layout(set = 3, binding = 1) uniform Light {
 } light;
 
 layout(location = 0) in vec4 in_color;
-layout(location = 1) in vec3 in_normal;
-layout(location = 2) in vec4 in_position;
-layout(location = 3) in vec2 in_uv;
+layout(location = 1) in vec4 in_position;
+layout(location = 2) in vec2 in_uv;
+layout(location = 3) in mat3 in_tbn;
 
 layout(location = 0) out vec4 out_color; 
 
@@ -33,7 +33,10 @@ void main() {
 
    vec4 light_dir = light.position - in_position;
    float distance = length(light_dir);
-   vec3 normal = (in_normal * 0.5 + 0.5) * texture(normalSampler, in_uv).xyz;
+
+   vec3 normal_c = in_tbn * vec3(0, 0, 1);
+
+   vec3 normal = (normal_c * 0.5 + 0.5) * texture(normalSampler, in_uv).xyz;
    float diff = clamp(dot(normal, normalize(light_dir.xyz)), 0.1, 1.0);
    float attenuation = light.intensity / (distance * distance);
 

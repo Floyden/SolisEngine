@@ -368,6 +368,7 @@ pub fn parseMeshData(self: Self, mesh_index: usize, allocator: std.mem.Allocator
             .{ .usage = .color, .type = .float3, .offset = 3 * @sizeOf(f32), .index = 0 },
             .{ .usage = .normal, .type = .float3, .offset = 6 * @sizeOf(f32), .index = 0 },
             .{ .usage = .texcoord, .type = .float2, .offset = 9 * @sizeOf(f32), .index = 0 },
+            .{ .usage = .tangent, .type = .float4, .offset = 11 * @sizeOf(f32), .index = 0 },
         };
         try mesh.rearrange(&target_desc);
 

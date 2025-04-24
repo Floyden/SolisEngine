@@ -44,7 +44,7 @@ pub fn createGraphicsPipeline(self: Renderer, desc: GraphicsPipeline.Description
         .slot = 0,
         .input_rate = c.SDL_GPU_VERTEXINPUTRATE_VERTEX,
         .instance_step_rate = 0,
-        .pitch = @sizeOf(f32) * 11,
+        .pitch = @sizeOf(f32) * 15,
     });
 
     const vertex_attributes = [_]c.SDL_GPUVertexAttribute{
@@ -71,6 +71,12 @@ pub fn createGraphicsPipeline(self: Renderer, desc: GraphicsPipeline.Description
             .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
             .location = 3,
             .offset = @sizeOf(f32) * 3 * 3,
+        }),
+        std.mem.zeroInit(c.SDL_GPUVertexAttribute, .{
+            .buffer_slot = 0,
+            .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+            .location = 4,
+            .offset = @sizeOf(f32) * 11,
         }),
     };
 
@@ -101,8 +107,8 @@ pub fn createGraphicsPipeline(self: Renderer, desc: GraphicsPipeline.Description
             .vertex_attributes = &vertex_attributes,
         },
         .rasterizer_state = .{
-            .cull_mode = c.SDL_GPU_CULLMODE_FRONT,
-            .front_face = c.SDL_GPU_FRONTFACE_CLOCKWISE,
+            // .cull_mode = c.SDL_GPU_CULLMODE_FRONT,
+            // .front_face = c.SDL_GPU_FRONTFACE_CLOCKWISE,
         },
         .props = 0,
     });
