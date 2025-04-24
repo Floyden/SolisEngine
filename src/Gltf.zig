@@ -352,15 +352,7 @@ pub fn parseMeshData(self: Self, mesh_index: usize, allocator: std.mem.Allocator
                 @memcpy(mesh.data.?[dst_start .. dst_start + elem_size], data[src_start .. src_start + elem_size]);
             }
         }
-
-        const target_desc = [_]vertex_data.ElementDesc{
-            .{ .usage = .position, .type = .float3, .offset = 0, .index = 0 },
-            .{ .usage = .color, .type = .float3, .offset = 3 * @sizeOf(f32), .index = 0 },
-            .{ .usage = .normal, .type = .float3, .offset = 6 * @sizeOf(f32), .index = 0 },
-            .{ .usage = .texcoord, .type = .float2, .offset = 9 * @sizeOf(f32), .index = 0 },
-        };
-        try mesh.rearrange(&target_desc);
-
+        
         if (index_buffer_opt) |index_buffer| {
             const view = self.bufferViews.?[self.accessors.?[indices_opt.?].bufferView.?];
             switch (index_buffer) {
@@ -370,6 +362,14 @@ pub fn parseMeshData(self: Self, mesh_index: usize, allocator: std.mem.Allocator
             }
             mesh.index_buffer = index_buffer;
         }
+
+        const target_desc = [_]vertex_data.ElementDesc{
+            .{ .usage = .position, .type = .float3, .offset = 0, .index = 0 },
+            .{ .usage = .color, .type = .float3, .offset = 3 * @sizeOf(f32), .index = 0 },
+            .{ .usage = .normal, .type = .float3, .offset = 6 * @sizeOf(f32), .index = 0 },
+            .{ .usage = .texcoord, .type = .float2, .offset = 9 * @sizeOf(f32), .index = 0 },
+        };
+        try mesh.rearrange(&target_desc);
 
         return mesh;
     }
