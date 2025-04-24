@@ -3,6 +3,8 @@ const std = @import("std");
 pub fn Matrix(T: type, rows: usize, cols: usize) type {
     return extern struct {
         const Self = @This();
+        const Cols = cols;
+        const Rows = rows;
         data: [rows * cols]T,
 
         pub fn diagonal_init(value: T) Self {
@@ -13,6 +15,13 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             return res;
         }
 
+        pub fn from(values: []const T) Self {
+            std.debug.assert(values.len == cols * rows);
+            var self: Self = undefined;
+            @memcpy(self.data[0..], values);
+            return self;
+        }
+
         pub fn at(self: Self, x: usize, y: usize) T {
             return self.data[y * cols + x];
         }
@@ -20,15 +29,22 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             return &self.data[y * cols + x];
         }
 
-        pub fn mult(self: Self, other: Matrix(T, cols, rows)) Matrix(T, rows, rows) {
-            var res = Matrix(T, rows, rows).zero;
-            for (0..rows) |resRow| {
-                for (0..rows) |resCol| {
+        fn MultResultType(other: type) type {
+            return Matrix(T, rows, other.Cols);
+        }
+
+        pub fn mult(self: Self, other: anytype) MultResultType(@TypeOf(other)) {
+            const OtherType = @TypeOf(other);
+            const ResType = MultResultType(OtherType);
+            comptime if(Self.Cols != OtherType.Rows) @compileError("Mismatched matrices");
+            var res = ResType.zero;
+            for (0..Rows) |y| {
+                for (0..ResType.Cols) |x| {
                     var val: T = 0;
                     for (0..cols) |i| {
-                        val += self.at(i, resCol) * other.at(resRow, i);
+                        val += self.at(i, y) * other.at(x, i);
                     }
-                    res.atMut(resRow, resCol).* = val;
+                    res.atMut(x, y).* = val;
                 }
             }
             return res;
