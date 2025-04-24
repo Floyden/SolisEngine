@@ -352,7 +352,7 @@ pub fn parseMeshData(self: Self, mesh_index: usize, allocator: std.mem.Allocator
                 @memcpy(mesh.data.?[dst_start .. dst_start + elem_size], data[src_start .. src_start + elem_size]);
             }
         }
-        
+
         if (index_buffer_opt) |index_buffer| {
             const view = self.bufferViews.?[self.accessors.?[indices_opt.?].bufferView.?];
             switch (index_buffer) {

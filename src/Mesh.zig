@@ -33,37 +33,37 @@ pub const Face = struct {
     indices: [3]u32,
 
     pub fn attribute(self: Face, usage: vertex_data.ElementUsage) ?[3][]f32 {
-        var offset : u32 = 0; 
-        const desc = for(self.desc.*) |desc| { 
-            if(desc.usage == usage) break desc;
+        var offset: u32 = 0;
+        const desc = for (self.desc.*) |desc| {
+            if (desc.usage == usage) break desc;
             offset += desc.type.size();
         } else return null;
 
         return .{
-            @alignCast(@ptrCast(self.vertices[0][offset..offset+desc.type.size()])),
-            @alignCast(@ptrCast(self.vertices[1][offset..offset+desc.type.size()])),
-            @alignCast(@ptrCast(self.vertices[2][offset..offset+desc.type.size()])),
+            @alignCast(@ptrCast(self.vertices[0][offset .. offset + desc.type.size()])),
+            @alignCast(@ptrCast(self.vertices[1][offset .. offset + desc.type.size()])),
+            @alignCast(@ptrCast(self.vertices[2][offset .. offset + desc.type.size()])),
         };
     }
 
-    pub fn positions(self: Face) ?*[3]Matrix(f32, 3, 1) {
-        var ptr = self.attribute(.position) orelse return null;
-        return @ptrCast(ptr[0..][0..]);
-    }
-    
-    pub fn normals(self: Face) ?*[3]Matrix(f32, 3, 1) {
-        var ptr = self.attribute(.normal) orelse return null;
-        return @ptrCast(ptr[0..][0..]);
+    pub fn positions(self: Face) ?[3]*Matrix(f32, 3, 1) {
+        const ptr = self.attribute(.position) orelse return null;
+        return .{ @ptrCast(ptr[0]), @ptrCast(ptr[1]), @ptrCast(ptr[2]) };
     }
 
-    pub fn texcoords(self: Face) ?*[3]Matrix(f32, 2, 1) {
-        var ptr = self.attribute(.texcoord) orelse return null;
-        return @ptrCast(ptr[0..][0..]);
+    pub fn normals(self: Face) ?[3]*Matrix(f32, 3, 1) {
+        const ptr = self.attribute(.normal) orelse return null;
+        return .{ @ptrCast(ptr[0]), @ptrCast(ptr[1]), @ptrCast(ptr[2]) };
     }
-    
-    pub fn tangents(self: Face) ?*[3]Matrix(f32, 4, 1) {
-        var ptr = self.attribute(.tangent) orelse return null;
-        return @ptrCast(ptr[0..][0..]);
+
+    pub fn texcoords(self: Face) ?[3]*Matrix(f32, 2, 1) {
+        const ptr = self.attribute(.texcoord) orelse return null;
+        return .{ @ptrCast(ptr[0]), @ptrCast(ptr[1]), @ptrCast(ptr[2]) };
+    }
+
+    pub fn tangents(self: Face) ?[3]*Matrix(f32, 4, 1) {
+        const ptr = self.attribute(.tangent) orelse return null;
+        return .{ @ptrCast(ptr[0]), @ptrCast(ptr[1]), @ptrCast(ptr[2]) };
     }
 };
 
@@ -72,21 +72,24 @@ pub const FaceIter = struct {
     index: u32,
 
     pub fn next(self: *FaceIter) ?Face {
-        var face = Face {.desc = &self.mesh.vertex_description.items, .vertices = undefined, .indices = undefined };
+        var face = Face{ .desc = &self.mesh.vertex_description.items, .vertices = undefined, .indices = undefined };
         const vertex_size = self.mesh.vertexSize();
 
-        if(self.mesh.index_buffer) |buffer| {
-            if(self.index >= buffer.size()) return null;
-            face.indices = [3]u32 {
+        if (self.mesh.index_buffer) |buffer| {
+            if (self.index >= buffer.size()) return null;
+            face.indices = [3]u32{
                 buffer.get(self.index),
                 buffer.get(self.index + 1),
                 buffer.get(self.index + 2),
             };
-            
+
+            const data: [*]u8 = self.mesh.data.?.ptr;
+            // std.log.info("{*}", .{data[face.indices[0] * vertex_size .. (face.indices[0] + 1) * vertex_size]});
+            // std.log.debug("{*}", .{&self.mesh.data.?[face.indices[0] * vertex_size .. (face.indices[0] + 1) * vertex_size]});
             face.vertices = .{
-                self.mesh.data.?[face.indices[0] * vertex_size .. (face.indices[0] + 1) * vertex_size],
-                self.mesh.data.?[face.indices[1] * vertex_size .. (face.indices[1] + 1) * vertex_size],
-                self.mesh.data.?[face.indices[2] * vertex_size .. (face.indices[2] + 1) * vertex_size],
+                data[face.indices[0] * vertex_size .. (face.indices[0] + 1) * vertex_size],
+                data[face.indices[1] * vertex_size .. (face.indices[1] + 1) * vertex_size],
+                data[face.indices[2] * vertex_size .. (face.indices[2] + 1) * vertex_size],
             };
         } else {
             std.log.info("FaceIter.next() not implemented for index-less meshes", .{});
@@ -110,12 +113,12 @@ pub const ElementIter = struct {
 
     pub fn next(self: *ElementIter) ?[]f32 {
         const res = self.at(self.index);
-        if(res)|_| self.index += 1;
+        if (res) |_| self.index += 1;
         return res;
     }
 
     pub fn at(self: *ElementIter, index: usize) ?[]u8 {
-        if(index >= self.mesh.num_vertices) return null;
+        if (index >= self.mesh.num_vertices) return null;
         return self.mesh.data.?[index * self.vertex_size + self.offset .. index * self.vertex_size + self.offset + self.element_size];
     }
 };
@@ -146,7 +149,7 @@ pub fn deinit(self: *Self) void {
 
 pub fn vertexSize(self: Self) u32 {
     var size: u32 = 0;
-    for(self.vertex_description.items) |desc| size += desc.type.size();
+    for (self.vertex_description.items) |desc| size += desc.type.size();
     return size;
 }
 
@@ -155,15 +158,15 @@ pub fn faces(self: *Self) FaceIter {
         .index = 0,
         .mesh = self,
     };
-} 
+}
 
 pub fn elements(self: *Self, usage: vertex_data.ElementUsage) ?ElementIter {
-    var offset : u32 = 0; 
-    const element_size = for(self.vertex_description.items) |desc| { 
-        if(desc.usage == usage) break desc.type.size();
+    var offset: u32 = 0;
+    const element_size = for (self.vertex_description.items) |desc| {
+        if (desc.usage == usage) break desc.type.size();
         offset += desc.type.size();
     } else return null;
-    
+
     var vertex_size: u32 = 0;
     for (self.vertex_description.items) |desc|
         vertex_size += desc.type.size();
@@ -224,51 +227,55 @@ pub fn rearrange(self: *Self, new_description: []const vertex_data.ElementDesc) 
     self.vertex_description.appendSlice(new_description) catch @panic("OOM");
 
     // if(calculate_normals)self.calculateNormals();
-    if(calculate_tangents)self.calculateTangents();
+    if (calculate_tangents) self.calculateTangents();
 }
 
 pub fn calculateTangents(self: *Self) void {
     var bitangents = self.allocator.alloc(Matrix(f32, 3, 1), self.num_vertices) catch @panic("OOM");
     defer self.allocator.free(bitangents);
-    for(bitangents) |*val| val.* = Matrix(f32, 3, 1).zero;
+    for (bitangents) |*val| val.* = Matrix(f32, 3, 1).zero;
 
     var face_iter = self.faces();
-    while(face_iter.next()) |face| {
+    while (face_iter.next()) |face| {
         const positions = face.positions().?;
         const uvs = face.texcoords().?;
 
-        const edge1 = positions[1].sub(positions[0]);
-        const edge2 = positions[2].sub(positions[0]);
+        // std.log.info("Base: {*}", .{self.data.?.ptr});
+        // std.log.debug("Position: {any}", .{positions});
+        // std.log.debug("uvs: {any}", .{uvs});
+        const edge1 = positions[1].sub(positions[0].*);
+        const edge2 = positions[2].sub(positions[0].*);
 
-        const duv1 = uvs[1].sub(uvs[0]);
-        const duv2 = uvs[2].sub(uvs[0]);
+        const duv1 = uvs[1].sub(uvs[0].*);
+        const duv2 = uvs[2].sub(uvs[0].*);
+        // std.log.debug("{} {} {} {}", .{edge1, edge2, duv1, duv2});
 
         const f = 1.0 / (duv1.at(0, 0) * duv2.at(1, 0) - duv1.at(1, 0) * duv2.at(0, 0));
         const tangent3 = edge1.mult(duv2.at(1, 0)).sub(edge2.mult(duv1.at(1, 0))).mult(f);
         const bitangent = edge1.mult(-duv2.at(0, 0)).add(edge2.mult(duv1.at(0, 0))).mult(f);
 
-        for(face.indices)|index|
+        for (face.indices) |index|
             bitangents[index].addMut(bitangent);
 
         var tangent = Matrix(f32, 4, 1).zero;
         @memcpy(tangent.data[0..3], &tangent3.data);
 
         const tangents = face.tangents().?;
-        for(tangents) |*val| 
+        for (&tangents) |val|
             val.addMut(tangent);
     }
 
     var tangents = self.elements(.tangent).?;
     var normals = self.elements(.normal).?;
 
-    for(0..self.num_vertices) |i| {
+    for (0..self.num_vertices) |i| {
         const tangent_ptr = tangents.at(i).?;
         var tangent: *Matrix(f32, 3, 1) = @alignCast(@ptrCast(tangent_ptr));
         tangent.* = tangent.normalize();
 
         const normal_ptr = normals.at(i).?;
         const normal: *Matrix(f32, 3, 1) = @alignCast(@ptrCast(normal_ptr));
-        const handedness = std.math.sign(normal.cross(tangent.*).dot(bitangents[i].normalize()));
+        const handedness = -std.math.sign(normal.cross(tangent.*).dot(bitangents[i].normalize()));
 
         var tangent4: *Matrix(f32, 4, 1) = @alignCast(@ptrCast(tangent_ptr));
         tangent4.data[3] = handedness;

@@ -34,15 +34,12 @@ void main() {
    vec4 light_dir = light.position - in_position;
    float distance = length(light_dir);
 
-   vec3 normal_c = in_tbn * vec3(0, 0, 1);
-
-   vec3 normal = (normal_c * 0.5 + 0.5) * texture(normalSampler, in_uv).xyz;
+   vec3 normal_tex = texture(normalSampler, in_uv).xyz * 2 - 1;
+   vec3 normal = normalize(in_tbn * normal_tex);
+ 
    float diff = clamp(dot(normal, normalize(light_dir.xyz)), 0.1, 1.0);
    float attenuation = light.intensity / (distance * distance);
 
    vec3 diffuse = diffuse_color * light.color.rgb * attenuation * diff;
    out_color = vec4(diffuse + ambient, base_color.a);
-   // out_color = vec4(normal, base_color.a);
-   // out_color = texture(normalSampler, in_uv);
-
 }
