@@ -38,7 +38,7 @@ pub fn main() !void {
     const allocator = std.heap.page_allocator;
     const file_path: []const u8 = @ptrCast(std.os.argv[1][0..std.mem.len(std.os.argv[1])]);
 
-    const parsed = Gltf.parseFromFile(std.heap.page_allocator, file_path) catch @panic("Failed");
+    const parsed = try Gltf.parseFromFile(std.heap.page_allocator, file_path);
     const mesh = parsed.parseMeshData(0, std.heap.page_allocator) catch @panic("Mesh Failed");
 
     errdefer c.SDL_Log("Error: %s", c.SDL_GetError());
@@ -108,7 +108,7 @@ pub fn main() !void {
     // Main loop
     var angle: f32 = 0.0;
     const point_light = light.PointLight{
-        .position = .{ 5.0, 0.0, 0.0, 1.0 },
+        .position = .{ 3.0, 0.0, -1.0, 1.0 },
         .color = .{ 0.5, 0.5, 0.5, 1.0 },
         .intensity = 40.0,
     };
