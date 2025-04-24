@@ -37,6 +37,15 @@ pub fn bindFragmentSamplers(self: Self, index: u32, samplers: []const c.SDL_GPUT
 pub fn bindVertexBuffers(self: Self, index: u32, bindings: []const c.SDL_GPUBufferBinding) void {
     c.SDL_BindGPUVertexBuffers(self.handle, index, bindings.ptr, @intCast(bindings.len));
 }
+
+pub fn bindIndexBuffers(self: Self, binding: *const c.SDL_GPUBufferBinding) void {
+    c.SDL_BindGPUIndexBuffer(self.handle, binding, c.SDL_GPU_INDEXELEMENTSIZE_16BIT);
+}
+
 pub fn drawPrimitives(self: Self, numVertices: u32) void {
     c.SDL_DrawGPUPrimitives(self.handle, numVertices, 1, 0, 0);
+}
+
+pub fn drawPrimitivesIndexed(self: Self, numVertices: u32) void {
+    c.SDL_DrawGPUIndexedPrimitives(self.handle, numVertices, 1, 0, 0, 1);
 }

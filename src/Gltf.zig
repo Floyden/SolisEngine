@@ -77,11 +77,11 @@ const BufferView = struct {
 };
 
 const Material = struct {
-    name: ?[]const u8 = null,  
+    name: ?[]const u8 = null,
     extensions: ?[]const u8 = null, // json
     extras: ?[]const u8 = null, // TODO: should be json, could be any type actually
     pbrMetallicRoughness: ?struct {
-        baseColorFactor: [4]f32 = .{1.0, 1.0, 1.0, 1.0},
+        baseColorFactor: [4]f32 = .{ 1.0, 1.0, 1.0, 1.0 },
         baseColorTexture: ?TextureInfo = null,
         metallicFactor: f32 = 1.0,
         roughnessFactor: f32 = 1.0,
@@ -105,7 +105,7 @@ const Material = struct {
 
     } = null,
     emissiveTexture: ?TextureInfo = null,
-    emissiveFactor: [3]f32 = .{0.0, 0.0, 0.0},
+    emissiveFactor: [3]f32 = .{ 0.0, 0.0, 0.0 },
     alphaMode: []const u8 = "OPAQUE",
     alphaCutoff: f32 = 0.5,
     doubleSided: bool = false,
@@ -115,11 +115,11 @@ const Node = struct {
     camera: ?u32 = null,
     children: ?[]u32 = null,
     skin: ?u32 = null,
-    matrix: [16]f32 = .{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 },
+    matrix: [16]f32 = .{ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 },
     mesh: ?u32 = null,
-    rotation: [4]f32 = .{0.0, 0.0, 0.0, 1.0},
-    scale: [3]f32 = .{1.0, 1.0, 1.0},
-    translation: [3]f32 = .{0.0, 0.0, 0.0},
+    rotation: [4]f32 = .{ 0.0, 0.0, 0.0, 1.0 },
+    scale: [3]f32 = .{ 1.0, 1.0, 1.0 },
+    translation: [3]f32 = .{ 0.0, 0.0, 0.0 },
     weights: ?[]f32 = null,
     name: ?[]const u8 = null,
     extensions: ?[]const u8 = null, // json
@@ -132,7 +132,6 @@ const TextureInfo = struct {
     extensions: ?[]const u8 = null, // json
     extras: ?[]const u8 = null, // TODO: should be json, could be any type actually
 };
-
 
 _resource_path: ?[]const u8 = null, // Relative path to load other resources if needed
 _buffer: ?[]const u8 = null, // Buffer of the json file
@@ -157,8 +156,8 @@ meshes: ?[]struct {
     },
 } = null,
 nodes: ?[]Node = null,
-samplers: ?[]struct { 
-    name: ?[]const u8 = null,  
+samplers: ?[]struct {
+    name: ?[]const u8 = null,
     magFilter: ?u32 = null,
     minFilter: ?u32 = null,
     wrapS: ?u32 = null,
@@ -341,9 +340,9 @@ pub fn parseMeshData(self: Self, mesh_index: usize, allocator: std.mem.Allocator
         if (index_buffer_opt) |index_buffer| {
             const view = self.bufferViews.?[self.accessors.?[indices_opt.?].bufferView.?];
             switch (index_buffer) {
-                .byte => @memcpy(index_buffer.byte, mesh.data.?[view.byteOffset .. view.byteOffset + view.byteLength]),
-                .short => @memcpy(@as([]u8, @ptrCast(index_buffer.short)), mesh.data.?[view.byteOffset .. view.byteOffset + view.byteLength]),
-                .int => @memcpy(@as([]u8, @ptrCast(index_buffer.int)), mesh.data.?[view.byteOffset .. view.byteOffset + view.byteLength]),
+                .byte => @memcpy(index_buffer.byte, data[view.byteOffset .. view.byteOffset + view.byteLength]),
+                .short => @memcpy(@as([]u8, @ptrCast(index_buffer.short)), data[view.byteOffset .. view.byteOffset + view.byteLength]),
+                .int => @memcpy(@as([]u8, @ptrCast(index_buffer.int)), data[view.byteOffset .. view.byteOffset + view.byteLength]),
             }
             mesh.index_buffer = index_buffer;
         }

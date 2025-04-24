@@ -80,16 +80,24 @@ pub fn main() !void {
     const buf_vertex = renderer.createBufferFromData(current_vert, c.SDL_GPU_BUFFERUSAGE_VERTEX, "Vertex Buffer") catch |e| return e;
     defer renderer.releaseBuffer(buf_vertex);
 
+    const buf_index = if (mesh.index_buffer) |buf| try renderer.createBufferFromData(@ptrCast(buf.short), c.SDL_GPU_BUFFERUSAGE_INDEX, "Index Buffer") else null;
+    defer if (buf_index) |buf| renderer.releaseBuffer(buf);
+
     // Image Texture
     const base_image_handle = try parsed.loadImage(0, &asset_server);
     defer asset_server.unload(Image, base_image_handle);
     const texture = try renderer.createTextureFromImage(asset_server.get(Image, base_image_handle).?.*);
     defer renderer.releaseTexture(texture);
 
-    const metallic_image_handle = try parsed.loadImage(0, &asset_server);
+    const metallic_image_handle = try parsed.loadImage(1, &asset_server);
     defer asset_server.unload(Image, metallic_image_handle);
-    const metallic_texture = try renderer.createTextureFromImage(asset_server.get(Image, base_image_handle).?.*);
+    const metallic_texture = try renderer.createTextureFromImage(asset_server.get(Image, metallic_image_handle).?.*);
     defer renderer.releaseTexture(metallic_texture);
+
+    const normal_image_handle = try parsed.loadImage(2, &asset_server);
+    defer asset_server.unload(Image, normal_image_handle);
+    const normal_texture = try renderer.createTextureFromImage(asset_server.get(Image, normal_image_handle).?.*);
+    defer renderer.releaseTexture(normal_texture);
 
     const sampler = try renderer.createSampler(.{});
     defer renderer.releaseSampler(sampler);
@@ -99,11 +107,12 @@ pub fn main() !void {
         .base_color_texture = texture,
         .metallic = 0.0,
         .metallic_texture = metallic_texture,
+        .normal_texture = normal_texture,
     };
     const binding = material.createUniformBinding();
 
     var camera = Camera{ .aspect = window.getAspect() };
-    camera.position[2] = -1.5;
+    // camera.position[2] = -1.5;
 
     // Main loop
     var angle: f32 = 0.0;
@@ -159,7 +168,6 @@ pub fn main() !void {
 
         const sampler_binding = material.createSamplerBinding(sampler.id);
 
-        const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buf_vertex, .offset = 0 };
         cmd.pushVertexUniformData(0, f32, @as(*[32]f32, @ptrCast(&matrices)));
         cmd.pushFragmentUniformData(0, u8, binding.toBuffer());
         cmd.pushFragmentUniformData(1, f32, point_light.toBuffer());
@@ -167,8 +175,18 @@ pub fn main() !void {
         const pass = cmd.createRenderPass(color_target, depth_target) orelse @panic("Could not create RenderPass");
         pass.bindGraphicsPipeline(pipeline);
         pass.bindFragmentSamplers(0, &sampler_binding);
+
+        const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buf_vertex, .offset = 0 };
         pass.bindVertexBuffers(0, &.{vertex_binding});
-        pass.drawPrimitives(mesh.num_vertices);
+
+        if (buf_index) |index| {
+            const index_binding = c.SDL_GPUBufferBinding{ .buffer = index, .offset = 0 };
+            pass.bindIndexBuffers(&index_binding);
+            pass.drawPrimitivesIndexed(@intCast(mesh.index_buffer.?.short.len));
+        } else {
+            pass.drawPrimitives(mesh.num_vertices);
+        }
+
         pass.end();
     }
 }
