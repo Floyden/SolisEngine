@@ -29,13 +29,36 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             return &self.data[y * cols + x];
         }
 
+        pub fn add(self: Self, other: Self) Self {
+            var res = Self.from(&self.data);
+            res.addMut(other);
+            return res;
+        }
+        
+        pub fn addMut(self: *Self, other: Self) void {
+            for(0..Rows*Cols) |i| self.data[i] += other.data[i];
+        }
+        
+        pub fn sub(self: Self, other: Self) Self {
+            var res = Self.from(&self.data);
+            for(0..Rows*Cols) |i| res.data[i] -= other.data[i];
+            return res;
+        }
+
         fn MultResultType(other: type) type {
+            if (other == T) return Self;
             return Matrix(T, rows, other.Cols);
         }
 
         pub fn mult(self: Self, other: anytype) MultResultType(@TypeOf(other)) {
             const OtherType = @TypeOf(other);
             const ResType = MultResultType(OtherType);
+            if(comptime OtherType == T) {
+                var res = Self.from(&self.data);
+                for(0..Rows*Cols) |i| res.data[i] *= other;
+                return res;
+            }
+
             comptime if(Self.Cols != OtherType.Rows) @compileError("Mismatched matrices");
             var res = ResType.zero;
             for (0..Rows) |y| {
@@ -91,6 +114,47 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
 
             return res;
         }
+
+        pub fn normalize(self: Self) Self {
+            if(comptime Rows > 1 and Cols > 1) @compileError("Normalize for matrices is not implemented");
+            const len = self.length();
+            var res = Self.from(&self.data);
+            for(&res.data) |*val| val.* /= len;
+            return res;
+        }
+
+        // Returns the length squared
+        pub fn length2(self: Self) T {
+            if(comptime Rows > 1 and Cols > 1) @compileError("length2 for matrices is not implemented");
+            var square_sum:T = 0.0;
+            for(self.data) |val| square_sum += val * val;
+            return square_sum;
+        }
+        
+        pub fn length(self: Self) T {
+            if(comptime Rows > 1 and Cols > 1) @compileError("length for matrices is not implemented");
+            return @sqrt(self.length2());
+        }
+
+        pub fn cross(self: Self, other: Self) Self {
+            if(comptime Rows != 3 or Cols != 1) @compileError("cross only works with 3d vectors");
+            var res = Self.zero;
+            res.atMut(0, 0).* = self.at(1, 0) * other.at(2, 0) - self.at(2, 0) * other.at(1, 0);
+            res.atMut(1, 0).* = self.at(2, 0) * other.at(0, 0) - self.at(0, 0) * other.at(2, 0);
+            res.atMut(2, 0).* = self.at(0, 0) * other.at(1, 0) - self.at(1, 0) * other.at(0, 0);
+            return res;
+        }
+
+        pub fn dot(self: Self, other: Self) T {
+            if(comptime Cols != 1) @compileError("dot only works with 3d vectors");
+            var res: T = 0.0;
+            for(self.data, other.data) |a, b| res += a * b;  
+            return res;
+        }
+
+        // pub fn reduce(self: Self, comptime NewRows: u32, comptime NewCols: u32) Matrix(T, NewRows, NewCols) {
+        //     if(comptime Rows < NewRows or Cols < NewCols) @compileError("Cannot increase dimension");
+        // }
 
         pub const zero: Self = std.mem.zeroes(@This());
         pub const identity = diagonal_init(1);
