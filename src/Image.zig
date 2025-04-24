@@ -47,6 +47,3 @@ pub fn deinit(self: *Self) void {
 pub fn rawBytes(self: Self) []const u8 {
     return self.data.items;
 }
-
-// pub const default : Self = init_fill(&[4]u8{255, 255, 255, 255}, .{.width = 1, .height = 1}, TextureFormat.rgba8unorm, );
-// pub const transparent : Self = init_fill(.{.width = 1, .height = 1}, TextureFormat.rgba8unorm, std.heap.PageAllocator);

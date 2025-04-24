@@ -17,14 +17,14 @@ pub fn projectionMatrix(self: Self) Matrix4f {
 
 pub fn viewMatrix(self: Self) Matrix4f {
     var view = Matrix4f.diagonal_init(1.0);
-    for(0..3)|y| {
-        for(0..3) |x| {
+    for (0..3) |y| {
+        for (0..3) |x| {
             view.atMut(x, y).* = self.orientation.at(x, y);
         }
     }
-    for(0..3) |y| {
+    for (0..3) |y| {
         view.atMut(y, 3).* = self.position[y];
     }
-   
+
     return view;
 }

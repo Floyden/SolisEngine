@@ -1,7 +1,8 @@
 #version 450 core
 
 layout(set = 2, binding = 0) uniform sampler2D textureSampler;
-layout(set = 2, binding = 1) uniform sampler2D metallicSampler;
+layout(set = 2, binding = 1) uniform sampler2D normalSampler;
+layout(set = 2, binding = 2) uniform sampler2D metallicSampler;
 
 layout(set = 3, binding = 0) uniform MaterialValues {
    vec4 color;
@@ -34,6 +35,5 @@ void main() {
    vec4 light_dir = light.position - in_position;
    float distance = dot(light_dir, light_dir);
    float diff = clamp(dot(in_normal, normalize(-light_dir.xyz)), 0.1, 1.0);
-   // out_color = base_color * light.color * diff * light.intensity / distance;
    out_color = base_color * ambient * light.color * diff * light.intensity / distance;
 }

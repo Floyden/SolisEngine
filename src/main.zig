@@ -19,6 +19,7 @@ const TextureFormat = @import("renderer/texture.zig").Format;
 const RenderPass = @import("renderer/RenderPass.zig");
 const Shader = @import("renderer/Shader.zig");
 const ShaderImporter = @import("renderer/ShaderImporter.zig");
+const defaults = @import("defaults.zig");
 
 const CommandBuffer = @import("CommandBuffer.zig");
 const SDL_ERROR = Window.SDL_ERROR;
@@ -34,7 +35,7 @@ pub fn main() !void {
     try asset_server.register_importer(Image, assets.ImageImporter);
     try asset_server.register_importer(Shader, ShaderImporter);
 
-    // const allocator = std.heap.page_allocator;
+    const allocator = std.heap.page_allocator;
     const file_path: []const u8 = @ptrCast(std.os.argv[1][0..std.mem.len(std.os.argv[1])]);
 
     const parsed = Gltf.parseFromFile(std.heap.page_allocator, file_path) catch @panic("Failed");
@@ -50,6 +51,8 @@ pub fn main() !void {
 
     var renderer = Renderer.init(&window) catch |e| return e;
     defer renderer.deinit();
+    defaults.texture_defaults = defaults.TextureDefaults.init(allocator, &renderer) catch @panic("OOM");
+    defer defaults.texture_defaults.?.deinit(&renderer);
 
     const vs_handle = try asset_server.load(Shader, "./assets/shaders/default.vert");
     defer asset_server.unload(Shader, vs_handle);
@@ -92,8 +95,10 @@ pub fn main() !void {
     defer renderer.releaseSampler(sampler);
 
     const material = Material{
-        .base_color = .{ 1.0, 0.5, 0.5, 1.0 },
+        .base_color = .{ 0.5, 0.5, 1.0, 1.0 },
+        .base_color_texture = texture,
         .metallic = 0.0,
+        .metallic_texture = metallic_texture,
     };
     const binding = material.createUniformBinding();
 
@@ -152,10 +157,7 @@ pub fn main() !void {
         const color_target = RenderPass.ColorTarget{ .texture = swapchain_texture, .clear_color = .{ 0.1, 0.1, 0.1, 1.0 } };
         const depth_target = RenderPass.DepthStencilTarget{ .texture = tex_depth };
 
-        const sampler_binding = [_]c.SDL_GPUTextureSamplerBinding{
-            .{ .sampler = sampler.id, .texture = texture.id },
-            .{ .sampler = sampler.id, .texture = metallic_texture.id },
-        };
+        const sampler_binding = material.createSamplerBinding(sampler.id);
 
         const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buf_vertex, .offset = 0 };
         cmd.pushVertexUniformData(0, f32, @as(*[32]f32, @ptrCast(&matrices)));

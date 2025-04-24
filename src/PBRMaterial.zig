@@ -1,5 +1,6 @@
 const texture = @import("renderer/texture.zig");
 const SamplerHandle = @import("renderer/sampler.zig").Handle;
+const defaults = @import("defaults.zig");
 const c = @import("solis").external.c;
 const Self = @This();
 
@@ -11,6 +12,8 @@ base_color_texture: ?texture.Handle = null,
 // If the texture is defined, the final value will be metallic * metallic_texture_sample
 metallic: f32 = 0.0,
 metallic_texture: ?texture.Handle = null,
+
+normal_texture: ?texture.Handle = null,
 
 pub const UniformBinding = extern struct {
     base_color: [4]f32,
@@ -25,5 +28,14 @@ pub fn createUniformBinding(self: Self) UniformBinding {
     return .{
         .base_color = self.base_color,
         .metallic = self.metallic,
+    };
+}
+
+pub fn createSamplerBinding(self: Self, sampler_id: *c.SDL_GPUSampler) [3]c.SDL_GPUTextureSamplerBinding {
+    // TODO: store sampler somewhere else
+    return [_]c.SDL_GPUTextureSamplerBinding{
+        .{ .sampler = sampler_id, .texture = if (self.base_color_texture) |tex| tex.id else defaults.texture_defaults.?.base_tex.id },
+        .{ .sampler = sampler_id, .texture = if (self.normal_texture) |tex| tex.id else defaults.texture_defaults.?.normals_tex.id },
+        .{ .sampler = sampler_id, .texture = if (self.metallic_texture) |tex| tex.id else defaults.texture_defaults.?.metal_rough_tex.id },
     };
 }
