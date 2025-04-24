@@ -2,7 +2,6 @@ const std = @import("std");
 const vertex_data = @import("vertex_data.zig");
 const Matrix = @import("matrix.zig").Matrix;
 
-// pub const IndexBufferType = enum { short, int };
 const Self = @This();
 
 pub const IndexBuffer = union(enum) {
@@ -84,8 +83,6 @@ pub const FaceIter = struct {
             };
 
             const data: [*]u8 = self.mesh.data.?.ptr;
-            // std.log.info("{*}", .{data[face.indices[0] * vertex_size .. (face.indices[0] + 1) * vertex_size]});
-            // std.log.debug("{*}", .{&self.mesh.data.?[face.indices[0] * vertex_size .. (face.indices[0] + 1) * vertex_size]});
             face.vertices = .{
                 data[face.indices[0] * vertex_size .. (face.indices[0] + 1) * vertex_size],
                 data[face.indices[1] * vertex_size .. (face.indices[1] + 1) * vertex_size],
@@ -114,12 +111,29 @@ pub const ElementIter = struct {
     pub fn next(self: *ElementIter) ?[]f32 {
         const res = self.at(self.index);
         if (res) |_| self.index += 1;
-        return res;
+        return @alignCast(@ptrCast(res));
+    }
+
+    pub fn nextAs(self: *ElementIter, comptime T: type) ?*T {
+        const res = self.at(self.index);
+        if (res) |_| self.index += 1;
+        return @alignCast(@ptrCast(res));
     }
 
     pub fn at(self: *ElementIter, index: usize) ?[]u8 {
         if (index >= self.mesh.num_vertices) return null;
-        return self.mesh.data.?[index * self.vertex_size + self.offset .. index * self.vertex_size + self.offset + self.element_size];
+        const base_index = index * self.vertex_size + self.offset;
+        return self.mesh.data.?[base_index .. base_index + self.element_size];
+    }
+
+    pub fn atAs(self: *ElementIter, index: usize, comptime T: type) ?*T {
+        if (index >= self.mesh.num_vertices) return null;
+        const base_index = index * self.vertex_size + self.offset;
+        return @alignCast(@ptrCast(self.mesh.data.?[base_index .. base_index + self.element_size]));
+    }
+
+    pub fn reset(self: *ElementIter) void {
+        self.index = 0;
     }
 };
 
@@ -226,8 +240,30 @@ pub fn rearrange(self: *Self, new_description: []const vertex_data.ElementDesc) 
     self.vertex_description.clearRetainingCapacity();
     self.vertex_description.appendSlice(new_description) catch @panic("OOM");
 
-    // if(calculate_normals)self.calculateNormals();
+    if (calculate_normals) self.calculateNormals();
     if (calculate_tangents) self.calculateTangents();
+}
+
+pub fn calculateNormals(self: *Self) void {
+    // Clear old normals
+    var normalIter = self.elements(.normal).?;
+    while (normalIter.nextAs(Matrix(f32, 3, 1))) |normal|
+        normal.* = Matrix(f32, 3, 1).zero;
+
+    var face_iter = self.faces();
+    while (face_iter.next()) |face| {
+        const positions = face.positions().?;
+        const edge1 = positions[1].sub(positions[0].*);
+        const edge2 = positions[2].sub(positions[0].*);
+
+        const normal = edge1.cross(edge2).normalize();
+        const normals = face.normals().?;
+        for (&normals) |dst| dst.addMut(normal);
+    }
+
+    normalIter.reset();
+    while (normalIter.nextAs(Matrix(f32, 3, 1))) |normal|
+        normal.* = normal.normalize();
 }
 
 pub fn calculateTangents(self: *Self) void {
@@ -240,15 +276,11 @@ pub fn calculateTangents(self: *Self) void {
         const positions = face.positions().?;
         const uvs = face.texcoords().?;
 
-        // std.log.info("Base: {*}", .{self.data.?.ptr});
-        // std.log.debug("Position: {any}", .{positions});
-        // std.log.debug("uvs: {any}", .{uvs});
         const edge1 = positions[1].sub(positions[0].*);
         const edge2 = positions[2].sub(positions[0].*);
 
         const duv1 = uvs[1].sub(uvs[0].*);
         const duv2 = uvs[2].sub(uvs[0].*);
-        // std.log.debug("{} {} {} {}", .{edge1, edge2, duv1, duv2});
 
         const f = 1.0 / (duv1.at(0, 0) * duv2.at(1, 0) - duv1.at(1, 0) * duv2.at(0, 0));
         const tangent3 = edge1.mult(duv2.at(1, 0)).sub(edge2.mult(duv1.at(1, 0))).mult(f);
@@ -267,17 +299,18 @@ pub fn calculateTangents(self: *Self) void {
 
     var tangents = self.elements(.tangent).?;
     var normals = self.elements(.normal).?;
+    const Vec = Matrix(f32, 3, 1);
 
+    // create average of each tangent and use it to assign the bitangent & handedness
     for (0..self.num_vertices) |i| {
-        const tangent_ptr = tangents.at(i).?;
-        var tangent: *Matrix(f32, 3, 1) = @alignCast(@ptrCast(tangent_ptr));
+        var tangent = tangents.atAs(i, Vec).?;
         tangent.* = tangent.normalize();
 
-        const normal_ptr = normals.at(i).?;
-        const normal: *Matrix(f32, 3, 1) = @alignCast(@ptrCast(normal_ptr));
+        var normal = normals.atAs(i, Vec).?;
+        // TODO: The minus looks wrong but it works?
         const handedness = -std.math.sign(normal.cross(tangent.*).dot(bitangents[i].normalize()));
 
-        var tangent4: *Matrix(f32, 4, 1) = @alignCast(@ptrCast(tangent_ptr));
-        tangent4.data[3] = handedness;
+        var tangent4 = tangents.atAs(i, [4]f32).?;
+        tangent4[3] = handedness;
     }
 }
