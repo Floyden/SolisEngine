@@ -16,6 +16,7 @@ pub const uuid = @import("uuid.zig");
 pub const Image = @import("Image.zig");
 pub const assets = @import("assets.zig");
 const TextureFormat = @import("renderer/texture.zig").Format;
+const Texture = @import("renderer/texture.zig").Handle;
 const RenderPass = @import("renderer/RenderPass.zig");
 const Shader = @import("renderer/Shader.zig");
 const ShaderImporter = @import("renderer/ShaderImporter.zig");
@@ -84,30 +85,27 @@ pub fn main() !void {
     defer if (buf_index) |buf| renderer.releaseBuffer(buf);
 
     // Image Texture
-    const base_image_handle = try parsed.loadImage(0, &asset_server);
-    defer asset_server.unload(Image, base_image_handle);
-    const texture = try renderer.createTextureFromImage(asset_server.get(Image, base_image_handle).?.*);
-    defer renderer.releaseTexture(texture);
+    const images = [_]?assets.Handle(Image){
+        try parsed.loadBaseColorImage(&asset_server),
+        try parsed.loadMetalRoughImage(&asset_server),
+        try parsed.loadNormalImage(&asset_server),
+    };
+    defer for (images) |image_opt| if (image_opt) |image| asset_server.unload(Image, image);
 
-    const metallic_image_handle = try parsed.loadImage(1, &asset_server);
-    defer asset_server.unload(Image, metallic_image_handle);
-    const metallic_texture = try renderer.createTextureFromImage(asset_server.get(Image, metallic_image_handle).?.*);
-    defer renderer.releaseTexture(metallic_texture);
-
-    const normal_image_handle = try parsed.loadImage(2, &asset_server);
-    defer asset_server.unload(Image, normal_image_handle);
-    const normal_texture = try renderer.createTextureFromImage(asset_server.get(Image, normal_image_handle).?.*);
-    defer renderer.releaseTexture(normal_texture);
+    var textures: [3]?Texture = undefined;
+    for (0..3) |i|
+        textures[i] = if (images[i]) |image| try renderer.createTextureFromImage(asset_server.get(Image, image).?.*) else null;
+    defer for (textures) |texture_opt| if (texture_opt) |texture| renderer.releaseTexture(texture);
 
     const sampler = try renderer.createSampler(.{});
     defer renderer.releaseSampler(sampler);
 
     const material = Material{
-        .base_color = .{ 0.5, 0.5, 1.0, 1.0 },
-        .base_color_texture = texture,
+        .base_color = .{ 1.0, 1.0, 1.0, 1.0 },
+        .base_color_texture = textures[0],
         .metallic = 0.0,
-        .metallic_texture = metallic_texture,
-        .normal_texture = normal_texture,
+        .metallic_texture = textures[1],
+        .normal_texture = textures[2],
     };
     const binding = material.createUniformBinding();
 
@@ -156,7 +154,7 @@ pub fn main() !void {
 
         var model_matrix = matrix.Matrix4f.diagonal_init(0.25);
         model_matrix.atMut(3, 3).* = 1.0;
-        model_matrix = model_matrix.mult(matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle));
+        // model_matrix = model_matrix.mult(matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle));
         model_matrix.atMut(2, 3).* = -1.0;
 
         var matrices = .{ model_matrix, model_matrix };

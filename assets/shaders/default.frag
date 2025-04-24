@@ -34,6 +34,7 @@ void main() {
 
    vec4 light_dir = light.position - in_position;
    float distance = dot(light_dir, light_dir);
-   float diff = clamp(dot(in_normal, normalize(-light_dir.xyz)), 0.1, 1.0);
+   vec3 normal = texture(normalSampler, in_uv).rgb * in_normal;
+   float diff = clamp(dot(normal, normalize(-light_dir.xyz)), 0.1, 1.0);
    out_color = base_color * ambient * light.color * diff * light.intensity / distance;
 }

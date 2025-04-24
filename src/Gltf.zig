@@ -249,6 +249,30 @@ pub fn loadImage(self: Self, index: usize, asset_server: *AssetServer) !Handle(I
     return handle;
 }
 
+pub fn loadBaseColorImage(self: Self, asset_server: *AssetServer) !?Handle(Image) {
+    if (self.materials) |material|
+        if (material[0].pbrMetallicRoughness) |pbr|
+            if (pbr.baseColorTexture) |texture|
+                return try loadImage(self, texture.index, asset_server);
+    return null;
+}
+
+pub fn loadNormalImage(self: Self, asset_server: *AssetServer) !?Handle(Image) {
+    if (self.materials) |material|
+        if (material[0].normalTexture) |normal|
+            return try loadImage(self, normal.index, asset_server);
+    return null;
+}
+
+pub fn loadMetalRoughImage(self: Self, asset_server: *AssetServer) !?Handle(Image) {
+    if (self.materials) |material| {
+        if (material[0].pbrMetallicRoughness) |pbr|
+            if (pbr.metallicRoughnessTexture) |texture|
+                return try loadImage(self, texture.index, asset_server);
+    }
+    return null;
+}
+
 pub fn parseMeshData(self: Self, mesh_index: usize, allocator: std.mem.Allocator) !Mesh {
     // TODO: check null handles
     const attributes = &self.meshes.?[mesh_index].primitives[0].attributes.map;
