@@ -25,6 +25,7 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
         pub fn at(self: Self, x: usize, y: usize) T {
             return self.data[y * cols + x];
         }
+
         pub fn atMut(self: *Self, x: usize, y: usize) *T {
             return &self.data[y * cols + x];
         }

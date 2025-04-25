@@ -1,6 +1,7 @@
 const std = @import("std");
 const vertex_data = @import("vertex_data.zig");
 const Matrix = @import("matrix.zig").Matrix;
+const c = @import("solis").external.c;
 
 const Self = @This();
 
@@ -9,11 +10,11 @@ pub const IndexBuffer = union(enum) {
     short: []u16,
     int: []u32,
 
-    pub fn size(self: IndexBuffer) usize {
+    pub fn size(self: IndexBuffer) u32 {
         return switch (self) {
-            .byte => self.byte.len,
-            .short => self.short.len,
-            .int => self.int.len,
+            .byte => @intCast(self.byte.len),
+            .short => @intCast(self.short.len),
+            .int => @intCast(self.int.len),
         };
     }
 
@@ -22,6 +23,22 @@ pub const IndexBuffer = union(enum) {
             .byte => self.byte[index],
             .short => self.short[index],
             .int => self.int[index],
+        };
+    }
+
+    pub fn rawBytes(self: IndexBuffer) []u8 {
+        return switch (self) {
+            .byte => self.byte,
+            .short => @ptrCast(self.short),
+            .int => @ptrCast(self.int),
+        };
+    }
+
+    pub fn elementType(self: IndexBuffer) u32 {
+        return switch (self) {
+            .byte => @panic("NotSupported, Sorry"),
+            .short => c.SDL_GPU_INDEXELEMENTSIZE_16BIT,
+            .int => c.SDL_GPU_INDEXELEMENTSIZE_32BIT,
         };
     }
 };

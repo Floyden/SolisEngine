@@ -81,7 +81,7 @@ pub fn main() !void {
     const buf_vertex = renderer.createBufferFromData(current_vert, c.SDL_GPU_BUFFERUSAGE_VERTEX, "Vertex Buffer") catch |e| return e;
     defer renderer.releaseBuffer(buf_vertex);
 
-    const buf_index = if (mesh.index_buffer) |buf| try renderer.createBufferFromData(@ptrCast(buf.short), c.SDL_GPU_BUFFERUSAGE_INDEX, "Index Buffer") else null;
+    const buf_index = if (mesh.index_buffer) |buf| try renderer.createBufferFromData(buf.rawBytes(), c.SDL_GPU_BUFFERUSAGE_INDEX, "Index Buffer") else null;
     defer if (buf_index) |buf| renderer.releaseBuffer(buf);
 
     // Image Texture
@@ -180,8 +180,8 @@ pub fn main() !void {
 
         if (buf_index) |index| {
             const index_binding = c.SDL_GPUBufferBinding{ .buffer = index, .offset = 0 };
-            pass.bindIndexBuffers(&index_binding);
-            pass.drawPrimitivesIndexed(@intCast(mesh.index_buffer.?.short.len));
+            pass.bindIndexBuffers(&index_binding, mesh.index_buffer.?.elementType());
+            pass.drawPrimitivesIndexed(mesh.index_buffer.?.size());
         } else {
             pass.drawPrimitives(mesh.num_vertices);
         }
