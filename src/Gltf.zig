@@ -281,6 +281,16 @@ pub fn loadMetalRoughImage(self: Self, asset_server: *AssetServer) !?Handle(Imag
     return null;
 }
 
+pub fn parseMeshes(self: Self, allocator: std.mem.Allocator) !std.ArrayList(Mesh) {
+    var meshes = std.ArrayList(Mesh).init(allocator);
+    errdefer meshes.deinit();
+
+    if(self.meshes == null) return meshes;
+
+    for(0..self.meshes.?.len) |i| try meshes.append(try self.parseMeshData(i, allocator));
+    return meshes;
+}
+
 pub fn parseMeshData(self: Self, mesh_index: usize, allocator: std.mem.Allocator) !Mesh {
     // TODO: check null handles
     const attributes = &self.meshes.?[mesh_index].primitives[0].attributes.map;
@@ -336,7 +346,11 @@ pub fn parseMeshData(self: Self, mesh_index: usize, allocator: std.mem.Allocator
         }
     }
 
-    const uri = self.buffers.?[mesh_index].uri;
+    // TODO: This will not work for when the buffers are split up in multiple files and in several other cases
+    const buffer_view_index = self.meshes.?[mesh_index].primitives[0].attributes.map.values()[0];
+    const buffer_index = self.bufferViews.?[buffer_view_index].buffer;
+
+    const uri = self.buffers.?[buffer_index].uri;
     const DATA_PREFIX = "data:application/octet-stream;base64,";
     if (!std.mem.startsWith(u8, uri, DATA_PREFIX)) {
         // mesh.data = try self.loadBufferFromFile(allocator, 0);

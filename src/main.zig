@@ -40,7 +40,10 @@ pub fn main() !void {
     const file_path: []const u8 = @ptrCast(std.os.argv[1][0..std.mem.len(std.os.argv[1])]);
 
     const parsed = try Gltf.parseFromFile(std.heap.page_allocator, file_path);
-    const mesh = parsed.parseMeshData(0, std.heap.page_allocator) catch @panic("Mesh Failed");
+    const meshes = try parsed.parseMeshes(std.heap.page_allocator);
+    defer meshes.deinit();
+
+    if(meshes.items.len == 0) return error.NoMeshesFound;
 
     errdefer c.SDL_Log("Error: %s", c.SDL_GetError());
     if (!c.SDL_Init(c.SDL_INIT_VIDEO)) return SDL_ERROR.Fail;
@@ -77,12 +80,21 @@ pub fn main() !void {
     defer renderer.releaseTexture(tex_depth);
 
     // Buffers
-    const current_vert: []const u8 = mesh.data.?;
-    const buf_vertex = renderer.createBufferFromData(current_vert, c.SDL_GPU_BUFFERUSAGE_VERTEX, "Vertex Buffer") catch |e| return e;
-    defer renderer.releaseBuffer(buf_vertex);
-
-    const buf_index = if (mesh.index_buffer) |buf| try renderer.createBufferFromData(buf.rawBytes(), c.SDL_GPU_BUFFERUSAGE_INDEX, "Index Buffer") else null;
-    defer if (buf_index) |buf| renderer.releaseBuffer(buf);
+    const BufferPair = struct { vertex_buffer: *c.SDL_GPUBuffer, index_buffer : ?*c.SDL_GPUBuffer };
+    var buffers = std.ArrayList(BufferPair).init(allocator);
+    for(meshes.items) |mesh| {
+        const vertex_buffer = try renderer.createBufferFromData(mesh.data.?, c.SDL_GPU_BUFFERUSAGE_VERTEX, "Vertex Buffer");
+        const index_buffer = if (mesh.index_buffer) |buf| try renderer.createBufferFromData(buf.rawBytes(), c.SDL_GPU_BUFFERUSAGE_INDEX, "Index Buffer") else null;
+        try buffers.append(.{.vertex_buffer = vertex_buffer, .index_buffer = index_buffer});
+    }
+    defer {
+        for(buffers.items) |buffer| {
+            renderer.releaseBuffer(buffer.vertex_buffer);
+            if (buffer.index_buffer) |idx| 
+            renderer.releaseBuffer(idx);
+        }
+        buffers.deinit();
+    }
 
     // Image Texture
     const images = [_]?assets.Handle(Image){
@@ -175,15 +187,17 @@ pub fn main() !void {
         pass.bindGraphicsPipeline(pipeline);
         pass.bindFragmentSamplers(0, &sampler_binding);
 
-        const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buf_vertex, .offset = 0 };
-        pass.bindVertexBuffers(0, &.{vertex_binding});
+        for(buffers.items) |buffer| {
+            const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buffer.vertex_buffer, .offset = 0 };
+            pass.bindVertexBuffers(0, &.{vertex_binding});
 
-        if (buf_index) |index| {
-            const index_binding = c.SDL_GPUBufferBinding{ .buffer = index, .offset = 0 };
-            pass.bindIndexBuffers(&index_binding, mesh.index_buffer.?.elementType());
-            pass.drawPrimitivesIndexed(mesh.index_buffer.?.size());
-        } else {
-            pass.drawPrimitives(mesh.num_vertices);
+            if (buffer.index_buffer) |index| {
+                const index_binding = c.SDL_GPUBufferBinding{ .buffer = index, .offset = 0 };
+                pass.bindIndexBuffers(&index_binding, meshes.items[0].index_buffer.?.elementType());
+                pass.drawPrimitivesIndexed(meshes.items[0].index_buffer.?.size());
+            } else {
+                pass.drawPrimitives(meshes.items[0].num_vertices);
+            }
         }
 
         pass.end();
