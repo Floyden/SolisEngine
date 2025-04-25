@@ -1,6 +1,10 @@
 const std = @import("std");
 const vertex_data = @import("vertex_data.zig");
-const Matrix = @import("matrix.zig").Matrix;
+const _matrix = @import("matrix.zig");
+const Matrix = _matrix.Matrix;
+const Vector2f = _matrix.Vector2f;
+const Vector3f = _matrix.Vector3f;
+const Vector4f = _matrix.Vector4f;
 const c = @import("solis").external.c;
 
 const Self = @This();
@@ -62,22 +66,22 @@ pub const Face = struct {
         };
     }
 
-    pub fn positions(self: Face) ?[3]*Matrix(f32, 3, 1) {
+    pub fn positions(self: Face) ?[3]*Vector3f {
         const ptr = self.attribute(.position) orelse return null;
         return .{ @ptrCast(ptr[0]), @ptrCast(ptr[1]), @ptrCast(ptr[2]) };
     }
 
-    pub fn normals(self: Face) ?[3]*Matrix(f32, 3, 1) {
+    pub fn normals(self: Face) ?[3]*Vector3f {
         const ptr = self.attribute(.normal) orelse return null;
         return .{ @ptrCast(ptr[0]), @ptrCast(ptr[1]), @ptrCast(ptr[2]) };
     }
 
-    pub fn texcoords(self: Face) ?[3]*Matrix(f32, 2, 1) {
+    pub fn texcoords(self: Face) ?[3]*Vector2f {
         const ptr = self.attribute(.texcoord) orelse return null;
         return .{ @ptrCast(ptr[0]), @ptrCast(ptr[1]), @ptrCast(ptr[2]) };
     }
 
-    pub fn tangents(self: Face) ?[3]*Matrix(f32, 4, 1) {
+    pub fn tangents(self: Face) ?[3]*Vector4f {
         const ptr = self.attribute(.tangent) orelse return null;
         return .{ @ptrCast(ptr[0]), @ptrCast(ptr[1]), @ptrCast(ptr[2]) };
     }
@@ -264,8 +268,8 @@ pub fn rearrange(self: *Self, new_description: []const vertex_data.ElementDesc) 
 pub fn calculateNormals(self: *Self) void {
     // Clear old normals
     var normalIter = self.elements(.normal).?;
-    while (normalIter.nextAs(Matrix(f32, 3, 1))) |normal|
-        normal.* = Matrix(f32, 3, 1).zero;
+    while (normalIter.nextAs(Vector3f)) |normal|
+        normal.* = Vector3f.zero;
 
     var face_iter = self.faces();
     while (face_iter.next()) |face| {
@@ -279,14 +283,14 @@ pub fn calculateNormals(self: *Self) void {
     }
 
     normalIter.reset();
-    while (normalIter.nextAs(Matrix(f32, 3, 1))) |normal|
+    while (normalIter.nextAs(Vector3f)) |normal|
         normal.* = normal.normalize();
 }
 
 pub fn calculateTangents(self: *Self) void {
-    var bitangents = self.allocator.alloc(Matrix(f32, 3, 1), self.num_vertices) catch @panic("OOM");
+    var bitangents = self.allocator.alloc(Vector3f, self.num_vertices) catch @panic("OOM");
     defer self.allocator.free(bitangents);
-    for (bitangents) |*val| val.* = Matrix(f32, 3, 1).zero;
+    for (bitangents) |*val| val.* = Vector3f.zero;
 
     var face_iter = self.faces();
     while (face_iter.next()) |face| {
@@ -299,14 +303,14 @@ pub fn calculateTangents(self: *Self) void {
         const duv1 = uvs[1].sub(uvs[0].*);
         const duv2 = uvs[2].sub(uvs[0].*);
 
-        const f = 1.0 / (duv1.at(0, 0) * duv2.at(1, 0) - duv1.at(1, 0) * duv2.at(0, 0));
-        const tangent3 = edge1.mult(duv2.at(1, 0)).sub(edge2.mult(duv1.at(1, 0))).mult(f);
-        const bitangent = edge1.mult(-duv2.at(0, 0)).add(edge2.mult(duv1.at(0, 0))).mult(f);
+        const f = 1.0 / (duv1.at(0) * duv2.at(1) - duv1.at(1) * duv2.at(0));
+        const tangent3 = edge1.mult(duv2.at(1)).sub(edge2.mult(duv1.at(1))).mult(f);
+        const bitangent = edge1.mult(-duv2.at(0)).add(edge2.mult(duv1.at(0))).mult(f);
 
         for (face.indices) |index|
             bitangents[index].addMut(bitangent);
 
-        var tangent = Matrix(f32, 4, 1).zero;
+        var tangent = Vector4f.zero;
         @memcpy(tangent.data[0..3], &tangent3.data);
 
         const tangents = face.tangents().?;
@@ -316,18 +320,17 @@ pub fn calculateTangents(self: *Self) void {
 
     var tangents = self.elements(.tangent).?;
     var normals = self.elements(.normal).?;
-    const Vec = Matrix(f32, 3, 1);
 
     // create average of each tangent and use it to assign the bitangent & handedness
     for (0..self.num_vertices) |i| {
-        var tangent = tangents.atAs(i, Vec).?;
+        var tangent = tangents.atAs(i, Vector3f).?;
         tangent.* = tangent.normalize();
 
-        var normal = normals.atAs(i, Vec).?;
+        var normal = normals.atAs(i, Vector3f).?;
         // TODO: The minus looks wrong but it works?
         const handedness = -std.math.sign(normal.cross(tangent.*).dot(bitangents[i].normalize()));
 
-        var tangent4 = tangents.atAs(i, [4]f32).?;
-        tangent4[3] = handedness;
+        var tangent4 = tangents.atAs(i, Vector4f).?;
+        tangent4.atMut(3).* = handedness;
     }
 }

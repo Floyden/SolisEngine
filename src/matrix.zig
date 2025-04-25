@@ -3,32 +3,46 @@ const std = @import("std");
 pub fn Matrix(T: type, rows: usize, cols: usize) type {
     return extern struct {
         const Self = @This();
-        const Cols = cols;
-        const Rows = rows;
-        data: [rows * cols]T,
+        pub const Cols = cols;
+        pub const Rows = rows;
+        pub const IsVector = Rows == 1 or Cols == 1;
+        pub const IsSquare = Rows == Cols;
+
+        data: [Rows * Cols]T,
 
         pub fn diagonal_init(value: T) Self {
             var res = Self.zero;
-            for (0..@min(rows, cols)) |i| {
+            for (0..@min(Rows, Cols)) |i| {
                 res.atMut(i, i).* = value;
             }
             return res;
         }
 
         pub fn from(values: []const T) Self {
-            std.debug.assert(values.len == cols * rows);
+            std.debug.assert(values.len == Cols * Rows);
             var self: Self = undefined;
             @memcpy(self.data[0..], values);
             return self;
         }
 
-        pub fn at(self: Self, x: usize, y: usize) T {
-            return self.data[y * cols + x];
+        fn atMatrix(self: Self, x: usize, y: usize) T {
+            return self.data[y * Cols + x];
         }
 
-        pub fn atMut(self: *Self, x: usize, y: usize) *T {
-            return &self.data[y * cols + x];
+        fn atVector(self: Self, x: usize) T {
+            return self.data[x];
         }
+
+        fn atMatrixMut(self: *Self, x: usize, y: usize) *T {
+            return &self.data[y * Cols + x];
+        }
+
+        fn atVectorMut(self: *Self, x: usize) *T {
+            return &self.data[x];
+        }
+
+        pub const at = if(IsVector) atVector else atMatrix;
+        pub const atMut = if(IsVector) atVectorMut else atMatrixMut;
 
         pub fn add(self: Self, other: Self) Self {
             var res = Self.from(&self.data);
@@ -48,24 +62,26 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
 
         fn MultResultType(other: type) type {
             if (other == T) return Self;
-            return Matrix(T, rows, other.Cols);
+            return Matrix(T, Rows, other.Cols);
         }
 
         pub fn mult(self: Self, other: anytype) MultResultType(@TypeOf(other)) {
             const OtherType = @TypeOf(other);
             const ResType = MultResultType(OtherType);
+            // Scalar multiplication
             if (comptime OtherType == T) {
                 var res = Self.from(&self.data);
                 for (0..Rows * Cols) |i| res.data[i] *= other;
                 return res;
             }
 
+            // Matrix multiplication 
             comptime if (Self.Cols != OtherType.Rows) @compileError("Mismatched matrices");
             var res = ResType.zero;
             for (0..Rows) |y| {
                 for (0..ResType.Cols) |x| {
                     var val: T = 0;
-                    for (0..cols) |i| {
+                    for (0..Cols) |i| {
                         val += self.at(i, y) * other.at(x, i);
                     }
                     res.atMut(x, y).* = val;
@@ -75,8 +91,8 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
         }
 
         pub fn rotation(_axis: [3]T, angle: T) Self {
-            comptime if (rows != cols) @compileError("Matrix is not square");
-            comptime if (rows < 3 or rows > 4) @compileError("Rotation is currently only implemented for 3x3 and 4x4 matrices");
+            comptime if (!IsSquare) @compileError("Matrix is not square");
+            comptime if (Rows < 3 or Rows > 4) @compileError("Rotation is currently only implemented for 3x3 and 4x4 matrices");
 
             const rad = angle * std.math.pi / 180.0;
             const sin = @sin(rad);
@@ -84,7 +100,7 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             const c1 = 1.0 - cos;
 
             var res = Self.zero;
-            if (comptime rows == 4) {
+            if (comptime Rows == 4) {
                 res.data[15] = 1;
             }
 
@@ -104,11 +120,11 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             return res;
         }
 
-        pub fn transpose(self: Self) Matrix(T, cols, rows) {
-            var res = Matrix(T, cols, rows).zero;
+        pub fn transpose(self: Self) Matrix(T, Cols, Rows) {
+            var res = Matrix(T, Cols, Rows).zero;
 
-            for (0..rows) |y| {
-                for (0..cols) |x| {
+            for (0..Rows) |y| {
+                for (0..Cols) |x| {
                     res.atMut(y, x).* = self.at(x, y);
                 }
             }
@@ -117,7 +133,7 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
         }
 
         pub fn normalize(self: Self) Self {
-            if (comptime Rows > 1 and Cols > 1) @compileError("Normalize for matrices is not implemented");
+            if (comptime !IsVector) @compileError("Normalize for matrices is not implemented");
             const len = self.length();
             var res = Self.from(&self.data);
             for (&res.data) |*val| val.* /= len;
@@ -126,28 +142,28 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
 
         // Returns the length squared
         pub fn length2(self: Self) T {
-            if (comptime Rows > 1 and Cols > 1) @compileError("length2 for matrices is not implemented");
+            if (comptime !IsVector) @compileError("length2 for matrices is not implemented");
             var square_sum: T = 0.0;
             for (self.data) |val| square_sum += val * val;
             return square_sum;
         }
 
         pub fn length(self: Self) T {
-            if (comptime Rows > 1 and Cols > 1) @compileError("length for matrices is not implemented");
+            if (comptime !IsVector) @compileError("length for matrices is not implemented");
             return @sqrt(self.length2());
         }
 
         pub fn cross(self: Self, other: Self) Self {
-            if (comptime Rows != 3 or Cols != 1) @compileError("cross only works with 3d vectors");
+            if (comptime !(Rows == 3 and Cols == 1) and !(Rows == 1 and Cols == 3)) @compileError("cross only works with 3d vectors");
             var res = Self.zero;
-            res.atMut(0, 0).* = self.at(1, 0) * other.at(2, 0) - self.at(2, 0) * other.at(1, 0);
-            res.atMut(1, 0).* = self.at(2, 0) * other.at(0, 0) - self.at(0, 0) * other.at(2, 0);
-            res.atMut(2, 0).* = self.at(0, 0) * other.at(1, 0) - self.at(1, 0) * other.at(0, 0);
+            res.atMut(0).* = self.at(1) * other.at(2) - self.at(2) * other.at(1);
+            res.atMut(1).* = self.at(2) * other.at(0) - self.at(0) * other.at(2);
+            res.atMut(2).* = self.at(0) * other.at(1) - self.at(1) * other.at(0);
             return res;
         }
 
         pub fn dot(self: Self, other: Self) T {
-            if (comptime Cols != 1) @compileError("dot only works with 3d vectors");
+            if (comptime !IsVector) @compileError("dot only works with vectors");
             var res: T = 0.0;
             for (self.data, other.data) |a, b| res += a * b;
             return res;
@@ -175,6 +191,11 @@ test "identity mult" {
     std.debug.assert(std.mem.eql(f32, &res3.data, &matrix3.data));
 }
 
+pub const Vector2f = Matrix(f32, 2, 1);
+pub const Vector3f = Matrix(f32, 3, 1);
+pub const Vector4f = Matrix(f32, 4, 1);
+
+pub const Matrix2f = Matrix(f32, 2, 2);
 pub const Matrix3f = Matrix(f32, 3, 3);
 pub const Matrix4f = Matrix(f32, 4, 4);
 
