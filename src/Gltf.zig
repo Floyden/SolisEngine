@@ -78,7 +78,7 @@ const BufferView = struct {
 
 const Material = struct {
     name: ?[]const u8 = null,
-    extensions: ?[]const u8 = null, // json
+    extensions: json.Value = .null, 
     extras: ?[]const u8 = null, // TODO: should be json, could be any type actually
     pbrMetallicRoughness: ?struct {
         baseColorFactor: [4]f32 = .{ 1.0, 1.0, 1.0, 1.0 },
@@ -126,6 +126,14 @@ const Node = struct {
     extras: ?[]const u8 = null, // TODO: should be json, could be any type actually
 };
 
+const Texture = struct {
+    sampler: ?u32 = null,
+    source: ?u32 = null,
+    name: ?[]const u8 = null,
+    extensions: ?[]const u8 = null, // json
+    extras: ?[]const u8 = null, // TODO: should be json, could be any type actually
+};
+
 const TextureInfo = struct {
     index: u32,
     texCoord: u32 = 0,
@@ -165,7 +173,7 @@ samplers: ?[]struct {
 } = null,
 scene: ?i32 = null,
 scenes: ?[]struct { nodes: []i32 } = null,
-textures: ?[]struct { sampler: i32, source: i32 } = null,
+textures: ?[]Texture = null,
 
 pub fn parseFromFile(allocator: std.mem.Allocator, path: []const u8) !Self {
     const file = try std.fs.cwd().openFile(path, .{});
