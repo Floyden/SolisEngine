@@ -1,5 +1,5 @@
-const _uuid = @import("solis").uuid;
-const Uuid = _uuid.Uuid;
+const uuids = @import("solis").uuid;
+const Uuid = uuids.Uuid;
 const type_id = @import("solis").type_id;
 
 pub const HandleAny = struct {
@@ -8,7 +8,7 @@ pub const HandleAny = struct {
 
     pub fn new(comptime T: type) HandleAny {
         return .{
-            .uuid = _uuid.new(),
+            .uuid = uuids.new(),
             .typeId = type_id.typeId(T),
         };
     }

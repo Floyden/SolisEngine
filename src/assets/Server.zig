@@ -2,6 +2,7 @@ const std = @import("std");
 const type_id = @import("solis").type_id;
 const Handle = @import("handle.zig").Handle;
 const HandleAny = @import("handle.zig").HandleAny;
+
 const Self = @This();
 
 allocator: std.mem.Allocator,

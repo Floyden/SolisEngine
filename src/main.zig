@@ -1,20 +1,21 @@
-pub const external = @import("external.zig");
-pub const Extent3d = @import("Extent3d.zig");
-
 const std = @import("std");
-const Window = @import("Window.zig");
+const zigimg = @import("zigimg");
+
+pub const external = @import("external.zig");
+const c = external.c;
+pub const Extent3d = @import("Extent3d.zig");
+pub const Window = @import("Window.zig");
 const Camera = @import("Camera.zig");
 const Renderer = @import("Renderer.zig");
-const matrix = @import("matrix.zig");
 const light = @import("light.zig");
 const Gltf = @import("Gltf.zig");
 const Material = @import("PBRMaterial.zig");
-const c = external.c;
-const zigimg = @import("zigimg");
 pub const type_id = @import("type_id.zig");
 pub const uuid = @import("uuid.zig");
 pub const Image = @import("Image.zig");
 pub const assets = @import("assets.zig");
+pub const mesh = @import("mesh.zig");
+pub const matrix = @import("matrix.zig");
 const TextureFormat = @import("renderer/texture.zig").Format;
 const Texture = @import("renderer/texture.zig").Handle;
 const RenderPass = @import("renderer/RenderPass.zig");
@@ -22,7 +23,7 @@ const Shader = @import("renderer/Shader.zig");
 const ShaderImporter = @import("renderer/ShaderImporter.zig");
 const defaults = @import("defaults.zig");
 
-const CommandBuffer = @import("CommandBuffer.zig");
+const CommandBuffer = @import("renderer/CommandBuffer.zig");
 const SDL_ERROR = Window.SDL_ERROR;
 
 pub fn main() !void {
@@ -70,7 +71,6 @@ pub fn main() !void {
     defer renderer.destroyGraphicsPipeline(pipeline);
 
     // window textures
-
     var tex_depth = try renderer.createTexture(.{
         .extent = .{ .width = @intCast(window.size[0]), .height = @intCast(window.size[1]) },
         .format = TextureFormat.depth16unorm,
@@ -82,9 +82,9 @@ pub fn main() !void {
     // Buffers
     const BufferPair = struct { vertex_buffer: *c.SDL_GPUBuffer, index_buffer : ?*c.SDL_GPUBuffer };
     var buffers = std.ArrayList(BufferPair).init(allocator);
-    for(meshes.items) |mesh| {
-        const vertex_buffer = try renderer.createBufferFromData(mesh.data.?, c.SDL_GPU_BUFFERUSAGE_VERTEX, "Vertex Buffer");
-        const index_buffer = if (mesh.index_buffer) |buf| try renderer.createBufferFromData(buf.rawBytes(), c.SDL_GPU_BUFFERUSAGE_INDEX, "Index Buffer") else null;
+    for(meshes.items) |item| {
+        const vertex_buffer = try renderer.createBufferFromData(item.data.?, c.SDL_GPU_BUFFERUSAGE_VERTEX, "Vertex Buffer");
+        const index_buffer = if (item.index_buffer) |buf| try renderer.createBufferFromData(buf.rawBytes(), c.SDL_GPU_BUFFERUSAGE_INDEX, "Index Buffer") else null;
         try buffers.append(.{.vertex_buffer = vertex_buffer, .index_buffer = index_buffer});
     }
     defer {
@@ -187,7 +187,9 @@ pub fn main() !void {
         pass.bindGraphicsPipeline(pipeline);
         pass.bindFragmentSamplers(0, &sampler_binding);
 
-        for(buffers.items) |buffer| {
+
+        for(parsed.nodes.?) |node| {
+            const buffer = buffers.items[node.mesh.?];
             const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buffer.vertex_buffer, .offset = 0 };
             pass.bindVertexBuffers(0, &.{vertex_binding});
 

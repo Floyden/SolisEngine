@@ -1,11 +1,11 @@
 const std = @import("std");
-const vertex_data = @import("vertex_data.zig");
-const _matrix = @import("matrix.zig");
+const _matrix = @import("solis").matrix;
 const Matrix = _matrix.Matrix;
 const Vector2f = _matrix.Vector2f;
 const Vector3f = _matrix.Vector3f;
 const Vector4f = _matrix.Vector4f;
 const c = @import("solis").external.c;
+const vertex_data = @import("vertex_data.zig");
 
 const Self = @This();
 

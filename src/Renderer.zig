@@ -1,6 +1,6 @@
 const std = @import("std");
 const Window = @import("Window.zig");
-const CommandBuffer = @import("CommandBuffer.zig");
+const CommandBuffer = @import("renderer/CommandBuffer.zig");
 const SDL_ERROR = Window.SDL_ERROR;
 const Image = @import("Image.zig");
 pub const PixelFormat = @import("zigimg").PixelFormat;
