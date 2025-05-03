@@ -8,6 +8,8 @@ const Mesh = @import("mesh.zig").Mesh;
 const Handle = @import("assets.zig").Handle;
 const AssetServer = @import("assets.zig").Server;
 const Image = @import("Image.zig");
+const Transformation = @import("Transformation.zig");
+const Matrix4f = @import("matrix.zig").Matrix4f;
 
 const Self = @This();
 
@@ -80,7 +82,7 @@ const BufferView = struct {
 
 const Material = struct {
     name: ?[]const u8 = null,
-    extensions: json.Value = .null, 
+    extensions: json.Value = .null,
     extras: ?[]const u8 = null, // TODO: should be json, could be any type actually
     pbrMetallicRoughness: ?struct {
         baseColorFactor: [4]f32 = .{ 1.0, 1.0, 1.0, 1.0 },
@@ -126,6 +128,15 @@ const Node = struct {
     name: ?[]const u8 = null,
     extensions: ?[]const u8 = null, // json
     extras: ?[]const u8 = null, // TODO: should be json, could be any type actually
+
+    pub fn getTransform(self: Node) Transformation {
+        // if (self.matrix) |matrix| return Transformation.from_matrix(Matrix4f.from(&matrix));
+        return Transformation{
+            .translation = .from(&self.translation),
+            .rotation = .fromXYZW(self.rotation),
+            .scale = .from(&self.scale),
+        };
+    }
 };
 
 const Texture = struct {
@@ -287,9 +298,9 @@ pub fn parseMeshes(self: Self, allocator: std.mem.Allocator) !std.ArrayList(Mesh
     var meshes = std.ArrayList(Mesh).init(allocator);
     errdefer meshes.deinit();
 
-    if(self.meshes == null) return meshes;
+    if (self.meshes == null) return meshes;
 
-    for(0..self.meshes.?.len) |i| try meshes.append(try self.parseMeshData(i, allocator));
+    for (0..self.meshes.?.len) |i| try meshes.append(try self.parseMeshData(i, allocator));
     return meshes;
 }
 

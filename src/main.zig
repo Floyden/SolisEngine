@@ -44,7 +44,7 @@ pub fn main() !void {
     const meshes = try parsed.parseMeshes(std.heap.page_allocator);
     defer meshes.deinit();
 
-    if(meshes.items.len == 0) return error.NoMeshesFound;
+    if (meshes.items.len == 0) return error.NoMeshesFound;
 
     errdefer c.SDL_Log("Error: %s", c.SDL_GetError());
     if (!c.SDL_Init(c.SDL_INIT_VIDEO)) return SDL_ERROR.Fail;
@@ -80,18 +80,18 @@ pub fn main() !void {
     defer renderer.releaseTexture(tex_depth);
 
     // Buffers
-    const BufferPair = struct { vertex_buffer: *c.SDL_GPUBuffer, index_buffer : ?*c.SDL_GPUBuffer };
+    const BufferPair = struct { vertex_buffer: *c.SDL_GPUBuffer, index_buffer: ?*c.SDL_GPUBuffer };
     var buffers = std.ArrayList(BufferPair).init(allocator);
-    for(meshes.items) |item| {
+    for (meshes.items) |item| {
         const vertex_buffer = try renderer.createBufferFromData(item.data.?, c.SDL_GPU_BUFFERUSAGE_VERTEX, "Vertex Buffer");
         const index_buffer = if (item.index_buffer) |buf| try renderer.createBufferFromData(buf.rawBytes(), c.SDL_GPU_BUFFERUSAGE_INDEX, "Index Buffer") else null;
-        try buffers.append(.{.vertex_buffer = vertex_buffer, .index_buffer = index_buffer});
+        try buffers.append(.{ .vertex_buffer = vertex_buffer, .index_buffer = index_buffer });
     }
     defer {
-        for(buffers.items) |buffer| {
+        for (buffers.items) |buffer| {
             renderer.releaseBuffer(buffer.vertex_buffer);
-            if (buffer.index_buffer) |idx| 
-            renderer.releaseBuffer(idx);
+            if (buffer.index_buffer) |idx|
+                renderer.releaseBuffer(idx);
         }
         buffers.deinit();
     }
@@ -122,7 +122,7 @@ pub fn main() !void {
     const binding = material.createUniformBinding();
 
     var camera = Camera{ .aspect = window.getAspect() };
-    // camera.position[2] = -1.5;
+    camera.position[2] = -2.5;
 
     // Main loop
     var angle: f32 = 0.0;
@@ -164,22 +164,11 @@ pub fn main() !void {
 
         angle += 1;
 
-        var model_matrix = matrix.Matrix4f.diagonal_init(1);
-        model_matrix.atMut(3, 3).* = 1.0;
-        // model_matrix = model_matrix.mult(matrix.Matrix4f.rotation(.{ 1.0, 2.0, 0 }, angle));
-        // model_matrix = model_matrix.mult(matrix.Matrix4f.rotation(.{ 0.0, 1.0, 0.0 }, 180));
-        model_matrix.atMut(2, 3).* = -2.5;
-
-        var matrices = .{ model_matrix, model_matrix };
-        matrices[0] = matrices[0].mult(camera.viewMatrix());
-        matrices[0] = matrices[0].mult(camera.projectionMatrix());
-
         const color_target = RenderPass.ColorTarget{ .texture = swapchain_texture, .clear_color = .{ 0.1, 0.1, 0.1, 1.0 } };
         const depth_target = RenderPass.DepthStencilTarget{ .texture = tex_depth };
 
         const sampler_binding = material.createSamplerBinding(sampler.id);
 
-        cmd.pushVertexUniformData(0, f32, @as(*[32]f32, @ptrCast(&matrices)));
         cmd.pushFragmentUniformData(0, u8, binding.toBuffer());
         cmd.pushFragmentUniformData(1, f32, point_light.toBuffer());
 
@@ -187,8 +176,15 @@ pub fn main() !void {
         pass.bindGraphicsPipeline(pipeline);
         pass.bindFragmentSamplers(0, &sampler_binding);
 
+        for (parsed.nodes.?) |node| {
+            var transform = node.getTransform();
+            const model_matrix = transform.to_matrix().transpose();
+            var matrices = .{ model_matrix, model_matrix };
+            matrices[0] = matrices[0].mult(camera.viewMatrix());
+            matrices[0] = matrices[0].mult(camera.projectionMatrix());
 
-        for(parsed.nodes.?) |node| {
+            cmd.pushVertexUniformData(0, f32, @as(*[32]f32, @ptrCast(&matrices)));
+
             const buffer = buffers.items[node.mesh.?];
             const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buffer.vertex_buffer, .offset = 0 };
             pass.bindVertexBuffers(0, &.{vertex_binding});
