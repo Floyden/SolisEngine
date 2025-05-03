@@ -10,22 +10,20 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
 
         data: [Rows * Cols]T,
 
-        /// Creates a square matrix with all diagonal elements set to value, and all other elements set to zero.
+        /// Creates a matrix with all diagonal elements set to value, and all other elements set to zero.
         pub fn diagonal_init(value: T) Self {
-            if (!IsSquare) @compileError("diagonal_init requires square matrices");
             var res = Self.zero;
-            for (0..Rows) |i| {
+            for (0..@min(Rows, Cols)) |i| {
                 res.atMut(i, i).* = value;
             }
             return res;
         }
-        /// Creates a square matrix with all diagonal elements set to the values of the slice, and all other elements set to zero.
+        /// Creates a matrix with all diagonal elements set to the values of the slice, and all other elements set to zero.
         /// If the slice is smaller than the dimension, then the remaining diagonal values are set to 1.
         pub fn diagonal_init_slice(values: []const T) Self {
-            if (!IsSquare) @compileError("diagonal_init_slice requires square matrices");
-            std.debug.assert(values.len <= Rows);
+            std.debug.assert(values.len <= @min(Rows, Cols));
             var res = Self.identity;
-            for (0..@min(Rows, values.len)) |i|
+            for (0..@min(Rows, Cols, values.len)) |i|
                 res.atMut(i, i).* = values[i];
             return res;
         }
@@ -229,13 +227,13 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
         /// Returns a matrix with all elements set to one.
         pub const ones: Self = .{ .data = [_]T{1} ** (Rows * Cols) };
         /// Returns the identity matrix. Only valid for square matrices
-        pub const identity = diagonal_init(1);
+        pub const identity = if(IsSquare) diagonal_init(1);
     };
 }
 
 test "identity mult" {
-    const matrix1 = Matrix(f32, 4, 3).identity;
-    const matrix2 = Matrix(f32, 3, 4).identity;
+    const matrix1 = Matrix(f32, 4, 3).diagonal_init(1);
+    const matrix2 = Matrix(f32, 3, 4).diagonal_init(1);
     const res = matrix2.mult(matrix1);
     std.debug.assert(std.mem.eql(f32, &res.data, &Matrix(f32, 3, 3).identity.data));
 
