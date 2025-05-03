@@ -83,6 +83,19 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             return Matrix(T, Rows, other.Cols);
         }
 
+        pub fn multMut(self: *Self, other: anytype) void {
+            const OtherType = @TypeOf(other);
+            
+            // Scalar multiplication
+            if (comptime OtherType == T) {
+                for (0..Rows * Cols) |i| self.data[i] *= other;
+                return;
+            } else {
+                // TODO: square matrix-matrix multiplication
+                @compileError("Mutable Matrix multiplication is not yet implemented");
+            }
+        }
+
         /// Performs scalar or matrix multiplication. If other is a scalar, all elements are multiplied by it. If other is a matrix, performs matrix multiplication.
         pub fn mult(self: Self, other: anytype) MultResultType(@TypeOf(other)) {
             const OtherType = @TypeOf(other);
@@ -90,7 +103,7 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             // Scalar multiplication
             if (comptime OtherType == T) {
                 var res = Self.from(&self.data);
-                for (0..Rows * Cols) |i| res.data[i] *= other;
+                res.multMut(other);
                 return res;
             }
 
@@ -215,6 +228,18 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             if (comptime IsSquare) @compileError("trace is only defined for square matrices");
             var res: T = 0;
             for (0..Rows) |i| res += self.at(i, i);
+            return res;
+        }
+
+        /// Returns a copy of the matrix with the new dimensions.
+        /// New diagonal elements are set to 1, all other elements are set to 0.
+        pub fn resize(self: Self, comptime NewRows: usize,  comptime NewCols: usize) Matrix(T, NewRows, NewCols) {
+            var res = Matrix(T, NewRows, NewCols).diagonal_init(1);
+            for(0..@min(NewRows, Rows)) |y| {
+                // Copy values
+                for(0..@min(NewCols, Cols)) |x| 
+                    res.atMut(x,y).* = self.at(x,y);
+            }
             return res;
         }
 

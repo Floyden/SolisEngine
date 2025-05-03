@@ -13,7 +13,7 @@ pub fn Quaternion(comptime T: type) type {
 
         pub const identity = Self{ .x = 0, .y = 0, .z = 0, .w = 1 };
 
-        pub fn from_xyzw(data: [4]T) Self {
+        pub fn fromXYZW(data: [4]T) Self {
             return .{
                 .x = data[0],
                 .y = data[1],
@@ -22,7 +22,7 @@ pub fn Quaternion(comptime T: type) type {
             };
         }
 
-        pub fn from_wxyz(data: [4]T) Self {
+        pub fn fromWXYZ(data: [4]T) Self {
             return .{
                 .w = data[0],
                 .x = data[1],
@@ -31,7 +31,7 @@ pub fn Quaternion(comptime T: type) type {
             };
         }
 
-        pub fn from_matrix3(rot: matrix.Matrix3f) Self {
+        pub fn fromMatrix3(rot: matrix.Matrix3f) Self {
             var quat: Self = undefined;
             var s: T = 1.0;
             if (rot.at(2, 2) < 0) {
@@ -84,7 +84,7 @@ pub fn Quaternion(comptime T: type) type {
             const xx = a.x * a.x;
             const yy = a.y * a.y;
             const zz = a.z * a.z;
-            const ww = a.z * a.z;
+            const ww = a.w * a.w;
             const xy = a.x * a.y;
             const xz = a.x * a.z;
             const xw = a.x * a.w;
@@ -102,6 +102,10 @@ pub fn Quaternion(comptime T: type) type {
                 2 * (yz + xw),
                 2 * (ww + zz) - 1,
             });
+        }
+        
+        pub fn toMatrix4(self: Self) Matrix4f {
+            return self.toMatrix3().resize(4,4);
         }
     };
 }
@@ -137,14 +141,23 @@ test "quaternion identity" {
 
 test "quaternion to matrix" {
     const a = Quaternion(f32){ .x = 0, .y = 0, .z = @sqrt(2.0) / 2.0, .w = @sqrt(2.0) / 2.0 };
+    const b = Quaternion(f32){ .w = 1, .x = 0, .y = 0, .z = 0 };
 
-    const res = a.toMatrix3();
-    const expected = matrix.Matrix3f.from(&[_]f32{
+    const res_a = a.toMatrix3();
+    const res_b = b.toMatrix3();
+    const expected_a = matrix.Matrix3f.from(&[_]f32{
         0.0, -1.0, 0.0,
         1.0, 0.0,  0.0,
         0.0, 0.0,  1.0,
     });
+    const expected_b = matrix.Matrix3f.from(&[_]f32{
+        1.0, 0.0, 0.0,
+        0.0, 1.0, 0.0,
+        0.0, 0.0, 1.0,
+    });
+
     for (0..9) |i| {
-        try std.testing.expectApproxEqAbs(expected.data[i], res.data[i], 0.01);
+        try std.testing.expectApproxEqAbs(expected_a.data[i], res_a.data[i], 0.01);
+        try std.testing.expectApproxEqAbs(expected_b.data[i], res_b.data[i], 0.01);
     }
 }
