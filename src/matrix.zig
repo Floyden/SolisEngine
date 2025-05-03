@@ -10,14 +10,27 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
 
         data: [Rows * Cols]T,
 
+        /// Creates a square matrix with all diagonal elements set to value, and all other elements set to zero.
         pub fn diagonal_init(value: T) Self {
+            if (!IsSquare) @compileError("diagonal_init requires square matrices");
             var res = Self.zero;
-            for (0..@min(Rows, Cols)) |i| {
+            for (0..Rows) |i| {
                 res.atMut(i, i).* = value;
             }
             return res;
         }
+        /// Creates a square matrix with all diagonal elements set to the values of the slice, and all other elements set to zero.
+        /// If the slice is smaller than the dimension, then the remaining diagonal values are set to 1.
+        pub fn diagonal_init_slice(values: []const T) Self {
+            if (!IsSquare) @compileError("diagonal_init_slice requires square matrices");
+            std.debug.assert(values.len <= Rows);
+            var res = Self.identity;
+            for (0..@min(Rows, values.len)) |i|
+                res.atMut(i, i).* = values[i];
+            return res;
+        }
 
+        /// Constructs a matrix from a flat slice of values. The slice length must be equal to Rows * Cols.
         pub fn from(values: []const T) Self {
             std.debug.assert(values.len == Cols * Rows);
             var self: Self = undefined;
@@ -41,23 +54,30 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             return &self.data[x];
         }
 
-        pub const at = if(IsVector) atVector else atMatrix;
-        pub const atMut = if(IsVector) atVectorMut else atMatrixMut;
+        pub const at = if (IsVector) atVector else atMatrix;
+        pub const atMut = if (IsVector) atVectorMut else atMatrixMut;
 
+        /// Returns the result of element-wise addition between self and other.
         pub fn add(self: Self, other: Self) Self {
             var res = Self.from(&self.data);
             res.addMut(other);
             return res;
         }
 
+        /// Performs in-place element-wise addition of other into self.
         pub fn addMut(self: *Self, other: Self) void {
             for (0..Rows * Cols) |i| self.data[i] += other.data[i];
         }
 
+        /// Returns the result of element-wise subtraction between self and other.
         pub fn sub(self: Self, other: Self) Self {
             var res = Self.from(&self.data);
-            for (0..Rows * Cols) |i| res.data[i] -= other.data[i];
+            res.subMut(other);
             return res;
+        }
+
+        pub fn subMut(self: *Self, other: Self) void {
+            for (0..Rows * Cols) |i| self.data[i] -= other.data[i];
         }
 
         fn MultResultType(other: type) type {
@@ -65,6 +85,7 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             return Matrix(T, Rows, other.Cols);
         }
 
+        /// Performs scalar or matrix multiplication. If other is a scalar, all elements are multiplied by it. If other is a matrix, performs matrix multiplication.
         pub fn mult(self: Self, other: anytype) MultResultType(@TypeOf(other)) {
             const OtherType = @TypeOf(other);
             const ResType = MultResultType(OtherType);
@@ -75,7 +96,7 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
                 return res;
             }
 
-            // Matrix multiplication 
+            // Matrix multiplication
             comptime if (Self.Cols != OtherType.Rows) @compileError("Mismatched matrices");
             var res = ResType.zero;
             for (0..Rows) |y| {
@@ -90,6 +111,7 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             return res;
         }
 
+        /// Constructs a 3x3 or 4x4 rotation matrix rotating around the given axis by the specified angle (in degrees). Only valid for square matrices of size 3×3 or 4×4
         pub fn rotation(_axis: [3]T, angle: T) Self {
             comptime if (!IsSquare) @compileError("Matrix is not square");
             comptime if (Rows < 3 or Rows > 4) @compileError("Rotation is currently only implemented for 3x3 and 4x4 matrices");
@@ -120,6 +142,7 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             return res;
         }
 
+        /// Returns the transpose of the matrix, flipping rows and columns
         pub fn transpose(self: Self) Matrix(T, Cols, Rows) {
             var res = Matrix(T, Cols, Rows).zero;
 
@@ -132,6 +155,7 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             return res;
         }
 
+        /// Returns the normalized version of a vector (1-row or 1-column matrix). Compile-time error if called on a non-vector
         pub fn normalize(self: Self) Self {
             if (comptime !IsVector) @compileError("Normalize for matrices is not implemented");
             const len = self.length();
@@ -140,7 +164,7 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             return res;
         }
 
-        // Returns the length squared
+        /// Returns the squared length (magnitude) of a vector. Compile-time error if called on a non-vector
         pub fn length2(self: Self) T {
             if (comptime !IsVector) @compileError("length2 for matrices is not implemented");
             var square_sum: T = 0.0;
@@ -148,11 +172,13 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             return square_sum;
         }
 
+        /// Returns the length (magnitude) of a vector. Compile-time error if called on a non-vector.
         pub fn length(self: Self) T {
             if (comptime !IsVector) @compileError("length for matrices is not implemented");
             return @sqrt(self.length2());
         }
 
+        /// Returns the cross product of two 3D vectors. Only valid for 3d-vectors. Compile-time error otherwise.
         pub fn cross(self: Self, other: Self) Self {
             if (comptime !(Rows == 3 and Cols == 1) and !(Rows == 1 and Cols == 3)) @compileError("cross only works with 3d vectors");
             var res = Self.zero;
@@ -162,6 +188,7 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             return res;
         }
 
+        /// Returns the dot product of two vectors. Only valid for vectors. Compile-time error otherwise.
         pub fn dot(self: Self, other: Self) T {
             if (comptime !IsVector) @compileError("dot only works with vectors");
             var res: T = 0.0;
@@ -169,11 +196,39 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             return res;
         }
 
+        /// Returns the i-th row of the matrix as a new vector.
+        pub fn row(self: Self, i: usize) Matrix(T, 1, Cols) {
+            const start = i * Cols;
+            return Matrix(T, 1, Cols).from(self.data[start .. start + Cols]);
+        }
+
+        /// Returns the j-th column of the matrix as a new vector.
+        pub fn column(self: Self, j: usize) Matrix(T, Rows, 1) {
+            var col = Matrix(T, Rows, 1).zero;
+            var i: usize = 0;
+            while (i < Rows) : (i += 1) {
+                col.data[i] = self.data[i * Cols + j];
+            }
+            return col;
+        }
+
+        /// Returns the trace (sum of diagonal elements) of a square matrix
+        pub fn trace(self: Self) T {
+            if (comptime IsSquare) @compileError("trace is only defined for square matrices");
+            var res: T = 0;
+            for (0..Rows) |i| res += self.at(i, i);
+            return res;
+        }
+
         // pub fn reduce(self: Self, comptime NewRows: u32, comptime NewCols: u32) Matrix(T, NewRows, NewCols) {
         //     if(comptime Rows < NewRows or Cols < NewCols) @compileError("Cannot increase dimension");
         // }
 
+        /// Returns a matrix with all elements set to zero.
         pub const zero: Self = std.mem.zeroes(@This());
+        /// Returns a matrix with all elements set to one.
+        pub const ones: Self = .{ .data = [_]T{1} ** (Rows * Cols) };
+        /// Returns the identity matrix. Only valid for square matrices
         pub const identity = diagonal_init(1);
     };
 }
