@@ -40,12 +40,13 @@ pub fn pushFragmentUniformData(self: CommandBuffer, location: u32, T: type, data
     c.SDL_PushGPUFragmentUniformData(self.handle, location, data.ptr, @intCast(@sizeOf(T) * data.len));
 }
 
-pub fn uploadToBuffer(self: CommandBuffer, src: *c.SDL_GPUTransferBuffer, dst: Buffer) void {
+pub fn uploadToBuffer(self: CommandBuffer, src: *c.SDL_GPUTransferBuffer, dst_offset: u32, size: u32, dst: Buffer) void {
     const buf_location = std.mem.zeroInit(c.SDL_GPUTransferBufferLocation, .{ .transfer_buffer = src });
-    const dst_region = std.mem.zeroInit(c.SDL_GPUBufferRegion, .{
+    const dst_region = c.SDL_GPUBufferRegion{
         .buffer = dst.handle,
-        .size = dst.size,
-    });
+        .size = size,
+        .offset = dst_offset
+    };
     c.SDL_UploadToGPUBuffer(self.copy_pass, &buf_location, &dst_region, false);
 }
 

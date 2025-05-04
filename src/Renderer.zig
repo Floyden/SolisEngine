@@ -236,7 +236,13 @@ pub fn createBufferNamed(self: *Renderer, size: u32, usage_flags: u32, name: [:0
 pub fn createBufferFromData(self: *Renderer, data: []const u8, usage_flags: u32, name: [:0]const u8) !Buffer {
     const buffer_size: u32 = @intCast(data.len);
     const buffer = try self.createBufferNamed(buffer_size, usage_flags, name);
-    const buf_transfer = self.createTransferBufferNamed(buffer_size, c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "Transfer Buffer") catch |e| return e;
+    try self.uploadDataToBuffer(0, buffer, data);
+    return buffer;
+}
+
+pub fn uploadDataToBuffer(self: *Renderer, dst_offset: u32, dst: Buffer, data: []const u8) !void {
+    // TODO: Reuse TransferBuffers
+    const buf_transfer = self.createTransferBufferNamed(dst.size, c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "Transfer Buffer") catch |e| return e;
     defer self.releaseTransferBuffer(buf_transfer);
 
     self.copyToTransferBuffer(buf_transfer, data);
@@ -245,9 +251,8 @@ pub fn createBufferFromData(self: *Renderer, data: []const u8, usage_flags: u32,
     defer cmd.submit();
 
     cmd.beginCopyPass();
-    cmd.uploadToBuffer(buf_transfer, buffer);
+    cmd.uploadToBuffer(buf_transfer, dst_offset, @intCast(data.len), dst);
     cmd.endCopyPass();
-    return buffer;
 }
 
 pub fn releaseBuffer(self: *Renderer, buffer: Buffer) void {
