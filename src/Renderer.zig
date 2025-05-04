@@ -290,24 +290,24 @@ pub fn loadSPIRVShader(device: *c.SDL_GPUDevice, shader: Shader) !?*c.SDL_GPUSha
     const num_uniform_buffers: u32 = @intCast(shader.uniform_buffers.items.len);
     const num_storage_buffers: u32 = @intCast(shader.storage_buffers.items.len);
     const num_storage_textures: u32 = @intCast(shader.storage_textures.items.len);
+    const num_samplers: u32 = @intCast(shader.samplers.items.len);
     const stage: u32 = switch (shader.stage) {
         .Vertex => c.SDL_GPU_SHADERSTAGE_VERTEX,
         .Fragment => c.SDL_GPU_SHADERSTAGE_FRAGMENT,
     };
 
     const code: []const u8 = @ptrCast(shader.code.items);
-    const sci = std.mem.zeroInit(c.SDL_GPUShaderCreateInfo, .{
-        .num_uniform_buffers = num_uniform_buffers,
-        .num_storage_buffers = num_storage_buffers,
-        .num_storage_textures = num_storage_textures,
-        .num_samplers = @as(u32, @intCast(shader.samplers.items.len)),
-
+    const sci = c.SDL_GPUShaderCreateInfo{
         .format = c.SDL_GPU_SHADERFORMAT_SPIRV,
         .code = code.ptr,
         .code_size = code.len,
         .entrypoint = "main",
-
         .stage = stage,
-    });
+
+        .num_uniform_buffers = num_uniform_buffers,
+        .num_storage_buffers = num_storage_buffers,
+        .num_storage_textures = num_storage_textures,
+        .num_samplers = num_samplers,
+    };
     return c.SDL_CreateGPUShader(device, &sci) orelse return SDL_ERROR.Fail;
 }

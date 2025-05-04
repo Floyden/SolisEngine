@@ -7,7 +7,7 @@ pub const Extent3d = @import("Extent3d.zig");
 pub const Window = @import("Window.zig");
 const Camera = @import("Camera.zig");
 const Renderer = @import("Renderer.zig");
-const light = @import("light.zig");
+const Light = @import("light.zig").Light;
 const Gltf = @import("Gltf.zig");
 const Material = @import("PBRMaterial.zig");
 pub const type_id = @import("type_id.zig");
@@ -100,11 +100,16 @@ pub fn main() !void {
     }
 
     // Lights
-    // var lights = std.ArrayList(light.Light).init(allocator);
-    const lights_buffer = try renderer.createBufferNamed(@sizeOf(light.Light) + @sizeOf(u32), c.SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ, "Lights");
+    var lights = std.ArrayList(Light).init(allocator);
+    defer lights.deinit();
+    try lights.append(Light.createPoint(Vector3f.from(&[_]f32{5.0, 0.0, 2.0}), Vector4f.from(&[_]f32{1.0, 1.0, 1.0, 1.0}), 40));
+    try lights.append(Light.createDirectional(Vector3f.from(&[_]f32{-1.0, 0.0, 2.0}).normalize(), Vector4f.from(&[_]f32{1.0, 0.0, 0.0, 1.0}), 80));
+
+    const lights_buffer = try renderer.createBufferNamed(@intCast(lights.items.len * @sizeOf(Light)), c.SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ, "Lights");
     defer renderer.releaseBuffer(lights_buffer);
 
-    const point_light = light.Light.createPoint(Vector3f.from(&[_]f32{5.0, 0.0, 2.0}), Vector4f.from(&[_]f32{0.5, 0.5, 0.5, 1.0}), 80);
+    for(lights.items, 0..) |light, i|
+        try renderer.uploadDataToBuffer(@intCast(i * @sizeOf(Light)), lights_buffer, light.toBuffer());
     
 
     // Image Texture
@@ -169,14 +174,13 @@ pub fn main() !void {
         const color_target = RenderPass.ColorTarget{ .texture = swapchain_texture, .clear_color = .{ 0.1, 0.1, 0.1, 1.0 } };
         const depth_target = RenderPass.DepthStencilTarget{ .texture = tex_depth };
 
-        const sampler_binding = material.createSamplerBinding(sampler.id);
-
-        cmd.pushFragmentUniformData(0, u8, binding.toBuffer());
-        cmd.pushFragmentUniformData(1, u8, point_light.toBuffer());
-
         const pass = cmd.createRenderPass(color_target, depth_target) orelse @panic("Could not create RenderPass");
         pass.bindGraphicsPipeline(pipeline);
+
+        const sampler_binding = material.createSamplerBinding(sampler.id);
         pass.bindFragmentSamplers(0, &sampler_binding);
+        pass.bindFragmentStorageBuffers(0, &.{lights_buffer.handle});
+        cmd.pushFragmentUniformData(0, u8, binding.toBuffer());
 
         for (parsed.nodes.?) |node| {
             var transform = node.getTransform();

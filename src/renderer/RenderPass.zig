@@ -1,4 +1,5 @@
 const texture = @import("texture.zig");
+const Buffer = @import("Buffer.zig");
 const GraphicsPipeline = @import("GraphicsPipeline.zig");
 const c = @import("solis").external.c;
 const Self = @This();
@@ -34,9 +35,14 @@ pub fn bindFragmentSamplers(self: Self, index: u32, samplers: []const c.SDL_GPUT
     c.SDL_BindGPUFragmentSamplers(self.handle, index, samplers.ptr, @intCast(samplers.len));
 }
 
+pub fn bindFragmentStorageBuffers(self: Self, index: u32, buffers: []const *c.SDL_GPUBuffer) void {
+    c.SDL_BindGPUFragmentStorageBuffers(self.handle, index, buffers.ptr, @intCast(buffers.len));
+}
+
 pub fn bindVertexBuffers(self: Self, index: u32, bindings: []const c.SDL_GPUBufferBinding) void {
     c.SDL_BindGPUVertexBuffers(self.handle, index, bindings.ptr, @intCast(bindings.len));
 }
+
 pub fn bindIndexBuffers(self: Self, binding: *const c.SDL_GPUBufferBinding, element_size: u32) void {
     c.SDL_BindGPUIndexBuffer(self.handle, binding, element_size);
 }
