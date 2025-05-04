@@ -19,6 +19,7 @@ struct Light {
    vec4 color;
    int type;
    float intensity;
+   vec2 _pad;
 };
 
 layout(set = 3, binding = 1) uniform Lights {

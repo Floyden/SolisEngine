@@ -172,7 +172,7 @@ pub fn main() !void {
         const sampler_binding = material.createSamplerBinding(sampler.id);
 
         cmd.pushFragmentUniformData(0, u8, binding.toBuffer());
-        cmd.pushFragmentUniformData(1, f32, point_light.toBuffer());
+        cmd.pushFragmentUniformData(1, u8, point_light.toBuffer());
 
         const pass = cmd.createRenderPass(color_target, depth_target) orelse @panic("Could not create RenderPass");
         pass.bindGraphicsPipeline(pipeline);

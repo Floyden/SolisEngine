@@ -1,3 +1,4 @@
+const std = @import("std");
 const matrix = @import("matrix.zig");
 const Vector3f = matrix.Vector3f;
 const Vector4f = matrix.Vector4f;
@@ -17,6 +18,10 @@ pub const Light = extern struct {
     color: Vector4f,
     type: Type,
     intensity: f32,
+    _padding: [2]f32 = undefined,
+    comptime {
+        std.debug.assert(@sizeOf(Light) % 16 == 0);
+    }
 
     pub fn createPoint(position: Vector3f, color: Vector4f, intensity: f32) Light {
         return Light {
@@ -38,7 +43,7 @@ pub const Light = extern struct {
         };
     }
     
-    pub fn toBuffer(self: *const Light) *const [@sizeOf(Light)]f32 {
+    pub fn toBuffer(self: *const Light) *const [@sizeOf(Light)]u8 {
         return @alignCast(@ptrCast(self));
     }
 };
