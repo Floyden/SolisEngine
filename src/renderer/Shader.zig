@@ -1,6 +1,7 @@
 const std = @import("std");
 const vertex_data = @import("solis").vertex_data;
 const spirv = @import("solis").external.spirv;
+const c = @import("solis").external.c;
 
 const Self = @This();
 
@@ -20,9 +21,38 @@ pub const Description = struct {
     source_type: SourceType,
 };
 
+pub const ResourceInfo = struct {
+    base_type: u32,
+    vector_width: u32,
+
+    pub fn getElementFormat(self: ResourceInfo) u32 {
+        switch (self.base_type) {
+            13 => { // f32
+                switch (self.vector_width) {
+                    1 => return c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT,
+                    2 => return c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
+                    3 => return c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
+                    4 => return c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+                    else => @panic("ResourceInfo unknown combination"),
+                }
+            },
+            else => @panic("ResourceInfo unknown base_type, probably not implemented"),
+        }
+    }
+
+    pub fn getSize(self: ResourceInfo) u32 {
+        const base_size = switch (self.base_type) {
+            13 => @sizeOf(f32), // f32
+            else => @panic("ResourceInfo.getSize unimplemented base_type"),
+        };
+
+        return base_size * self.vector_width;
+    }
+};
+
 code: std.ArrayList(u32),
 stage: Stage,
-inputs: std.ArrayList(u32),
+inputs: std.ArrayList(ResourceInfo),
 outputs: std.ArrayList(u32),
 uniform_buffers: std.ArrayList(u32),
 storage_buffers: std.ArrayList(u32),
@@ -42,14 +72,14 @@ pub fn init(desc: Description, allocator: std.mem.Allocator) !Self {
     var res = Self{
         .code = code,
         .stage = desc.stage,
-        .inputs = std.ArrayList(u32).init(allocator),
+        .inputs = std.ArrayList(ResourceInfo).init(allocator),
         .outputs = std.ArrayList(u32).init(allocator),
         .uniform_buffers = std.ArrayList(u32).init(allocator),
         .storage_buffers = std.ArrayList(u32).init(allocator),
         .storage_textures = std.ArrayList(u32).init(allocator),
         .samplers = std.ArrayList(u32).init(allocator),
     };
-    res.analyze();
+    try res.analyze();
 
     return res;
 }
@@ -121,7 +151,7 @@ pub fn compileGlslShader(code: []const u8, stage: Stage, destination: *std.Array
     spirv.glslang_program_SPIRV_get(program, @ptrCast(destination.items.ptr));
 }
 
-fn analyze(self: *Self) void {
+fn analyze(self: *Self) !void {
     var context: spirv.spvc_context = undefined;
     if (spirv.spvc_context_create(&context) != 0) @panic("Fail");
     defer spirv.spvc_context_destroy(context);
@@ -140,7 +170,16 @@ fn analyze(self: *Self) void {
 
     // Input
     if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_STAGE_INPUT, &resource_list, &resource_list_size) != 0) @panic("Fail");
-    self.inputs.resize(resource_list_size) catch @panic("OOM");
+    try self.inputs.resize(resource_list_size);
+    for (resource_list[0..resource_list_size]) |res| {
+        const type_handle = spirv.spvc_compiler_get_type_handle(compiler, res.type_id);
+        const location = spirv.spvc_compiler_get_decoration(compiler, res.id, spirv.SpvDecorationLocation);
+
+        self.inputs.items[location] = .{
+            .base_type = spirv.spvc_type_get_basetype(type_handle),
+            .vector_width = spirv.spvc_type_get_vector_size(type_handle),
+        };
+    }
 
     // Output
     if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_STAGE_OUTPUT, &resource_list, &resource_list_size) != 0) @panic("Fail");
@@ -149,12 +188,12 @@ fn analyze(self: *Self) void {
     // uniform
     if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_UNIFORM_BUFFER, &resource_list, &resource_list_size) != 0) @panic("Fail");
     self.uniform_buffers.resize(resource_list_size) catch @panic("OOM");
-    
-    // storage buffers 
+
+    // storage buffers
     if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_STORAGE_BUFFER, &resource_list, &resource_list_size) != 0) @panic("Fail");
     self.storage_buffers.resize(resource_list_size) catch @panic("OOM");
-    
-    // storage buffers 
+
+    // storage buffers
     if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_STORAGE_IMAGE, &resource_list, &resource_list_size) != 0) @panic("Fail");
     self.storage_textures.resize(resource_list_size) catch @panic("OOM");
 

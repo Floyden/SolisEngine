@@ -41,45 +41,24 @@ pub fn createGraphicsPipeline(self: Renderer, desc: GraphicsPipeline.Description
     // Graphics Pipeline
     const color_target_desc = std.mem.zeroInit(c.SDL_GPUColorTargetDescription, .{ .format = c.SDL_GetGPUSwapchainTextureFormat(self.device, self.window.handle) });
 
+    var vertex_offset: u32 = 0;
+    var vertex_attributes: [16]c.SDL_GPUVertexAttribute = undefined;
+    for (desc.vertex_shader.inputs.items, 0..) |input, i| {
+        vertex_attributes[i] = .{
+            .location = @intCast(i),
+            .buffer_slot = 0,
+            .format = input.getElementFormat(),
+            .offset = vertex_offset,
+        };
+        vertex_offset += input.getSize();
+    }
+
     const vertex_buffer_desc = std.mem.zeroInit(c.SDL_GPUVertexBufferDescription, .{
         .slot = 0,
         .input_rate = c.SDL_GPU_VERTEXINPUTRATE_VERTEX,
         .instance_step_rate = 0,
-        .pitch = @sizeOf(f32) * 15,
+        .pitch = vertex_offset,
     });
-
-    const vertex_attributes = [_]c.SDL_GPUVertexAttribute{
-        std.mem.zeroInit(c.SDL_GPUVertexAttribute, .{
-            .buffer_slot = 0,
-            .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
-            .location = 0,
-            .offset = 0,
-        }),
-        std.mem.zeroInit(c.SDL_GPUVertexAttribute, .{
-            .buffer_slot = 0,
-            .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
-            .location = 1,
-            .offset = @sizeOf(f32) * 3,
-        }),
-        std.mem.zeroInit(c.SDL_GPUVertexAttribute, .{
-            .buffer_slot = 0,
-            .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
-            .location = 2,
-            .offset = @sizeOf(f32) * 3 * 2,
-        }),
-        std.mem.zeroInit(c.SDL_GPUVertexAttribute, .{
-            .buffer_slot = 0,
-            .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
-            .location = 3,
-            .offset = @sizeOf(f32) * 3 * 3,
-        }),
-        std.mem.zeroInit(c.SDL_GPUVertexAttribute, .{
-            .buffer_slot = 0,
-            .format = c.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
-            .location = 4,
-            .offset = @sizeOf(f32) * 11,
-        }),
-    };
 
     const pipelinedesc = std.mem.zeroInit(c.SDL_GPUGraphicsPipelineCreateInfo, .{
         .target_info = .{
@@ -104,7 +83,7 @@ pub fn createGraphicsPipeline(self: Renderer, desc: GraphicsPipeline.Description
         .vertex_input_state = .{
             .num_vertex_buffers = 1,
             .vertex_buffer_descriptions = &vertex_buffer_desc,
-            .num_vertex_attributes = vertex_attributes.len,
+            .num_vertex_attributes = @as(u32, @intCast(desc.vertex_shader.inputs.items.len)),
             .vertex_attributes = &vertex_attributes,
         },
         .rasterizer_state = .{
@@ -230,7 +209,7 @@ pub fn createBufferNamed(self: *Renderer, size: u32, usage_flags: u32, name: [:0
     _ = c.SDL_SetStringProperty(buffer_desc.props, c.SDL_PROP_GPU_BUFFER_CREATE_NAME_STRING, name);
     const buf_vertex = c.SDL_CreateGPUBuffer(self.device, &buffer_desc) orelse return SDL_ERROR.Fail;
     c.SDL_DestroyProperties(buffer_desc.props);
-    return .{.handle = buf_vertex, .size = size};
+    return .{ .handle = buf_vertex, .size = size };
 }
 
 pub fn createBufferFromData(self: *Renderer, data: []const u8, usage_flags: u32, name: [:0]const u8) !Buffer {
