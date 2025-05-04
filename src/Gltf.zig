@@ -130,7 +130,7 @@ const Node = struct {
     extras: ?[]const u8 = null, // TODO: should be json, could be any type actually
 
     pub fn getTransform(self: Node) Transformation {
-        // if (self.matrix) |matrix| return Transformation.from_matrix(Matrix4f.from(&matrix));
+        if (self.matrix) |matrix| return Transformation.fromMatrix(Matrix4f.from(&matrix));
         return Transformation{
             .translation = .from(&self.translation),
             .rotation = .fromXYZW(self.rotation),

@@ -125,7 +125,6 @@ pub fn main() !void {
     camera.position[2] = -2.5;
 
     // Main loop
-    var angle: f32 = 0.0;
     const point_light = light.PointLight{
         .position = .{ 5.0, 0.0, 2.0, 1.0 },
         .color = .{ 0.5, 0.5, 0.5, 1.0 },
@@ -162,8 +161,6 @@ pub fn main() !void {
             camera.aspect = window.getAspect();
         }
 
-        angle += 1;
-
         const color_target = RenderPass.ColorTarget{ .texture = swapchain_texture, .clear_color = .{ 0.1, 0.1, 0.1, 1.0 } };
         const depth_target = RenderPass.DepthStencilTarget{ .texture = tex_depth };
 
@@ -178,7 +175,7 @@ pub fn main() !void {
 
         for (parsed.nodes.?) |node| {
             var transform = node.getTransform();
-            const model_matrix = transform.to_matrix().transpose();
+            const model_matrix = transform.toMatrix();
             var matrices = .{ model_matrix, model_matrix };
             matrices[0] = matrices[0].mult(camera.viewMatrix());
             matrices[0] = matrices[0].mult(camera.projectionMatrix());

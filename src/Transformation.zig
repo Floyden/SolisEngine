@@ -9,7 +9,7 @@ translation: matrix.Vector3f = .zero,
 scale: matrix.Vector3f = .ones,
 rotation: quaternion.Quaternion(f32) = .identity,
 
-pub fn from_matrix(transform: Matrix4f) Self {
+pub fn fromMatrix(transform: Matrix4f) Self {
     const translation = matrix.Vector3f.from(transform.column(3).data[0..2]);
     const scale = matrix.Vector3f.from(&[_]f32{ transform.column(0).length(), transform.column(1).length(), transform.column(2).length() });
 
@@ -26,7 +26,7 @@ pub fn from_matrix(transform: Matrix4f) Self {
     };
 }
 
-pub fn to_matrix(self: Self) Matrix4f {
+pub fn toMatrix(self: Self) Matrix4f {
     var res = Matrix4f.diagonal_init_slice(self.scale.data[0..2]);
     res = res.mult(self.rotation.toMatrix4());
 

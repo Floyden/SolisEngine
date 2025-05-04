@@ -281,12 +281,11 @@ pub fn perspective(fovy: f32, aspect: f32, znear: f32, zfar: f32) Matrix4f {
     const f = 1.0 / @tan(fovy * 0.5);
     var res = Matrix4f.zero;
 
-    res.data[0] = f / aspect;
-    res.data[5] = f;
-    res.data[10] = (zfar) / (znear - zfar);
-    res.data[11] = -1.0;
-    res.data[14] = (znear * zfar) / (znear - zfar);
-    res.data[15] = 0.0;
+    res.atMut(0, 0).* = f / aspect;
+    res.atMut(1,1).* = f;
+    res.atMut(2,2).* = (zfar) / (znear - zfar);
+    res.atMut(2,3).* = (znear * zfar) / (znear - zfar);
+    res.atMut(3,2).* = -1.0;
 
     return res;
 }
