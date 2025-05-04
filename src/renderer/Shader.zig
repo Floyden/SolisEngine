@@ -24,7 +24,9 @@ code: std.ArrayList(u32),
 stage: Stage,
 inputs: std.ArrayList(u32),
 outputs: std.ArrayList(u32),
-uniforms: std.ArrayList(u32),
+uniform_buffers: std.ArrayList(u32),
+storage_buffers: std.ArrayList(u32),
+storage_textures: std.ArrayList(u32),
 samplers: std.ArrayList(u32),
 
 pub fn init(desc: Description, allocator: std.mem.Allocator) !Self {
@@ -42,7 +44,9 @@ pub fn init(desc: Description, allocator: std.mem.Allocator) !Self {
         .stage = desc.stage,
         .inputs = std.ArrayList(u32).init(allocator),
         .outputs = std.ArrayList(u32).init(allocator),
-        .uniforms = std.ArrayList(u32).init(allocator),
+        .uniform_buffers = std.ArrayList(u32).init(allocator),
+        .storage_buffers = std.ArrayList(u32).init(allocator),
+        .storage_textures = std.ArrayList(u32).init(allocator),
         .samplers = std.ArrayList(u32).init(allocator),
     };
     res.analyze();
@@ -54,7 +58,9 @@ pub fn deinit(self: *Self) void {
     self.code.deinit();
     self.inputs.deinit();
     self.outputs.deinit();
-    self.uniforms.deinit();
+    self.uniform_buffers.deinit();
+    self.storage_buffers.deinit();
+    self.storage_textures.deinit();
     self.samplers.deinit();
 }
 
@@ -142,7 +148,15 @@ fn analyze(self: *Self) void {
 
     // uniform
     if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_UNIFORM_BUFFER, &resource_list, &resource_list_size) != 0) @panic("Fail");
-    self.uniforms.resize(resource_list_size) catch @panic("OOM");
+    self.uniform_buffers.resize(resource_list_size) catch @panic("OOM");
+    
+    // storage buffers 
+    if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_STORAGE_BUFFER, &resource_list, &resource_list_size) != 0) @panic("Fail");
+    self.storage_buffers.resize(resource_list_size) catch @panic("OOM");
+    
+    // storage buffers 
+    if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_STORAGE_IMAGE, &resource_list, &resource_list_size) != 0) @panic("Fail");
+    self.storage_textures.resize(resource_list_size) catch @panic("OOM");
 
     // num_samplers
     if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_SAMPLED_IMAGE, &resource_list, &resource_list_size) != 0) @panic("Fail");

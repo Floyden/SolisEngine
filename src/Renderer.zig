@@ -287,7 +287,9 @@ pub fn acquireCommandBuffer(self: *Renderer) ?CommandBuffer {
 }
 
 pub fn loadSPIRVShader(device: *c.SDL_GPUDevice, shader: Shader) !?*c.SDL_GPUShader {
-    const numBuffers: u32 = @intCast(shader.uniforms.items.len);
+    const num_uniform_buffers: u32 = @intCast(shader.uniform_buffers.items.len);
+    const num_storage_buffers: u32 = @intCast(shader.storage_buffers.items.len);
+    const num_storage_textures: u32 = @intCast(shader.storage_textures.items.len);
     const stage: u32 = switch (shader.stage) {
         .Vertex => c.SDL_GPU_SHADERSTAGE_VERTEX,
         .Fragment => c.SDL_GPU_SHADERSTAGE_FRAGMENT,
@@ -295,7 +297,9 @@ pub fn loadSPIRVShader(device: *c.SDL_GPUDevice, shader: Shader) !?*c.SDL_GPUSha
 
     const code: []const u8 = @ptrCast(shader.code.items);
     const sci = std.mem.zeroInit(c.SDL_GPUShaderCreateInfo, .{
-        .num_uniform_buffers = numBuffers,
+        .num_uniform_buffers = num_uniform_buffers,
+        .num_storage_buffers = num_storage_buffers,
+        .num_storage_textures = num_storage_textures,
         .num_samplers = @as(u32, @intCast(shader.samplers.items.len)),
 
         .format = c.SDL_GPU_SHADERFORMAT_SPIRV,
