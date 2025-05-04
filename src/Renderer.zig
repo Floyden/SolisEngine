@@ -10,6 +10,7 @@ pub const sampler = @import("renderer/sampler.zig");
 pub const texture = @import("renderer/texture.zig");
 pub const GraphicsPipeline = @import("renderer/GraphicsPipeline.zig");
 pub const Shader = @import("renderer/Shader.zig");
+pub const Buffer = @import("renderer/Buffer.zig");
 
 const Renderer = @This();
 window: *Window,
@@ -107,8 +108,8 @@ pub fn createGraphicsPipeline(self: Renderer, desc: GraphicsPipeline.Description
             .vertex_attributes = &vertex_attributes,
         },
         .rasterizer_state = .{
-            // .cull_mode = c.SDL_GPU_CULLMODE_FRONT,
-            // .front_face = c.SDL_GPU_FRONTFACE_CLOCKWISE,
+            .cull_mode = c.SDL_GPU_CULLMODE_FRONT,
+            .front_face = c.SDL_GPU_FRONTFACE_CLOCKWISE,
         },
         .props = 0,
     });
@@ -220,7 +221,7 @@ pub fn releaseSampler(self: *Renderer, handle: sampler.Handle) void {
     _ = c.SDL_ReleaseGPUSampler(self.device, handle.id);
 }
 
-pub fn createBufferNamed(self: *Renderer, size: u32, usage_flags: u32, name: [:0]const u8) !*c.SDL_GPUBuffer {
+pub fn createBufferNamed(self: *Renderer, size: u32, usage_flags: u32, name: [:0]const u8) !Buffer {
     const buffer_desc = c.SDL_GPUBufferCreateInfo{
         .size = size,
         .usage = usage_flags,
@@ -229,10 +230,10 @@ pub fn createBufferNamed(self: *Renderer, size: u32, usage_flags: u32, name: [:0
     _ = c.SDL_SetStringProperty(buffer_desc.props, c.SDL_PROP_GPU_BUFFER_CREATE_NAME_STRING, name);
     const buf_vertex = c.SDL_CreateGPUBuffer(self.device, &buffer_desc) orelse return SDL_ERROR.Fail;
     c.SDL_DestroyProperties(buffer_desc.props);
-    return buf_vertex;
+    return .{.handle = buf_vertex, .size = size};
 }
 
-pub fn createBufferFromData(self: *Renderer, data: []const u8, usage_flags: u32, name: [:0]const u8) !*c.SDL_GPUBuffer {
+pub fn createBufferFromData(self: *Renderer, data: []const u8, usage_flags: u32, name: [:0]const u8) !Buffer {
     const buffer_size: u32 = @intCast(data.len);
     const buffer = try self.createBufferNamed(buffer_size, usage_flags, name);
     const buf_transfer = self.createTransferBufferNamed(buffer_size, c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "Transfer Buffer") catch |e| return e;
@@ -244,13 +245,13 @@ pub fn createBufferFromData(self: *Renderer, data: []const u8, usage_flags: u32,
     defer cmd.submit();
 
     cmd.beginCopyPass();
-    cmd.uploadToBuffer(buf_transfer, buffer, buffer_size);
+    cmd.uploadToBuffer(buf_transfer, buffer);
     cmd.endCopyPass();
     return buffer;
 }
 
-pub fn releaseBuffer(self: *Renderer, buffer: *c.SDL_GPUBuffer) void {
-    _ = c.SDL_ReleaseGPUBuffer(self.device, buffer);
+pub fn releaseBuffer(self: *Renderer, buffer: Buffer) void {
+    _ = c.SDL_ReleaseGPUBuffer(self.device, buffer.handle);
 }
 
 pub fn createTransferBufferNamed(self: *Renderer, size: u32, usage_flags: u32, name: [:0]const u8) !*c.SDL_GPUTransferBuffer {

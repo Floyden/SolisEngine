@@ -21,6 +21,7 @@ const Vector4f = matrix.Vector4f;
 const TextureFormat = @import("renderer/texture.zig").Format;
 const Texture = @import("renderer/texture.zig").Handle;
 const RenderPass = @import("renderer/RenderPass.zig");
+const Buffer = @import("renderer/Buffer.zig");
 const Shader = @import("renderer/Shader.zig");
 const ShaderImporter = @import("renderer/ShaderImporter.zig");
 const defaults = @import("defaults.zig");
@@ -82,7 +83,7 @@ pub fn main() !void {
     defer renderer.releaseTexture(tex_depth);
 
     // Buffers
-    const BufferPair = struct { vertex_buffer: *c.SDL_GPUBuffer, index_buffer: ?*c.SDL_GPUBuffer };
+    const BufferPair = struct { vertex_buffer: Buffer, index_buffer: ?Buffer };
     var buffers = std.ArrayList(BufferPair).init(allocator);
     for (meshes.items) |item| {
         const vertex_buffer = try renderer.createBufferFromData(item.data.?, c.SDL_GPU_BUFFERUSAGE_VERTEX, "Vertex Buffer");
@@ -97,6 +98,14 @@ pub fn main() !void {
         }
         buffers.deinit();
     }
+
+    // Lights
+    // var lights = std.ArrayList(light.Light).init(allocator);
+    const lights_buffer = try renderer.createBufferNamed(@sizeOf(light.Light) + @sizeOf(u32), c.SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ, "Lights");
+    defer renderer.releaseBuffer(lights_buffer);
+
+    const point_light = light.Light.createPoint(Vector3f.from(&[_]f32{5.0, 0.0, 2.0}), Vector4f.from(&[_]f32{0.5, 0.5, 0.5, 1.0}), 80);
+    
 
     // Image Texture
     const images = [_]?assets.Handle(Image){
@@ -127,8 +136,6 @@ pub fn main() !void {
     camera.position[2] = -2.5;
 
     // Main loop
-    const point_light = light.Light.createPoint(Vector3f.from(&[_]f32{5.0, 0.0, 2.0}), Vector4f.from(&[_]f32{0.5, 0.5, 0.5, 1.0}), 80);
-
     var done = false;
     var event: c.SDL_Event = undefined;
     while (!done) {
@@ -181,11 +188,11 @@ pub fn main() !void {
             cmd.pushVertexUniformData(0, f32, @as(*[32]f32, @ptrCast(&matrices)));
 
             const buffer = buffers.items[node.mesh.?];
-            const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buffer.vertex_buffer, .offset = 0 };
+            const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buffer.vertex_buffer.handle, .offset = 0 };
             pass.bindVertexBuffers(0, &.{vertex_binding});
 
             if (buffer.index_buffer) |index| {
-                const index_binding = c.SDL_GPUBufferBinding{ .buffer = index, .offset = 0 };
+                const index_binding = c.SDL_GPUBufferBinding{ .buffer = index.handle, .offset = 0 };
                 pass.bindIndexBuffers(&index_binding, meshes.items[0].index_buffer.?.elementType());
                 pass.drawPrimitivesIndexed(meshes.items[0].index_buffer.?.size());
             } else {
