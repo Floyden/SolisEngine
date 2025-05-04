@@ -85,7 +85,7 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
 
         pub fn multMut(self: *Self, other: anytype) void {
             const OtherType = @TypeOf(other);
-            
+
             // Scalar multiplication
             if (comptime OtherType == T) {
                 for (0..Rows * Cols) |i| self.data[i] *= other;
@@ -233,38 +233,37 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
 
         /// Returns a copy of the matrix with the new dimensions.
         /// New diagonal elements are set to 1, all other elements are set to 0.
-        pub fn resize(self: Self, comptime NewRows: usize,  comptime NewCols: usize) Matrix(T, NewRows, NewCols) {
+        pub fn resize(self: Self, comptime NewRows: usize, comptime NewCols: usize) Matrix(T, NewRows, NewCols) {
             var res = Matrix(T, NewRows, NewCols).diagonal_init(1);
-            for(0..@min(NewRows, Rows)) |y| {
+            for (0..@min(NewRows, Rows)) |y| {
                 // Copy values
-                for(0..@min(NewCols, Cols)) |x| {
-                    if(comptime IsVector){
+                for (0..@min(NewCols, Cols)) |x| {
+                    if (comptime IsVector) {
                         const idx = @max(x, y);
                         res.atMut(idx).* = self.at(idx);
                     } else {
-                        res.atMut(x,y).* = self.at(x,y);
+                        res.atMut(x, y).* = self.at(x, y);
                     }
                 }
             }
             return res;
         }
-        
+
         /// Returns a copy of the matrix with the new dimensions.
         /// New  elements are set to val.
-        pub fn resizeFill(self: Self, comptime NewRows: usize,  comptime NewCols: usize, val: T) Matrix(T, NewRows, NewCols) {
-            var res : Matrix(T, NewRows, NewCols) = undefined;
+        pub fn resizeFill(self: Self, comptime NewRows: usize, comptime NewCols: usize, val: T) Matrix(T, NewRows, NewCols) {
+            var res: Matrix(T, NewRows, NewCols) = undefined;
             @memset(&res.data, val); // TODO: Writing twice in the same location should be avoided
-            for(0..@min(NewRows, Rows)) |y| {
+            for (0..@min(NewRows, Rows)) |y| {
                 // Copy values
-                for(0..@min(NewCols, Cols)) |x| {
-                    if(comptime IsVector){
+                for (0..@min(NewCols, Cols)) |x| {
+                    if (comptime IsVector) {
                         const idx = @max(x, y);
                         res.atMut(idx).* = self.at(idx);
                     } else {
-                        res.atMut(x,y).* = self.at(x,y);
+                        res.atMut(x, y).* = self.at(x, y);
                     }
                 }
-
             }
             return res;
         }
@@ -278,7 +277,7 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
         /// Returns a matrix with all elements set to one.
         pub const ones: Self = .{ .data = [_]T{1} ** (Rows * Cols) };
         /// Returns the identity matrix. Only valid for square matrices
-        pub const identity = if(IsSquare) diagonal_init(1);
+        pub const identity = if (IsSquare) diagonal_init(1);
     };
 }
 
@@ -308,10 +307,10 @@ pub fn perspective(fovy: f32, aspect: f32, znear: f32, zfar: f32) Matrix4f {
     var res = Matrix4f.zero;
 
     res.atMut(0, 0).* = f / aspect;
-    res.atMut(1,1).* = f;
-    res.atMut(2,2).* = (zfar) / (znear - zfar);
-    res.atMut(2,3).* = (znear * zfar) / (znear - zfar);
-    res.atMut(3,2).* = -1.0;
+    res.atMut(1, 1).* = f;
+    res.atMut(2, 2).* = (zfar) / (znear - zfar);
+    res.atMut(2, 3).* = (znear * zfar) / (znear - zfar);
+    res.atMut(3, 2).* = -1.0;
 
     return res;
 }

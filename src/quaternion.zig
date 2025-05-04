@@ -103,9 +103,9 @@ pub fn Quaternion(comptime T: type) type {
                 2 * (ww + zz) - 1,
             });
         }
-        
+
         pub fn toMatrix4(self: Self) Matrix4f {
-            return self.toMatrix3().resize(4,4);
+            return self.toMatrix3().resize(4, 4);
         }
     };
 }

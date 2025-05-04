@@ -102,15 +102,14 @@ pub fn main() !void {
     // Lights
     var lights = std.ArrayList(Light).init(allocator);
     defer lights.deinit();
-    try lights.append(Light.createPoint(Vector3f.from(&[_]f32{5.0, 0.0, 2.0}), Vector4f.from(&[_]f32{1.0, 1.0, 1.0, 1.0}), 40));
-    try lights.append(Light.createDirectional(Vector3f.from(&[_]f32{-1.0, 0.0, 2.0}).normalize(), Vector4f.from(&[_]f32{1.0, 0.0, 0.0, 1.0}), 80));
+    try lights.append(Light.createPoint(Vector3f.from(&[_]f32{ 5.0, 0.0, 2.0 }), Vector4f.from(&[_]f32{ 1.0, 1.0, 1.0, 1.0 }), 40));
+    try lights.append(Light.createDirectional(Vector3f.from(&[_]f32{ -1.0, 0.0, 2.0 }).normalize(), Vector4f.from(&[_]f32{ 1.0, 0.0, 0.0, 1.0 }), 80));
 
     const lights_buffer = try renderer.createBufferNamed(@intCast(lights.items.len * @sizeOf(Light)), c.SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ, "Lights");
     defer renderer.releaseBuffer(lights_buffer);
 
-    for(lights.items, 0..) |light, i|
+    for (lights.items, 0..) |light, i|
         try renderer.uploadDataToBuffer(@intCast(i * @sizeOf(Light)), lights_buffer, light.toBuffer());
-    
 
     // Image Texture
     const images = [_]?assets.Handle(Image){
