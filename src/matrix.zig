@@ -237,8 +237,34 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             var res = Matrix(T, NewRows, NewCols).diagonal_init(1);
             for(0..@min(NewRows, Rows)) |y| {
                 // Copy values
-                for(0..@min(NewCols, Cols)) |x| 
-                    res.atMut(x,y).* = self.at(x,y);
+                for(0..@min(NewCols, Cols)) |x| {
+                    if(comptime IsVector){
+                        const idx = @max(x, y);
+                        res.atMut(idx).* = self.at(idx);
+                    } else {
+                        res.atMut(x,y).* = self.at(x,y);
+                    }
+                }
+            }
+            return res;
+        }
+        
+        /// Returns a copy of the matrix with the new dimensions.
+        /// New  elements are set to val.
+        pub fn resizeFill(self: Self, comptime NewRows: usize,  comptime NewCols: usize, val: T) Matrix(T, NewRows, NewCols) {
+            var res : Matrix(T, NewRows, NewCols) = undefined;
+            @memset(&res.data, val); // TODO: Writing twice in the same location should be avoided
+            for(0..@min(NewRows, Rows)) |y| {
+                // Copy values
+                for(0..@min(NewCols, Cols)) |x| {
+                    if(comptime IsVector){
+                        const idx = @max(x, y);
+                        res.atMut(idx).* = self.at(idx);
+                    } else {
+                        res.atMut(x,y).* = self.at(x,y);
+                    }
+                }
+
             }
             return res;
         }

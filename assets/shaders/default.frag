@@ -9,11 +9,18 @@ layout(set = 3, binding = 0) uniform MaterialValues {
    float metallic;
 } material; 
 
-layout(set = 3, binding = 1) uniform Light { 
-   vec4 position; 
-   vec4 color; 
-   float intensity; 
-} light;
+struct Light {
+   vec4 position;
+   vec4 direction;
+   vec4 color;
+   int type;
+   float intensity;
+};
+
+layout(set = 3, binding = 1) uniform Lights {
+   Light lights[256];
+   int numLights;
+};
 
 layout(location = 0) in vec4 in_color;
 layout(location = 1) in vec4 in_position;
@@ -31,15 +38,15 @@ void main() {
    vec3 spec_color = mix(F0, base_color.rgb, metallic);
    vec3 ambient = 0.1 * (diffuse_color * spec_color);
 
-   vec4 light_dir = light.position - in_position;
+   vec4 light_dir = lights[0].position - in_position;
    float distance = length(light_dir);
 
    vec3 normal_tex = texture(normalSampler, in_uv).xyz * 2 - 1;
    vec3 normal = normalize(in_tbn * normal_tex);
  
    float diff = clamp(dot(normal, normalize(light_dir.xyz)), 0.1, 1.0);
-   float attenuation = light.intensity / (distance * distance);
+   float attenuation = lights[0].intensity / (distance * distance);
 
-   vec3 diffuse = diffuse_color * light.color.rgb * attenuation * diff;
+   vec3 diffuse = diffuse_color * lights[0].color.rgb * attenuation * diff;
    out_color = vec4(diffuse + ambient, base_color.a);
 }

@@ -16,6 +16,8 @@ pub const Image = @import("Image.zig");
 pub const assets = @import("assets.zig");
 pub const mesh = @import("mesh.zig");
 pub const matrix = @import("matrix.zig");
+const Vector3f = matrix.Vector3f;
+const Vector4f = matrix.Vector4f;
 const TextureFormat = @import("renderer/texture.zig").Format;
 const Texture = @import("renderer/texture.zig").Handle;
 const RenderPass = @import("renderer/RenderPass.zig");
@@ -125,11 +127,7 @@ pub fn main() !void {
     camera.position[2] = -2.5;
 
     // Main loop
-    const point_light = light.PointLight{
-        .position = .{ 5.0, 0.0, 2.0, 1.0 },
-        .color = .{ 0.5, 0.5, 0.5, 1.0 },
-        .intensity = 80.0,
-    };
+    const point_light = light.Light.createPoint(Vector3f.from(&[_]f32{5.0, 0.0, 2.0}), Vector4f.from(&[_]f32{0.5, 0.5, 0.5, 1.0}), 80);
 
     var done = false;
     var event: c.SDL_Event = undefined;
