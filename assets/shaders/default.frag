@@ -32,23 +32,35 @@ layout(location = 3) in mat3 in_tbn;
 
 layout(location = 0) out vec4 out_color; 
 
+const float PI = 3.141592653589793;
 const vec3 F0 = vec3(0.04);
 
-vec3 calculateLight(Light light, vec3 normal) {
-   vec4 result;
+// Returns (dir, distance)
+vec4 lightDirection(Light light) {
+   vec4 light_dir = vec4(0);
    if (light.type == LIGHT_TYPE_POINT) {
-      vec4 light_dir = light.position - in_position;
-      float distance = length(light_dir);
+      vec3 dir = (light.position - in_position).xyz;
+      light_dir = vec4(normalize(dir), length(dir.xyz));
+   } else if (light.type == LIGHT_TYPE_DIRECTIONAL) {
+      light_dir = vec4(normalize(-light.direction.xyz), 0.0);
+   }
 
-      float diff = clamp(dot(normal, normalize(light_dir.xyz)), 0.0, 1.0);
-      float attenuation = light.intensity / (distance * distance);
-      result = light.color * attenuation * diff;
-   } else if(light.type == LIGHT_TYPE_DIRECTIONAL) {
-      vec3 light_dir = normalize(-light.direction.xyz);
-      float diff = max(dot(normal, light_dir), 0.0);
-      result = light.color * diff * light.intensity;
-   } 
-   return result.xyz;
+   return light_dir;
+}
+
+vec3 calculateLight(Light light, vec3 normal, vec3 diffuse_color) {
+   vec3 result;
+   vec4 light_dir = lightDirection(light);
+   float attenuation = light.intensity;
+   if(light_dir.w > 1.0)
+      attenuation *= (1.0 / (light_dir.w * light_dir.w));
+
+   float n_dot_dir = clamp(dot(normal, light_dir.xyz), 0.0, 1.0);
+
+   vec3 diffuse_contrib = diffuse_color * (1.0 / PI);
+
+   result = light.color.xyz * (diffuse_contrib) * n_dot_dir * attenuation;
+   return result;
 }
 
 void main() {
@@ -63,7 +75,7 @@ void main() {
 
    vec3 light = vec3(0) ;
    for(int i = 0; i < lights.length(); ++i)
-      light += calculateLight(lights[i], normal).xyz;
+      light += calculateLight(lights[i], normal, diffuse_color);
    vec3 diffuse = diffuse_color * light;
    out_color = vec4(diffuse + ambient, base_color.a);
 }
