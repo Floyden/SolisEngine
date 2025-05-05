@@ -26,20 +26,33 @@ layout(set = 3, binding = 0) uniform MaterialValues {
 } material; 
 
 layout(location = 0) in vec4 in_color;
-layout(location = 1) in vec4 in_position;
-layout(location = 2) in vec2 in_uv;
-layout(location = 3) in mat3 in_tbn;
+layout(location = 1) in vec4 in_world_position;
+layout(location = 2) in vec4 in_view_position;
+layout(location = 3) in vec2 in_uv;
+layout(location = 4) in mat3 in_tbn;
 
 layout(location = 0) out vec4 out_color; 
 
 const float PI = 3.141592653589793;
 const vec3 F0 = vec3(0.04);
 
+struct LightParameters {
+   vec3 diffuse_color;
+   vec3 specular_color;
+   vec3 normal;
+   vec3 view_dir;
+};
+
+vec3 specularReflection(float cos_theta, vec3 f0) {
+   //Fresnel-Schlick approximation
+   return f0 + (vec3(1.0) - f0) * pow(1.0 - cos_theta, 5.0);
+}
+
 // Returns (dir, distance)
 vec4 lightDirection(Light light) {
    vec4 light_dir = vec4(0);
    if (light.type == LIGHT_TYPE_POINT) {
-      vec3 dir = (light.position - in_position).xyz;
+      vec3 dir = (light.position - in_world_position).xyz;
       light_dir = vec4(normalize(dir), length(dir.xyz));
    } else if (light.type == LIGHT_TYPE_DIRECTIONAL) {
       light_dir = vec4(normalize(-light.direction.xyz), 0.0);
@@ -48,18 +61,21 @@ vec4 lightDirection(Light light) {
    return light_dir;
 }
 
-vec3 calculateLight(Light light, vec3 normal, vec3 diffuse_color) {
+vec3 calculateLight(Light light, LightParameters parameters) {
    vec3 result;
    vec4 light_dir = lightDirection(light);
    float attenuation = light.intensity;
    if(light_dir.w > 1.0)
       attenuation *= (1.0 / (light_dir.w * light_dir.w));
 
-   float n_dot_dir = clamp(dot(normal, light_dir.xyz), 0.0, 1.0);
+   vec3 half_dir = normalize(light_dir.xyz + parameters.view_dir);
+   float n_dot_ldir = clamp(dot(parameters.normal, light_dir.xyz), 0.0, 1.0);
+   float vdir_dot_hdir = clamp(dot(parameters.view_dir, half_dir), 0.0, 1.0);
 
-   vec3 diffuse_contrib = diffuse_color * (1.0 / PI);
+   vec3 diffuse_contrib = parameters.diffuse_color * (1.0 / PI);
+   vec3 specular_contrib = specularReflection(vdir_dot_hdir, parameters.specular_color);
 
-   result = light.color.xyz * (diffuse_contrib) * n_dot_dir * attenuation;
+   result = light.color.xyz * (diffuse_contrib + specular_contrib) * n_dot_ldir * attenuation;
    return result;
 }
 
@@ -73,9 +89,15 @@ void main() {
 
    vec3 normal = normalize(in_tbn * normal_tex);
 
+   LightParameters parameters;
+   parameters.diffuse_color = diffuse_color;
+   parameters.specular_color = spec_color;
+   parameters.normal = normal;
+   parameters.view_dir = normalize(-in_view_position.xyz);
+
    vec3 light = vec3(0) ;
    for(int i = 0; i < lights.length(); ++i)
-      light += calculateLight(lights[i], normal, diffuse_color);
+      light += calculateLight(lights[i], parameters);
    vec3 diffuse = diffuse_color * light;
    out_color = vec4(diffuse + ambient, base_color.a);
 }

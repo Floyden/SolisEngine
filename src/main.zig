@@ -139,6 +139,7 @@ pub fn main() !void {
     var camera = Camera{ .aspect = window.getAspect() };
     camera.position[2] = -2.5;
 
+    var angle :f32 = 0;
     // Main loop
     var done = false;
     var event: c.SDL_Event = undefined;
@@ -151,6 +152,10 @@ pub fn main() !void {
             }
         }
         c.SDL_Delay(16);
+        angle += 0.03;
+        lights.items[1].direction = Vector4f.from(&[_]f32{@sin(angle), 0.0, @cos(angle), 0.0});
+        try renderer.uploadDataToBuffer(@intCast(@sizeOf(Light)), lights_buffer, lights.items[1].toBuffer());
+
         const cmd = renderer.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
         defer cmd.submit();
 
@@ -184,9 +189,10 @@ pub fn main() !void {
         for (parsed.nodes.?) |node| {
             var transform = node.getTransform();
             const model_matrix = transform.toMatrix();
-            var matrices = .{ model_matrix, model_matrix };
-            matrices[0] = matrices[0].mult(camera.viewMatrix());
-            matrices[0] = matrices[0].mult(camera.projectionMatrix());
+            // MVP, model, MV
+            var matrices = [_]matrix.Matrix4f{ model_matrix, model_matrix, undefined };
+            matrices[2] = matrices[0].mult(camera.viewMatrix());
+            matrices[0] = matrices[2].mult(camera.projectionMatrix());
 
             cmd.pushVertexUniformData(0, f32, @as(*[32]f32, @ptrCast(&matrices)));
 
