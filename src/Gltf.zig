@@ -313,7 +313,7 @@ pub fn parseMaterials(self: Self, allocator: std.mem.Allocator, textures: []cons
         if(mat.pbrMetallicRoughness) |pbr| {
             material.*.base_color = pbr.baseColorFactor;
             material.*.base_color_texture = if(pbr.baseColorTexture) |idx| textures[idx.index] else null;
-            material.*.metallic_texture = if(pbr.metallicRoughnessTexture) |idx| textures[idx.index] else null;
+            material.*.metallic_roughness_texture = if(pbr.metallicRoughnessTexture) |idx| textures[idx.index] else null;
             material.*.roughness = pbr.roughnessFactor;
             material.*.metallic = pbr.metallicFactor;
         }

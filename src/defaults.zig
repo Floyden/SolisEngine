@@ -14,7 +14,7 @@ pub const TextureDefaults = struct {
     pub fn init(allocator: std.mem.Allocator, renderer: *Renderer) !TextureDefaults {
         const base = Image.init_fill(&[_]u8{ 255, 255, 255, 255 }, .{ .width = 1, .height = 1 }, .rgba8unorm, allocator);
         const normals = Image.init_fill(&[_]u8{ 128, 128, 255, 255 }, .{ .width = 1, .height = 1 }, .rgba8unorm, allocator);
-        const metal_rough = Image.init_fill(&[_]u8{ 0, 0, 0, 255 }, .{ .width = 1, .height = 1 }, .rgba8unorm, allocator);
+        const metal_rough = Image.init_fill(&[_]u8{ 255, 255, 255, 255 }, .{ .width = 1, .height = 1 }, .rgba8unorm, allocator);
 
         const base_tex = try renderer.createTextureFromImage(base);
         const normals_tex = try renderer.createTextureFromImage(normals);

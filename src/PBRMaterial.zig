@@ -8,16 +8,25 @@ const Self = @This();
 base_color: [4]f32 = .{ 1.0, 1.0, 1.0, 1.0 },
 base_color_texture: ?texture.Handle = null,
 
+// Contains the ambient occlusion, metallic and roughness textures in the respective RGB channels.
+metallic_roughness_texture: ?texture.Handle = null,
+
 // How metallic the material appears. Allowed values are [0.0, 1.0].
-// If the texture is defined, the final value will be metallic * metallic_texture_sample
+// If the texture is defined (green channel of metallic_roughness_texture), 
+// the final value will be metallic * metallic_texture_sample
 metallic: f32 = 0.0,
-metallic_texture: ?texture.Handle = null,
+
+// How metallic the material appears. Allowed values are [0.0, 1.0].
+// If the texture is defined (blue channel of metallic_roughness_texture), 
+// the final value will be roughness * roughness_texture_sample
+roughness: f32 = 0.0,
 
 normal_texture: ?texture.Handle = null,
 
 pub const UniformBinding = extern struct {
     base_color: [4]f32,
     metallic: f32,
+    roughness: f32,
 
     pub fn toBuffer(self: *const UniformBinding) *const [@sizeOf(UniformBinding)]u8 {
         return @ptrCast(self);
@@ -28,6 +37,7 @@ pub fn createUniformBinding(self: Self) UniformBinding {
     return .{
         .base_color = self.base_color,
         .metallic = self.metallic,
+        .roughness = self.roughness,
     };
 }
 
@@ -36,6 +46,6 @@ pub fn createSamplerBinding(self: Self, sampler_id: *c.SDL_GPUSampler) [3]c.SDL_
     return [_]c.SDL_GPUTextureSamplerBinding{
         .{ .sampler = sampler_id, .texture = if (self.base_color_texture) |tex| tex.id else defaults.texture_defaults.?.base_tex.id },
         .{ .sampler = sampler_id, .texture = if (self.normal_texture) |tex| tex.id else defaults.texture_defaults.?.normals_tex.id },
-        .{ .sampler = sampler_id, .texture = if (self.metallic_texture) |tex| tex.id else defaults.texture_defaults.?.metal_rough_tex.id },
+        .{ .sampler = sampler_id, .texture = if (self.metallic_roughness_texture) |tex| tex.id else defaults.texture_defaults.?.metal_rough_tex.id },
     };
 }

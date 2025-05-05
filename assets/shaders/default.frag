@@ -23,6 +23,7 @@ layout(std430, set = 2, binding = 3) buffer Lights {
 layout(set = 3, binding = 0) uniform MaterialValues {
    vec4 color;
    float metallic;
+   float roughness;
 } material; 
 
 layout(location = 0) in vec4 in_color;
@@ -41,6 +42,8 @@ struct LightParameters {
    vec3 specular_color;
    vec3 normal;
    vec3 view_dir;
+   float roughness;
+   float n_dot_vdir;
 };
 
 vec3 specularReflection(float cos_theta, vec3 f0) {
@@ -82,10 +85,10 @@ vec3 calculateLight(Light light, LightParameters parameters) {
 void main() {
    vec4 base_color = texture(textureSampler, in_uv) * material.color * in_color;
    float metallic = texture(metallicSampler, in_uv).g * material.metallic;
+   float roughness = texture(metallicSampler, in_uv).b * material.roughness;
    vec3 normal_tex = texture(normalSampler, in_uv).xyz * 2 - 1;
    vec3 diffuse_color = (base_color.rgb * (vec3(1.0) - F0)) * (1.0 - metallic);
    vec3 spec_color = mix(F0, base_color.rgb, metallic);
-   vec3 ambient = 0.1 * (diffuse_color * spec_color);
 
    vec3 normal = normalize(in_tbn * normal_tex);
 
@@ -94,10 +97,11 @@ void main() {
    parameters.specular_color = spec_color;
    parameters.normal = normal;
    parameters.view_dir = normalize(-in_view_position.xyz);
+   parameters.roughness = roughness;
+   parameters.n_dot_vdir = clamp(dot(parameters.normal, parameters.view_dir.xyz), 0.0, 1.0);
 
    vec3 light = vec3(0) ;
    for(int i = 0; i < lights.length(); ++i)
       light += calculateLight(lights[i], parameters);
-   vec3 diffuse = diffuse_color * light;
-   out_color = vec4(diffuse + ambient, base_color.a);
+   out_color = vec4(light, base_color.a);
 }
