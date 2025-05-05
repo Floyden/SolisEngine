@@ -114,29 +114,29 @@ pub fn main() !void {
         try renderer.uploadDataToBuffer(@intCast(i * @sizeOf(Light)), lights_buffer, light.toBuffer());
 
     // Image Texture
-    const images = [_]?assets.Handle(Image){
-        try parsed.loadBaseColorImage(&asset_server),
-        try parsed.loadMetalRoughImage(&asset_server),
-        try parsed.loadNormalImage(&asset_server),
-    };
-    defer for (images) |image_opt| if (image_opt) |image| asset_server.unload(Image, image);
+    var textures = std.ArrayList(Texture).init(allocator);
+    defer {
+        for (textures.items) |texture| renderer.releaseTexture(texture);
+        textures.deinit();
+    }
+    if(parsed.images) |parsed_images| {
+        for(0..parsed_images.len)|i| {
+            const img = try parsed.loadImage(i, &asset_server);
+            defer asset_server.unload(Image, img);
 
-    var textures: [3]?Texture = undefined;
-    for (0..3) |i|
-        textures[i] = if (images[i]) |image| try renderer.createTextureFromImage(asset_server.get(Image, image).?.*) else null;
-    defer for (textures) |texture_opt| if (texture_opt) |texture| renderer.releaseTexture(texture);
+            try textures.append(try renderer.createTextureFromImage(asset_server.get(Image, img).?.*));
+        }
+    }
 
     const sampler = try renderer.createSampler(.{});
     defer renderer.releaseSampler(sampler);
 
-    const material = Material{
-        .base_color = .{ 1.0, 1.0, 1.0, 1.0 },
-        .base_color_texture = textures[0],
-        .metallic = 0.0,
-        .metallic_texture = textures[1],
-        .normal_texture = textures[2],
-    };
-    const binding = material.createUniformBinding();
+    var materials = try parsed.parseMaterials(allocator, textures.items);
+    defer materials.deinit();
+
+    if(materials.items.len == 0) {
+         try materials.append(Material{});
+    }
 
     var camera = Camera{ .aspect = window.getAspect() };
     camera.position[2] = -2.5;
@@ -182,11 +182,7 @@ pub fn main() !void {
 
         const pass = cmd.createRenderPass(color_target, depth_target) orelse @panic("Could not create RenderPass");
         pass.bindGraphicsPipeline(pipeline);
-
-        const sampler_binding = material.createSamplerBinding(sampler.id);
-        pass.bindFragmentSamplers(0, &sampler_binding);
         pass.bindFragmentStorageBuffers(0, &.{lights_buffer.handle});
-        cmd.pushFragmentUniformData(0, u8, binding.toBuffer());
 
         for (parsed.nodes.?) |node| {
             var transform = node.getTransform();
@@ -204,6 +200,11 @@ pub fn main() !void {
             const buffer = buffers.items[node.mesh.?];
             const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buffer.vertex_buffer.handle, .offset = 0 };
             pass.bindVertexBuffers(0, &.{vertex_binding});
+
+            const parsed_mesh = parsed.meshes.?[node.mesh.?];
+            const mat_idx = parsed_mesh.primitives[0].material.?;
+            pass.bindFragmentSamplers(0, &materials.items[mat_idx].createSamplerBinding(sampler.id));
+            cmd.pushFragmentUniformData(0, u8, materials.items[mat_idx].createUniformBinding().toBuffer());
 
             if (buffer.index_buffer) |index| {
                 const index_binding = c.SDL_GPUBufferBinding{ .buffer = index.handle, .offset = 0 };

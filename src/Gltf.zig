@@ -10,6 +10,8 @@ const AssetServer = @import("assets.zig").Server;
 const Image = @import("Image.zig");
 const Transformation = @import("Transformation.zig");
 const Matrix4f = @import("matrix.zig").Matrix4f;
+const RenderTexture = @import("renderer/texture.zig").Handle;
+const PBRMaterial = @import("PBRMaterial.zig");
 
 const Self = @This();
 
@@ -270,28 +272,55 @@ pub fn loadImage(self: Self, index: usize, asset_server: *AssetServer) !Handle(I
     return handle;
 }
 
-pub fn loadBaseColorImage(self: Self, asset_server: *AssetServer) !?Handle(Image) {
-    if (self.materials) |material|
-        if (material[0].pbrMetallicRoughness) |pbr|
+pub fn loadBaseColorImage(self: Self, asset_server: *AssetServer, mat_idx : u32) !?Handle(Image) {
+    if (self.materials) |materials| {
+        std.debug.assert(materials.len > mat_idx);
+        if (materials[mat_idx].pbrMetallicRoughness) |pbr|
             if (pbr.baseColorTexture) |texture|
                 return try loadImage(self, texture.index, asset_server);
+    }
     return null;
 }
 
-pub fn loadNormalImage(self: Self, asset_server: *AssetServer) !?Handle(Image) {
-    if (self.materials) |material|
-        if (material[0].normalTexture) |normal|
+pub fn loadNormalImage(self: Self, asset_server: *AssetServer, mat_idx : u32) !?Handle(Image) {
+    if (self.materials) |materials| {
+        std.debug.assert(materials.len > mat_idx);
+        if (materials[mat_idx].normalTexture) |normal|
             return try loadImage(self, normal.index, asset_server);
+    }
     return null;
 }
 
-pub fn loadMetalRoughImage(self: Self, asset_server: *AssetServer) !?Handle(Image) {
-    if (self.materials) |material| {
-        if (material[0].pbrMetallicRoughness) |pbr|
+pub fn loadMetalRoughImage(self: Self, asset_server: *AssetServer, mat_idx : u32) !?Handle(Image) {
+    if (self.materials) |materials| {
+        std.debug.assert(materials.len > mat_idx);
+        if (materials[mat_idx].pbrMetallicRoughness) |pbr|
             if (pbr.metallicRoughnessTexture) |texture|
                 return try loadImage(self, texture.index, asset_server);
     }
     return null;
+}
+
+pub fn parseMaterials(self: Self, allocator: std.mem.Allocator, textures: []const RenderTexture) !std.ArrayList(PBRMaterial) {
+    var materials = std.ArrayList(PBRMaterial).init(allocator);
+    errdefer materials.deinit();
+
+    if (self.materials == null) return materials;
+
+    for(self.materials.?) |mat| {
+        const material = try materials.addOne();
+        material.* = PBRMaterial{};
+        if(mat.pbrMetallicRoughness) |pbr| {
+            material.*.base_color = pbr.baseColorFactor;
+            material.*.base_color_texture = if(pbr.baseColorTexture) |idx| textures[idx.index] else null;
+            material.*.metallic_texture = if(pbr.metallicRoughnessTexture) |idx| textures[idx.index] else null;
+            material.*.roughness = pbr.roughnessFactor;
+            material.*.metallic = pbr.metallicFactor;
+        }
+        material.*.normal_texture = if(mat.normalTexture) |idx| textures[idx.index] else null;
+    }
+
+    return materials;
 }
 
 pub fn parseMeshes(self: Self, allocator: std.mem.Allocator) !std.ArrayList(Mesh) {
