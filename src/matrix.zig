@@ -134,7 +134,7 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
 
             var res = Self.zero;
             if (comptime Rows == 4) {
-                res.data[15] = 1;
+                res.atMut(3, 3).* = 1;
             }
 
             const axis: @Vector(3, T) = _axis;
@@ -142,12 +142,12 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             const u = axis / @as(@Vector(3, T), @splat(len));
 
             for (0..3) |i| {
-                res.data[i * 4 + (i + 1) % 3] = u[(i + 2) % 3] * sin;
-                res.data[i * 4 + (i + 2) % 3] = -u[(i + 1) % 3] * sin;
+                res.atMut((i + 1) % 3, i).* = u[(i + 2) % 3] * sin;
+                res.atMut((i + 2) % 3, i).* = -u[(i + 1) % 3] * sin;
             }
             for (0..3) |i| {
                 for (0..3) |j| {
-                    res.data[i * 4 + j] += c1 * u[i] * u[j] + if (i == j) cos else 0.0;
+                    res.atMut(j, i).* += c1 * u[i] * u[j] + if (i == j) cos else 0.0;
                 }
             }
             return res;
@@ -309,8 +309,8 @@ pub fn perspective(fovy: f32, aspect: f32, znear: f32, zfar: f32) Matrix4f {
     res.atMut(0, 0).* = f / aspect;
     res.atMut(1, 1).* = f;
     res.atMut(2, 2).* = (zfar) / (znear - zfar);
-    res.atMut(2, 3).* = (znear * zfar) / (znear - zfar);
-    res.atMut(3, 2).* = -1.0;
+    res.atMut(3, 2).* = (znear * zfar) / (znear - zfar);
+    res.atMut(2, 3).* = -1.0;
 
     return res;
 }

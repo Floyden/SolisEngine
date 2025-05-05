@@ -23,7 +23,7 @@ pub fn viewMatrix(self: Self) Matrix4f {
         }
     }
     for (0..3) |y| {
-        view.atMut(y, 3).* = self.position[y];
+        view.atMut(3, y).* = self.position[y];
     }
 
     return view;

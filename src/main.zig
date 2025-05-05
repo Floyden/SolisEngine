@@ -18,6 +18,8 @@ pub const mesh = @import("mesh.zig");
 pub const matrix = @import("matrix.zig");
 const Vector3f = matrix.Vector3f;
 const Vector4f = matrix.Vector4f;
+const Matrix3f = matrix.Matrix3f;
+const Matrix4f = matrix.Matrix4f;
 const TextureFormat = @import("renderer/texture.zig").Format;
 const Texture = @import("renderer/texture.zig").Handle;
 const RenderPass = @import("renderer/RenderPass.zig");
@@ -102,7 +104,7 @@ pub fn main() !void {
     // Lights
     var lights = std.ArrayList(Light).init(allocator);
     defer lights.deinit();
-    try lights.append(Light.createPoint(Vector3f.from(&[_]f32{ 5.0, 0.0, 2.0 }), Vector4f.from(&[_]f32{ 1.0, 1.0, 1.0, 1.0 }), 40));
+    try lights.append(Light.createPoint(Vector3f.from(&[_]f32{ 0.0, 5.0, 0.0 }), Vector4f.from(&[_]f32{ 1.0, 1.0, 1.0, 1.0 }), 40));
     try lights.append(Light.createDirectional(Vector3f.from(&[_]f32{ 1.0, 0.0, 2.0 }).normalize(), Vector4f.from(&[_]f32{ 1.0, 1.0, 1.0, 1.0 }), 0.5));
 
     const lights_buffer = try renderer.createBufferNamed(@intCast(lights.items.len * @sizeOf(Light)), c.SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ, "Lights");
@@ -152,8 +154,8 @@ pub fn main() !void {
             }
         }
         c.SDL_Delay(16);
-        angle += 0.03;
         lights.items[1].direction = Vector4f.from(&[_]f32{@sin(angle), 0.0, @cos(angle), 0.0});
+        angle += 0.03;
         try renderer.uploadDataToBuffer(@intCast(@sizeOf(Light)), lights_buffer, lights.items[1].toBuffer());
 
         const cmd = renderer.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
@@ -191,10 +193,13 @@ pub fn main() !void {
             const model_matrix = transform.toMatrix();
             // MVP, model, MV
             var matrices = [_]matrix.Matrix4f{ model_matrix, model_matrix, undefined };
-            matrices[2] = matrices[0].mult(camera.viewMatrix());
-            matrices[0] = matrices[2].mult(camera.projectionMatrix());
+            matrices[2] = camera.viewMatrix().mult(matrices[0]);
+            matrices[0] = camera.projectionMatrix().mult(matrices[2]);
 
-            cmd.pushVertexUniformData(0, f32, @as(*[32]f32, @ptrCast(&matrices)));
+            for(&matrices) |*mat|
+                mat.* = mat.transpose();
+
+            cmd.pushVertexUniformData(0, Matrix4f, &matrices);
 
             const buffer = buffers.items[node.mesh.?];
             const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buffer.vertex_buffer.handle, .offset = 0 };

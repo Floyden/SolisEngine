@@ -142,9 +142,11 @@ test "quaternion identity" {
 test "quaternion to matrix" {
     const a = Quaternion(f32){ .x = 0, .y = 0, .z = @sqrt(2.0) / 2.0, .w = @sqrt(2.0) / 2.0 };
     const b = Quaternion(f32){ .w = 1, .x = 0, .y = 0, .z = 0 };
+    const c = Quaternion(f32){ .x = @sqrt(2.0) / 2.0, .y = 0, .z = 0.0, .w = -@sqrt(2.0) / 2.0 };
 
     const res_a = a.toMatrix3();
     const res_b = b.toMatrix3();
+    const res_c = c.toMatrix3();
     const expected_a = matrix.Matrix3f.from(&[_]f32{
         0.0, -1.0, 0.0,
         1.0, 0.0,  0.0,
@@ -155,9 +157,15 @@ test "quaternion to matrix" {
         0.0, 1.0, 0.0,
         0.0, 0.0, 1.0,
     });
+    const expected_c = matrix.Matrix3f.from(&[_]f32{
+        1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0,
+        0.0, -1.0, 0.0,
+    });
 
     for (0..9) |i| {
         try std.testing.expectApproxEqAbs(expected_a.data[i], res_a.data[i], 0.01);
         try std.testing.expectApproxEqAbs(expected_b.data[i], res_b.data[i], 0.01);
+        try std.testing.expectApproxEqAbs(expected_c.data[i], res_c.data[i], 0.01);
     }
 }
