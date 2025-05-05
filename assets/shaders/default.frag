@@ -43,10 +43,9 @@ vec3 calculateLight(Light light, vec3 normal) {
       float diff = clamp(dot(normal, normalize(light_dir.xyz)), 0.0, 1.0);
       float attenuation = light.intensity / (distance * distance);
       result = light.color * attenuation * diff;
-   } else 
-      if(light.type == LIGHT_TYPE_DIRECTIONAL) {
+   } else if(light.type == LIGHT_TYPE_DIRECTIONAL) {
       vec3 light_dir = normalize(-light.direction.xyz);
-      float diff = clamp(dot(normal, light_dir), 0.0, 1.0);
+      float diff = max(dot(normal, light_dir), 0.0);
       result = light.color * diff * light.intensity;
    } 
    return result.xyz;
