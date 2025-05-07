@@ -35,7 +35,7 @@ pub const TextureDefaults = struct {
     }
 
     pub fn deinit(renderer: *Renderer) void {
-        if(texture_defaults) |*default| {
+        if (texture_defaults) |*default| {
             default.base.deinit();
             default.normals.deinit();
             default.metal_rough.deinit();
@@ -47,7 +47,7 @@ pub const TextureDefaults = struct {
     }
 
     pub fn get() TextureDefaults {
-        if(texture_defaults == null) std.debug.panic("Failed to initialize TextureDefaults", .{});
+        if (texture_defaults == null) std.debug.panic("Failed to initialize TextureDefaults", .{});
         return texture_defaults.?;
     }
 };

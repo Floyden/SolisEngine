@@ -142,10 +142,10 @@ pub fn main() !void {
     var materials = try parsed.parseMaterials(allocator, textures.items);
     defer materials.deinit();
 
-    if (materials.items.len == 0) {
+    if (materials.items.len == 0)
         try materials.append(Material{});
-    }
 
+    // Camera
     var camera = Camera{ .aspect = window.getAspect() };
     camera.position[2] = -2.5;
 
@@ -215,7 +215,6 @@ pub fn main() !void {
             const sampler_binding = materials.items[mat_idx].createSamplerBinding(sampler.id);
             pass.bindFragmentSamplers(0, &sampler_binding);
             pass.bindFragmentSamplers(sampler_binding.len, &[_]c.SDL_GPUTextureSamplerBinding{.{ .sampler = sampler.id, .texture = textures.getLast().id }});
-            // pass.bindFragmentSamplers(sampler_binding.len, &[_]c.SDL_GPUTextureSamplerBinding{.{ .sampler = sampler.id, .texture = defaults.texture_defaults.?.environment.id }});
             cmd.pushFragmentUniformData(0, u8, materials.items[mat_idx].createUniformBinding().toBuffer());
 
             if (buffer.index_buffer) |index| {

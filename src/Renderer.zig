@@ -18,6 +18,7 @@ window: *Window,
 device: *c.SDL_GPUDevice,
 sample_count: c.SDL_GPUSampleCount,
 
+/// Initializes the Renderer with a given window. Returns an error if it is unable to create a GPU device or claim the window.
 pub fn init(window: *Window) !Renderer {
     // GPU Device init
     const device = c.SDL_CreateGPUDevice(c.SDL_GPU_SHADERFORMAT_SPIRV, true, null) orelse return SDL_ERROR.Fail;
@@ -28,15 +29,17 @@ pub fn init(window: *Window) !Renderer {
     return .{ .window = window, .device = device, .sample_count = sample_count };
 }
 
+/// Deinitializes the Renderer and releases associated resources
 pub fn deinit(self: *Renderer) void {
     c.SDL_DestroyGPUDevice(self.device);
 }
 
+/// Creates a graphics pipeline with the specified description. Returns an error if the shader or pipeline creation fails.
 pub fn createGraphicsPipeline(self: Renderer, desc: GraphicsPipeline.Description) !GraphicsPipeline {
     // Shaders, Can be destroyed after pipeline is created
-    const v_shader = loadSPIRVShader(self.device, desc.vertex_shader) catch |e| return e;
+    const v_shader = try loadSPIRVShader(self.device, desc.vertex_shader);
     defer c.SDL_ReleaseGPUShader(self.device, v_shader);
-    const f_shader = loadSPIRVShader(self.device, desc.fragment_shader) catch |e| return e;
+    const f_shader = try loadSPIRVShader(self.device, desc.fragment_shader);
     defer c.SDL_ReleaseGPUShader(self.device, f_shader);
 
     // Graphics Pipeline
@@ -93,15 +96,17 @@ pub fn createGraphicsPipeline(self: Renderer, desc: GraphicsPipeline.Description
         },
         .props = 0,
     });
-    const pipeline = c.SDL_CreateGPUGraphicsPipeline(self.device, &pipelinedesc);
-    if (pipeline == null) return SDL_ERROR.Fail;
-    return GraphicsPipeline{ .handle = pipeline.?, .vertex_shader = desc.vertex_shader, .fragment_shader = desc.fragment_shader };
+    const pipeline = c.SDL_CreateGPUGraphicsPipeline(self.device, &pipelinedesc) orelse return SDL_ERROR.Fail;
+    return GraphicsPipeline{ .handle = pipeline, .vertex_shader = desc.vertex_shader, .fragment_shader = desc.fragment_shader };
 }
 
+/// Releases the provided GraphicsPipeline
 pub fn destroyGraphicsPipeline(self: Renderer, pipeline: GraphicsPipeline) void {
     c.SDL_ReleaseGPUGraphicsPipeline(self.device, pipeline.handle);
 }
 
+/// Creates a 2D texture from an image.
+/// Returns a texture handle or an error if creation fails.
 pub fn createTextureFromImage(self: *Renderer, image: Image) !texture.Handle {
     return self.createTextureWithData(.{
         .extent = image.extent,
@@ -111,6 +116,8 @@ pub fn createTextureFromImage(self: *Renderer, image: Image) !texture.Handle {
     }, image.rawBytes());
 }
 
+/// Creates a cube texture from an image by extracting regions for each face.
+/// Returns a texture handle or an error if creation fails
 pub fn createCubeTextureFromImage(self: *Renderer, image: Image) !texture.Handle {
     const cube_extent = Extent3d{ .width = image.extent.width / 4, .height = image.extent.height / 3, .depth = 6 };
     std.debug.assert(cube_extent.height == cube_extent.width);
@@ -143,19 +150,19 @@ pub fn createCubeTextureFromImage(self: *Renderer, image: Image) !texture.Handle
     });
 
     const image_size: u32 = @intCast(images[0].rawBytes().len);
-    const buf_transfer = self.createTransferBufferNamed(@intCast(image_size * images.len), c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "CubeTextureTransferBuffer") catch |e| return e;
-    defer self.releaseTransferBuffer(buf_transfer);
+    const transfer_buffer = try self.createTransferBufferNamed(@intCast(image_size * images.len), c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "CubeTextureTransferBuffer");
+    defer self.releaseTransferBuffer(transfer_buffer);
 
     for (images, 0..) |img, i|
-        self.copyToTransferBuffer(buf_transfer, img.data.items, @intCast(image_size * i));
+        self.copyToTransferBuffer(transfer_buffer, img.data.items, @intCast(image_size * i));
 
-    var cmd = self.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
-    defer cmd.submit();
+    var command_buffer = self.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
+    defer command_buffer.submit();
 
-    cmd.beginCopyPass();
+    command_buffer.beginCopyPass();
     for (0..6) |i| {
         const source = c.SDL_GPUTextureTransferInfo{
-            .transfer_buffer = buf_transfer,
+            .transfer_buffer = transfer_buffer,
             .offset = @intCast(image_size * i),
             .pixels_per_row = 0,
             .rows_per_layer = 0,
@@ -168,29 +175,31 @@ pub fn createCubeTextureFromImage(self: *Renderer, image: Image) !texture.Handle
             .layer = @as(u32, @intCast(i)),
         });
 
-        c.SDL_UploadToGPUTexture(cmd.copy_pass, &source, &destination, false);
+        c.SDL_UploadToGPUTexture(command_buffer.copy_pass, &source, &destination, false);
     }
-    cmd.endCopyPass();
+    command_buffer.endCopyPass();
     _ = c.SDL_WaitForGPUIdle(self.device);
     return handle;
 }
 
+/// Creates a texture with the given description and data.
+/// Returns a texture handle or an error if creation fails.
 pub fn createTextureWithData(self: *Renderer, desc: texture.Description, data: []const u8) !texture.Handle {
     const handle = try self.createTexture(desc);
 
     // Transfer image data
     {
-        const buf_transfer = self.createTransferBufferNamed(@intCast(data.len), c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "TexTransferBuffer") catch |e| return e;
-        defer self.releaseTransferBuffer(buf_transfer);
+        const transfer_buffer = try self.createTransferBufferNamed(@intCast(data.len), c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "TexTransferBuffer");
+        defer self.releaseTransferBuffer(transfer_buffer);
 
-        self.copyToTransferBuffer(buf_transfer, data, 0);
+        self.copyToTransferBuffer(transfer_buffer, data, 0);
 
-        var cmd = self.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
-        defer cmd.submit();
+        var command_buffer = self.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
+        defer command_buffer.submit();
 
-        cmd.beginCopyPass();
+        command_buffer.beginCopyPass();
         const source = c.SDL_GPUTextureTransferInfo{
-            .transfer_buffer = buf_transfer,
+            .transfer_buffer = transfer_buffer,
             .offset = 0,
             .pixels_per_row = desc.extent.width,
             .rows_per_layer = desc.extent.height,
@@ -202,13 +211,15 @@ pub fn createTextureWithData(self: *Renderer, desc: texture.Description, data: [
             .d = desc.extent.depth,
         });
 
-        c.SDL_UploadToGPUTexture(cmd.copy_pass, &source, &destination, true);
+        c.SDL_UploadToGPUTexture(command_buffer.copy_pass, &source, &destination, true);
 
-        cmd.endCopyPass();
+        command_buffer.endCopyPass();
     }
     return handle;
 }
 
+/// Creates a texture with the given description.
+/// Returns a texture handle or an error if creation fails.
 pub fn createTexture(self: *Renderer, desc: texture.Description) !texture.Handle {
     const texture_desc = c.SDL_GPUTextureCreateInfo{
         .type = desc.type.toSDLFormat(),
@@ -231,10 +242,13 @@ pub fn createTexture(self: *Renderer, desc: texture.Description) !texture.Handle
     return texture.Handle{ .id = texture_sdl };
 }
 
+/// Releases the specified texture handle.
 pub fn releaseTexture(self: *Renderer, handle: texture.Handle) void {
     _ = c.SDL_ReleaseGPUTexture(self.device, handle.id);
 }
 
+/// Creates a sampler with the given description.
+/// Returns a sampler handle or an error if creation fails.
 pub fn createSampler(self: *Renderer, desc: sampler.Description) !sampler.Handle {
     const sampler_create_info = c.SDL_GPUSamplerCreateInfo{
         .min_filter = desc.min_filter,
@@ -262,10 +276,13 @@ pub fn createSampler(self: *Renderer, desc: sampler.Description) !sampler.Handle
     return sampler.Handle{ .id = sdl_sampler };
 }
 
+/// Releases the specified sampler handle.
 pub fn releaseSampler(self: *Renderer, handle: sampler.Handle) void {
     _ = c.SDL_ReleaseGPUSampler(self.device, handle.id);
 }
 
+/// Creates a buffer with the specified size, usage flags, and name.
+/// Returns a buffer or an error if creation fails.
 pub fn createBufferNamed(self: *Renderer, size: u32, usage_flags: u32, name: [:0]const u8) !Buffer {
     const buffer_desc = c.SDL_GPUBufferCreateInfo{
         .size = size,
@@ -278,6 +295,8 @@ pub fn createBufferNamed(self: *Renderer, size: u32, usage_flags: u32, name: [:0
     return .{ .handle = buf_vertex, .size = size };
 }
 
+/// Creates a buffer from the provided data, usage flags, and name.
+/// Returns a buffer or an error if creation fails.
 pub fn createBufferFromData(self: *Renderer, data: []const u8, usage_flags: u32, name: [:0]const u8) !Buffer {
     const buffer_size: u32 = @intCast(data.len);
     const buffer = try self.createBufferNamed(buffer_size, usage_flags, name);
@@ -285,25 +304,30 @@ pub fn createBufferFromData(self: *Renderer, data: []const u8, usage_flags: u32,
     return buffer;
 }
 
+/// Uploads data to a specified buffer at a given offset.
+/// Returns an error if the upload fails.
 pub fn uploadDataToBuffer(self: *Renderer, dst_offset: u32, dst: Buffer, data: []const u8) !void {
     // TODO: Reuse TransferBuffers
-    const buf_transfer = self.createTransferBufferNamed(dst.size, c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "Transfer Buffer") catch |e| return e;
-    defer self.releaseTransferBuffer(buf_transfer);
+    const transfer_buffer = try self.createTransferBufferNamed(dst.size, c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "Transfer Buffer");
+    defer self.releaseTransferBuffer(transfer_buffer);
 
-    self.copyToTransferBuffer(buf_transfer, data, 0);
+    self.copyToTransferBuffer(transfer_buffer, data, 0);
 
-    var cmd = self.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
-    defer cmd.submit();
+    var command_buffer = self.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
+    defer command_buffer.submit();
 
-    cmd.beginCopyPass();
-    cmd.uploadToBuffer(buf_transfer, dst_offset, @intCast(data.len), dst);
-    cmd.endCopyPass();
+    command_buffer.beginCopyPass();
+    command_buffer.uploadToBuffer(transfer_buffer, dst_offset, @intCast(data.len), dst);
+    command_buffer.endCopyPass();
 }
 
+/// Releases the specified buffer.
 pub fn releaseBuffer(self: *Renderer, buffer: Buffer) void {
     _ = c.SDL_ReleaseGPUBuffer(self.device, buffer.handle);
 }
 
+/// Creates a transfer buffer with the specified size, usage flags, and name.
+/// Returns a transfer buffer or an error if creation fails.
 pub fn createTransferBufferNamed(self: *Renderer, size: u32, usage_flags: u32, name: [:0]const u8) !*c.SDL_GPUTransferBuffer {
     const transfer_buffer_desc = c.SDL_GPUTransferBufferCreateInfo{
         .size = size,
@@ -311,28 +335,31 @@ pub fn createTransferBufferNamed(self: *Renderer, size: u32, usage_flags: u32, n
         .props = c.SDL_CreateProperties(),
     };
     _ = c.SDL_SetStringProperty(transfer_buffer_desc.props, c.SDL_PROP_GPU_TRANSFERBUFFER_CREATE_NAME_STRING, name);
-    const buf_transfer = c.SDL_CreateGPUTransferBuffer(self.device, &transfer_buffer_desc) orelse return SDL_ERROR.Fail;
+    const transfer_buffer = c.SDL_CreateGPUTransferBuffer(self.device, &transfer_buffer_desc) orelse return SDL_ERROR.Fail;
     c.SDL_DestroyProperties(transfer_buffer_desc.props);
-    return buf_transfer;
+    return transfer_buffer;
 }
 
+/// Releases the specified transfer buffer.
 pub fn releaseTransferBuffer(self: *Renderer, buffer: *c.SDL_GPUTransferBuffer) void {
     _ = c.SDL_ReleaseGPUTransferBuffer(self.device, buffer);
 }
 
+/// Copies data to a transfer buffer at a specified offset.
 pub fn copyToTransferBuffer(self: *Renderer, buffer: *c.SDL_GPUTransferBuffer, data: []const u8, dst_offset: u32) void {
-    const map = c.SDL_MapGPUTransferBuffer(self.device, buffer, true);
-    const ptr: [*]u8 = @ptrCast(map);
-    _ = c.SDL_memcpy(ptr + dst_offset, data.ptr, data.len);
+    const mapped: [*]u8 = @ptrCast(c.SDL_MapGPUTransferBuffer(self.device, buffer, true));
+    _ = c.SDL_memcpy(mapped + dst_offset, data.ptr, data.len);
     c.SDL_UnmapGPUTransferBuffer(self.device, buffer);
 }
 
+/// Acquires a command buffer for submitting GPU commands.
+/// Returns a command buffer or null if acquisition fails.
 pub fn acquireCommandBuffer(self: *Renderer) ?CommandBuffer {
-    const cmd = c.SDL_AcquireGPUCommandBuffer(self.device) orelse return null;
-    return .{ .handle = cmd };
+    const command_buffer = c.SDL_AcquireGPUCommandBuffer(self.device) orelse return null;
+    return .{ .handle = command_buffer };
 }
 
-pub fn loadSPIRVShader(device: *c.SDL_GPUDevice, shader: Shader) !?*c.SDL_GPUShader {
+fn loadSPIRVShader(device: *c.SDL_GPUDevice, shader: Shader) !?*c.SDL_GPUShader {
     const num_uniform_buffers: u32 = @intCast(shader.uniform_buffers.items.len);
     const num_storage_buffers: u32 = @intCast(shader.storage_buffers.items.len);
     const num_storage_textures: u32 = @intCast(shader.storage_textures.items.len);
