@@ -1,4 +1,5 @@
 const std = @import("std");
+const Extent3d = @import("Extent3d.zig");
 const Window = @import("Window.zig");
 const CommandBuffer = @import("renderer/CommandBuffer.zig");
 const SDL_ERROR = Window.SDL_ERROR;
@@ -106,7 +107,73 @@ pub fn createTextureFromImage(self: *Renderer, image: Image) !texture.Handle {
         .extent = image.extent,
         .format = image.format,
         .usage = c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
+        .type = .image2d,
     }, image.rawBytes());
+}
+
+pub fn createCubeTextureFromImage(self: *Renderer, image: Image) !texture.Handle {
+    const cube_extent = Extent3d{.width = image.extent.width / 4, .height = image.extent.height / 3, .depth = 6};
+    std.debug.assert(cube_extent.height == cube_extent.width);
+
+    const offsets = [_]Extent3d {
+        .{.width = cube_extent.width * 2, .height = cube_extent.height * 1}, // X- 
+        .{.width = cube_extent.width * 0, .height = cube_extent.height * 1}, // X+
+        .{.width = cube_extent.width * 1, .height = cube_extent.height * 0}, // Y+ 
+        .{.width = cube_extent.width * 1, .height = cube_extent.height * 2}, 
+        .{.width = cube_extent.width * 1, .height = cube_extent.height * 1},
+        .{.width = cube_extent.width * 3, .height = cube_extent.height * 1}, 
+    };
+
+    var images = [_]Image {
+        image.extractRegion(cube_extent, offsets[0], image.allocator),
+        image.extractRegion(cube_extent, offsets[1], image.allocator),
+        image.extractRegion(cube_extent, offsets[2], image.allocator),
+        image.extractRegion(cube_extent, offsets[3], image.allocator),
+        image.extractRegion(cube_extent, offsets[4], image.allocator),
+        image.extractRegion(cube_extent, offsets[5], image.allocator),
+    };
+    defer for(&images)|*img| img.deinit();
+
+    const handle = try self.createTexture(.{
+        .extent = cube_extent,
+        .format = image.format,
+        .usage = c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
+        .type = .cube,
+        .label = "CubeMap",
+    });
+
+
+    const image_size: u32 = @intCast(images[0].rawBytes().len);
+    const buf_transfer = self.createTransferBufferNamed(@intCast(image_size * images.len), c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "CubeTextureTransferBuffer") catch |e| return e;
+    defer self.releaseTransferBuffer(buf_transfer);
+
+    for(images, 0..) |img, i| 
+        self.copyToTransferBuffer(buf_transfer, img.data.items, @intCast(image_size * i));
+
+    var cmd = self.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
+    defer cmd.submit();
+
+    cmd.beginCopyPass();
+    for(0..6) | i| {
+        const source = c.SDL_GPUTextureTransferInfo{
+            .transfer_buffer = buf_transfer,
+            .offset = @intCast(image_size * i),
+            .pixels_per_row = 0,
+            .rows_per_layer = 0,
+        };
+        const destination = std.mem.zeroInit(c.SDL_GPUTextureRegion, .{
+            .texture = handle.id,
+            .w = cube_extent.width,
+            .h = cube_extent.height,
+            .d = 1,
+            .layer = @as(u32,@intCast(i)),
+        });
+
+        c.SDL_UploadToGPUTexture(cmd.copy_pass, &source, &destination, false);
+    }
+    cmd.endCopyPass();
+    _ = c.SDL_WaitForGPUIdle(self.device);
+    return handle;
 }
 
 pub fn createTextureWithData(self: *Renderer, desc: texture.Description, data: []const u8) !texture.Handle {
@@ -117,7 +184,7 @@ pub fn createTextureWithData(self: *Renderer, desc: texture.Description, data: [
         const buf_transfer = self.createTransferBufferNamed(@intCast(data.len), c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "TexTransferBuffer") catch |e| return e;
         defer self.releaseTransferBuffer(buf_transfer);
 
-        self.copyToTransferBuffer(buf_transfer, data);
+        self.copyToTransferBuffer(buf_transfer, data, 0);
 
         var cmd = self.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
         defer cmd.submit();
@@ -145,7 +212,7 @@ pub fn createTextureWithData(self: *Renderer, desc: texture.Description, data: [
 
 pub fn createTexture(self: *Renderer, desc: texture.Description) !texture.Handle {
     const texture_desc = c.SDL_GPUTextureCreateInfo{
-        .type = c.SDL_GPU_TEXTURETYPE_2D,
+        .type = desc.type.toSDLFormat(),
         .format = desc.format.toSDLFormat(),
         .usage = desc.usage,
         .width = desc.extent.width,
@@ -224,7 +291,7 @@ pub fn uploadDataToBuffer(self: *Renderer, dst_offset: u32, dst: Buffer, data: [
     const buf_transfer = self.createTransferBufferNamed(dst.size, c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "Transfer Buffer") catch |e| return e;
     defer self.releaseTransferBuffer(buf_transfer);
 
-    self.copyToTransferBuffer(buf_transfer, data);
+    self.copyToTransferBuffer(buf_transfer, data, 0);
 
     var cmd = self.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
     defer cmd.submit();
@@ -254,9 +321,10 @@ pub fn releaseTransferBuffer(self: *Renderer, buffer: *c.SDL_GPUTransferBuffer) 
     _ = c.SDL_ReleaseGPUTransferBuffer(self.device, buffer);
 }
 
-pub fn copyToTransferBuffer(self: *Renderer, buffer: *c.SDL_GPUTransferBuffer, data: []const u8) void {
+pub fn copyToTransferBuffer(self: *Renderer, buffer: *c.SDL_GPUTransferBuffer, data: []const u8, dst_offset: u32) void {
     const map = c.SDL_MapGPUTransferBuffer(self.device, buffer, true);
-    _ = c.SDL_memcpy(map, data.ptr, data.len);
+    const ptr: [*]u8 = @ptrCast(map);
+    _ = c.SDL_memcpy(ptr + dst_offset, data.ptr, data.len);
     c.SDL_UnmapGPUTransferBuffer(self.device, buffer);
 }
 

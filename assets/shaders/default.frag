@@ -16,7 +16,8 @@ struct Light {
 layout(set = 2, binding = 0) uniform sampler2D textureSampler;
 layout(set = 2, binding = 1) uniform sampler2D normalSampler;
 layout(set = 2, binding = 2) uniform sampler2D metallicSampler; // contains (ao, metalic, roughness)
-layout(std430, set = 2, binding = 3) buffer Lights {
+layout(set = 2, binding = 3) uniform samplerCube enviromentSampler; 
+layout(std430, set = 2, binding = 4) buffer Lights {
    Light lights[];
 };
 
@@ -49,6 +50,11 @@ struct LightParameters {
 vec3 specularReflection(float cos_theta, vec3 f0) {
    //Fresnel-Schlick approximation
    return f0 + (vec3(1.0) - f0) * pow(1.0 - cos_theta, 5.0);
+}
+
+vec3 specularReflectionRoughness(float cos_theta, vec3 f0, float roughness) {
+   //Fresnel-Schlick approximation
+   return f0 + (vec3(1.0 - roughness) - f0) * pow(1.0 - cos_theta, 5.0);
 }
 
 // Returns (dir, distance)
@@ -104,4 +110,14 @@ void main() {
    for(int i = 0; i < lights.length(); ++i)
       light += calculateLight(lights[i], parameters);
    out_color = vec4(light, base_color.a);
+
+   // Indirect
+   vec3 id_specular = specularReflectionRoughness(parameters.n_dot_vdir, spec_color, roughness);
+   vec3 envDir = normalize(reflect(parameters.view_dir, normal));
+   envDir.xy *= -1.0; // Vulkan coordinate system 
+   vec3 id_env_color = texture(enviromentSampler, envDir).rgb;
+
+   vec3 id_kd = (1.0 - id_specular) * (1.0 - metallic);
+
+   out_color.xyz += id_env_color * id_specular + id_kd * base_color.rgb * (1.0 / PI);
 }

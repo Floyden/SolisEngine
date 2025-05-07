@@ -9,9 +9,28 @@ pub const Handle = struct {
 
 pub const Description = struct {
     extent: Extent3d,
+    type: Type,
     usage: u32,
     format: Format,
     label: ?[]const u8 = null,
+};
+
+pub const Type = enum {
+    image2d,
+    image2d_array,
+    image3d,
+    cube,
+    cube_array,
+
+    pub fn toSDLFormat(self: Type) u32 {
+        switch (self) {
+            .image2d => return c.SDL_GPU_TEXTURETYPE_2D,
+            .image2d_array => return c.SDL_GPU_TEXTURETYPE_2D_ARRAY,
+            .image3d => return c.SDL_GPU_TEXTURETYPE_3D,
+            .cube => return c.SDL_GPU_TEXTURETYPE_CUBE,
+            .cube_array => return c.SDL_GPU_TEXTURETYPE_CUBE_ARRAY,
+        }
+    }
 };
 
 pub const Format = enum {

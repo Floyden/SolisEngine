@@ -81,6 +81,7 @@ pub fn main() !void {
         .format = TextureFormat.depth16unorm,
         .usage = c.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
         .label = "Depth Texture",
+        .type = .image2d,
     });
     defer renderer.releaseTexture(tex_depth);
 
@@ -128,9 +129,16 @@ pub fn main() !void {
         }
     }
 
+    {
+        const img = try asset_server.load(Image, "assets/textures/cubemap.jpg");
+        defer asset_server.unload(Image, img);
+        try textures.append(try renderer.createCubeTextureFromImage(asset_server.get(Image, img).?.*));
+    }
+
     const sampler = try renderer.createSampler(.{});
     defer renderer.releaseSampler(sampler);
 
+    // Materials
     var materials = try parsed.parseMaterials(allocator, textures.items);
     defer materials.deinit();
 
@@ -173,6 +181,7 @@ pub fn main() !void {
                 .format = TextureFormat.depth16unorm,
                 .usage = c.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
                 .label = "Depth Texture",
+                .type = .image2d,
             });
             camera.aspect = window.getAspect();
         }
@@ -203,7 +212,9 @@ pub fn main() !void {
 
             const parsed_mesh = parsed.meshes.?[node.mesh.?];
             const mat_idx = parsed_mesh.primitives[0].material.?;
-            pass.bindFragmentSamplers(0, &materials.items[mat_idx].createSamplerBinding(sampler.id));
+            const sampler_binding = materials.items[mat_idx].createSamplerBinding(sampler.id);
+            pass.bindFragmentSamplers(0, &sampler_binding);
+            pass.bindFragmentSamplers(sampler_binding.len, &[_]c.SDL_GPUTextureSamplerBinding{.{.sampler = sampler.id, .texture = textures.getLast().id}});
             cmd.pushFragmentUniformData(0, u8, materials.items[mat_idx].createUniformBinding().toBuffer());
 
             if (buffer.index_buffer) |index| {
