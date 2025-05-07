@@ -111,7 +111,7 @@ pub fn createTextureFromImage(self: *Renderer, image: Image) !texture.Handle {
     return self.createTextureWithData(.{
         .extent = image.extent,
         .format = image.format,
-        .usage = c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
+        .usage = .sampler,
         .type = .image2d,
     }, image.rawBytes());
 }
@@ -144,7 +144,7 @@ pub fn createCubeTextureFromImage(self: *Renderer, image: Image) !texture.Handle
     const handle = try self.createTexture(.{
         .extent = cube_extent,
         .format = image.format,
-        .usage = c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
+        .usage = .sampler,
         .type = .cube,
         .label = "CubeMap",
     });
@@ -224,7 +224,7 @@ pub fn createTexture(self: *Renderer, desc: texture.Description) !texture.Handle
     const texture_desc = c.SDL_GPUTextureCreateInfo{
         .type = desc.type.toSDLFormat(),
         .format = desc.format.toSDLFormat(),
-        .usage = desc.usage,
+        .usage = desc.usage.toSDLFormat(),
         .width = desc.extent.width,
         .height = desc.extent.height,
         .layer_count_or_depth = desc.extent.depth,

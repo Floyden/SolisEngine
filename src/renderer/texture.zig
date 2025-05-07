@@ -10,9 +10,21 @@ pub const Handle = struct {
 pub const Description = struct {
     extent: Extent3d,
     type: Type,
-    usage: u32,
+    usage: Usage,
     format: Format,
     label: ?[]const u8 = null,
+};
+
+pub const Usage = enum {
+    sampler,
+    depth_stencil_target,
+    
+    pub fn toSDLFormat(self: Usage) u32 {
+        return switch (self) {
+            .sampler => c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
+            .depth_stencil_target => c.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
+        };
+    }
 };
 
 pub const Type = enum {
@@ -23,13 +35,13 @@ pub const Type = enum {
     cube_array,
 
     pub fn toSDLFormat(self: Type) u32 {
-        switch (self) {
-            .image2d => return c.SDL_GPU_TEXTURETYPE_2D,
-            .image2d_array => return c.SDL_GPU_TEXTURETYPE_2D_ARRAY,
-            .image3d => return c.SDL_GPU_TEXTURETYPE_3D,
-            .cube => return c.SDL_GPU_TEXTURETYPE_CUBE,
-            .cube_array => return c.SDL_GPU_TEXTURETYPE_CUBE_ARRAY,
-        }
+        return switch (self) {
+            .image2d => c.SDL_GPU_TEXTURETYPE_2D,
+            .image2d_array => c.SDL_GPU_TEXTURETYPE_2D_ARRAY,
+            .image3d => c.SDL_GPU_TEXTURETYPE_3D,
+            .cube => c.SDL_GPU_TEXTURETYPE_CUBE,
+            .cube_array => c.SDL_GPU_TEXTURETYPE_CUBE_ARRAY,
+        };
     }
 };
 
@@ -49,16 +61,16 @@ pub const Format = enum {
     }
 
     pub fn toSDLFormat(self: Format) u32 {
-        switch (self) {
-            .rgba8unorm => return c.SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
-            .depth16unorm => return c.SDL_GPU_TEXTUREFORMAT_D16_UNORM,
-        }
+        return switch (self) {
+            .rgba8unorm => c.SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+            .depth16unorm => c.SDL_GPU_TEXTUREFORMAT_D16_UNORM,
+        };
     }
 
     pub fn byteCount(self: Format) u32 {
-        switch (self) {
-            .rgba8unorm => return 4,
-            .depth16unorm => return 2,
-        }
+        return switch (self) {
+            .rgba8unorm => 4,
+            .depth16unorm => 2,
+        };
     }
 };

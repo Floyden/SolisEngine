@@ -79,9 +79,9 @@ pub fn main() !void {
     var tex_depth = try renderer.createTexture(.{
         .extent = .{ .width = @intCast(window.size[0]), .height = @intCast(window.size[1]) },
         .format = TextureFormat.depth16unorm,
-        .usage = c.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
-        .label = "Depth Texture",
+        .usage = .depth_stencil_target,
         .type = .image2d,
+        .label = "Depth Texture",
     });
     defer renderer.releaseTexture(tex_depth);
 
@@ -179,7 +179,7 @@ pub fn main() !void {
             tex_depth = try renderer.createTexture(.{
                 .extent = .{ .width = @intCast(window.size[0]), .height = @intCast(window.size[1]) },
                 .format = TextureFormat.depth16unorm,
-                .usage = c.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET,
+                .usage = .depth_stencil_target,
                 .label = "Depth Texture",
                 .type = .image2d,
             });
