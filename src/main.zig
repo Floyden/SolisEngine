@@ -166,7 +166,7 @@ pub fn main() !void {
         angle += 0.03;
         try renderer.uploadDataToBuffer(@intCast(@sizeOf(Light)), lights_buffer, lights.items[1].toBuffer());
 
-        const cmd = renderer.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
+        const cmd = try renderer.acquireCommandBuffer();
         defer cmd.submit();
 
         const swapchain_texture = cmd.acquireSwapchain(window) orelse {

@@ -21,8 +21,8 @@ sample_count: c.SDL_GPUSampleCount,
 /// Initializes the Renderer with a given window. Returns an error if it is unable to create a GPU device or claim the window.
 pub fn init(window: *Window) !Renderer {
     // GPU Device init
-    const device = c.SDL_CreateGPUDevice(c.SDL_GPU_SHADERFORMAT_SPIRV, true, null) orelse return SDL_ERROR.Fail;
-    if (!c.SDL_ClaimWindowForGPUDevice(device, window.handle)) return SDL_ERROR.Fail;
+    const device = c.SDL_CreateGPUDevice(c.SDL_GPU_SHADERFORMAT_SPIRV, true, null) orelse return error.UnableToCreateGPUDevice;
+    if (!c.SDL_ClaimWindowForGPUDevice(device, window.handle)) return error.UnableToClaimWindowForGPU;
 
     const sample_count: c.SDL_GPUSampleCount = c.SDL_GPU_SAMPLECOUNT_1;
 
@@ -96,7 +96,7 @@ pub fn createGraphicsPipeline(self: Renderer, desc: GraphicsPipeline.Description
         },
         .props = 0,
     });
-    const pipeline = c.SDL_CreateGPUGraphicsPipeline(self.device, &pipelinedesc) orelse return SDL_ERROR.Fail;
+    const pipeline = c.SDL_CreateGPUGraphicsPipeline(self.device, &pipelinedesc) orelse return error.GraphicsPipelineCreationFailed;
     return GraphicsPipeline{ .handle = pipeline, .vertex_shader = desc.vertex_shader, .fragment_shader = desc.fragment_shader };
 }
 
@@ -156,7 +156,7 @@ pub fn createCubeTextureFromImage(self: *Renderer, image: Image) !texture.Handle
     for (images, 0..) |img, i|
         self.copyToTransferBuffer(transfer_buffer, img.data.items, @intCast(image_size * i));
 
-    var command_buffer = self.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
+    var command_buffer = try self.acquireCommandBuffer();
     defer command_buffer.submit();
 
     command_buffer.beginCopyPass();
@@ -194,7 +194,7 @@ pub fn createTextureWithData(self: *Renderer, desc: texture.Description, data: [
 
         self.copyToTransferBuffer(transfer_buffer, data, 0);
 
-        var command_buffer = self.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
+        var command_buffer = try self.acquireCommandBuffer();
         defer command_buffer.submit();
 
         command_buffer.beginCopyPass();
@@ -313,7 +313,7 @@ pub fn uploadDataToBuffer(self: *Renderer, dst_offset: u32, dst: Buffer, data: [
 
     self.copyToTransferBuffer(transfer_buffer, data, 0);
 
-    var command_buffer = self.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
+    var command_buffer = try self.acquireCommandBuffer();
     defer command_buffer.submit();
 
     command_buffer.beginCopyPass();
@@ -335,7 +335,7 @@ pub fn createTransferBufferNamed(self: *Renderer, size: u32, usage_flags: u32, n
         .props = c.SDL_CreateProperties(),
     };
     _ = c.SDL_SetStringProperty(transfer_buffer_desc.props, c.SDL_PROP_GPU_TRANSFERBUFFER_CREATE_NAME_STRING, name);
-    const transfer_buffer = c.SDL_CreateGPUTransferBuffer(self.device, &transfer_buffer_desc) orelse return SDL_ERROR.Fail;
+    const transfer_buffer = c.SDL_CreateGPUTransferBuffer(self.device, &transfer_buffer_desc) orelse return error.TransferBufferCreationFailed;
     c.SDL_DestroyProperties(transfer_buffer_desc.props);
     return transfer_buffer;
 }
@@ -353,13 +353,13 @@ pub fn copyToTransferBuffer(self: *Renderer, buffer: *c.SDL_GPUTransferBuffer, d
 }
 
 /// Acquires a command buffer for submitting GPU commands.
-/// Returns a command buffer or null if acquisition fails.
-pub fn acquireCommandBuffer(self: *Renderer) ?CommandBuffer {
-    const command_buffer = c.SDL_AcquireGPUCommandBuffer(self.device) orelse return null;
+/// Returns a command buffer or an error if acquisition fails.
+pub fn acquireCommandBuffer(self: *Renderer) !CommandBuffer {
+    const command_buffer = c.SDL_AcquireGPUCommandBuffer(self.device) orelse return error.CommandBufferAcquisitionFailed;
     return .{ .handle = command_buffer };
 }
 
-fn loadSPIRVShader(device: *c.SDL_GPUDevice, shader: Shader) !?*c.SDL_GPUShader {
+fn loadSPIRVShader(device: *c.SDL_GPUDevice, shader: Shader) !*c.SDL_GPUShader {
     const num_uniform_buffers: u32 = @intCast(shader.uniform_buffers.items.len);
     const num_storage_buffers: u32 = @intCast(shader.storage_buffers.items.len);
     const num_storage_textures: u32 = @intCast(shader.storage_textures.items.len);
@@ -382,5 +382,5 @@ fn loadSPIRVShader(device: *c.SDL_GPUDevice, shader: Shader) !?*c.SDL_GPUShader 
         .num_storage_textures = num_storage_textures,
         .num_samplers = num_samplers,
     };
-    return c.SDL_CreateGPUShader(device, &sci) orelse return SDL_ERROR.Fail;
+    return c.SDL_CreateGPUShader(device, &sci) orelse return error.ShaderCreationFailed;
 }
