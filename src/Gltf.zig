@@ -272,7 +272,7 @@ pub fn loadImage(self: Self, index: usize, asset_server: *AssetServer) !Handle(I
     return handle;
 }
 
-pub fn loadBaseColorImage(self: Self, asset_server: *AssetServer, mat_idx : u32) !?Handle(Image) {
+pub fn loadBaseColorImage(self: Self, asset_server: *AssetServer, mat_idx: u32) !?Handle(Image) {
     if (self.materials) |materials| {
         std.debug.assert(materials.len > mat_idx);
         if (materials[mat_idx].pbrMetallicRoughness) |pbr|
@@ -282,7 +282,7 @@ pub fn loadBaseColorImage(self: Self, asset_server: *AssetServer, mat_idx : u32)
     return null;
 }
 
-pub fn loadNormalImage(self: Self, asset_server: *AssetServer, mat_idx : u32) !?Handle(Image) {
+pub fn loadNormalImage(self: Self, asset_server: *AssetServer, mat_idx: u32) !?Handle(Image) {
     if (self.materials) |materials| {
         std.debug.assert(materials.len > mat_idx);
         if (materials[mat_idx].normalTexture) |normal|
@@ -291,7 +291,7 @@ pub fn loadNormalImage(self: Self, asset_server: *AssetServer, mat_idx : u32) !?
     return null;
 }
 
-pub fn loadMetalRoughImage(self: Self, asset_server: *AssetServer, mat_idx : u32) !?Handle(Image) {
+pub fn loadMetalRoughImage(self: Self, asset_server: *AssetServer, mat_idx: u32) !?Handle(Image) {
     if (self.materials) |materials| {
         std.debug.assert(materials.len > mat_idx);
         if (materials[mat_idx].pbrMetallicRoughness) |pbr|
@@ -307,17 +307,17 @@ pub fn parseMaterials(self: Self, allocator: std.mem.Allocator, textures: []cons
 
     if (self.materials == null) return materials;
 
-    for(self.materials.?) |mat| {
+    for (self.materials.?) |mat| {
         const material = try materials.addOne();
         material.* = PBRMaterial{};
-        if(mat.pbrMetallicRoughness) |pbr| {
+        if (mat.pbrMetallicRoughness) |pbr| {
             material.*.base_color = pbr.baseColorFactor;
-            material.*.base_color_texture = if(pbr.baseColorTexture) |idx| textures[idx.index] else null;
-            material.*.metallic_roughness_texture = if(pbr.metallicRoughnessTexture) |idx| textures[idx.index] else null;
+            material.*.base_color_texture = if (pbr.baseColorTexture) |idx| textures[idx.index] else null;
+            material.*.metallic_roughness_texture = if (pbr.metallicRoughnessTexture) |idx| textures[idx.index] else null;
             material.*.roughness = pbr.roughnessFactor;
             material.*.metallic = pbr.metallicFactor;
         }
-        material.*.normal_texture = if(mat.normalTexture) |idx| textures[idx.index] else null;
+        material.*.normal_texture = if (mat.normalTexture) |idx| textures[idx.index] else null;
     }
 
     return materials;

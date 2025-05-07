@@ -1,6 +1,6 @@
 const texture = @import("renderer/texture.zig");
 const SamplerHandle = @import("renderer/sampler.zig").Handle;
-const defaults = @import("defaults.zig");
+const TextureDefaults = @import("defaults.zig").TextureDefaults;
 const c = @import("solis").external.c;
 const Self = @This();
 
@@ -12,12 +12,12 @@ base_color_texture: ?texture.Handle = null,
 metallic_roughness_texture: ?texture.Handle = null,
 
 // How metallic the material appears. Allowed values are [0.0, 1.0].
-// If the texture is defined (green channel of metallic_roughness_texture), 
+// If the texture is defined (green channel of metallic_roughness_texture),
 // the final value will be metallic * metallic_texture_sample
 metallic: f32 = 0.0,
 
 // How metallic the material appears. Allowed values are [0.0, 1.0].
-// If the texture is defined (blue channel of metallic_roughness_texture), 
+// If the texture is defined (blue channel of metallic_roughness_texture),
 // the final value will be roughness * roughness_texture_sample
 roughness: f32 = 0.0,
 
@@ -44,8 +44,8 @@ pub fn createUniformBinding(self: Self) UniformBinding {
 pub fn createSamplerBinding(self: Self, sampler_id: *c.SDL_GPUSampler) [3]c.SDL_GPUTextureSamplerBinding {
     // TODO: store sampler somewhere else
     return [_]c.SDL_GPUTextureSamplerBinding{
-        .{ .sampler = sampler_id, .texture = if (self.base_color_texture) |tex| tex.id else defaults.texture_defaults.?.base_tex.id },
-        .{ .sampler = sampler_id, .texture = if (self.normal_texture) |tex| tex.id else defaults.texture_defaults.?.normals_tex.id },
-        .{ .sampler = sampler_id, .texture = if (self.metallic_roughness_texture) |tex| tex.id else defaults.texture_defaults.?.metal_rough_tex.id },
+        .{ .sampler = sampler_id, .texture = if (self.base_color_texture) |tex| tex.id else TextureDefaults.get().base_tex.id },
+        .{ .sampler = sampler_id, .texture = if (self.normal_texture) |tex| tex.id else TextureDefaults.get().normals_tex.id },
+        .{ .sampler = sampler_id, .texture = if (self.metallic_roughness_texture) |tex| tex.id else TextureDefaults.get().metal_rough_tex.id },
     };
 }

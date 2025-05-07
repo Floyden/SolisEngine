@@ -61,8 +61,8 @@ pub fn main() !void {
 
     var renderer = Renderer.init(&window) catch |e| return e;
     defer renderer.deinit();
-    defaults.texture_defaults = defaults.TextureDefaults.init(allocator, &renderer) catch @panic("OOM");
-    defer defaults.texture_defaults.?.deinit(&renderer);
+    defaults.TextureDefaults.init(allocator, &renderer) catch @panic("OOM");
+    defer defaults.TextureDefaults.deinit(&renderer);
 
     const vs_handle = try asset_server.load(Shader, "./assets/shaders/default.vert");
     defer asset_server.unload(Shader, vs_handle);
@@ -120,8 +120,8 @@ pub fn main() !void {
         for (textures.items) |texture| renderer.releaseTexture(texture);
         textures.deinit();
     }
-    if(parsed.images) |parsed_images| {
-        for(0..parsed_images.len)|i| {
+    if (parsed.images) |parsed_images| {
+        for (0..parsed_images.len) |i| {
             const img = try parsed.loadImage(i, &asset_server);
             defer asset_server.unload(Image, img);
 
@@ -142,14 +142,14 @@ pub fn main() !void {
     var materials = try parsed.parseMaterials(allocator, textures.items);
     defer materials.deinit();
 
-    if(materials.items.len == 0) {
-         try materials.append(Material{});
+    if (materials.items.len == 0) {
+        try materials.append(Material{});
     }
 
     var camera = Camera{ .aspect = window.getAspect() };
     camera.position[2] = -2.5;
 
-    var angle :f32 = 0;
+    var angle: f32 = 0;
     // Main loop
     var done = false;
     var event: c.SDL_Event = undefined;
@@ -162,7 +162,7 @@ pub fn main() !void {
             }
         }
         c.SDL_Delay(16);
-        lights.items[1].direction = Vector4f.from(&[_]f32{@sin(angle), 0.0, @cos(angle), 0.0});
+        lights.items[1].direction = Vector4f.from(&[_]f32{ @sin(angle), 0.0, @cos(angle), 0.0 });
         angle += 0.03;
         try renderer.uploadDataToBuffer(@intCast(@sizeOf(Light)), lights_buffer, lights.items[1].toBuffer());
 
@@ -201,7 +201,7 @@ pub fn main() !void {
             matrices[2] = camera.viewMatrix().mult(matrices[0]);
             matrices[0] = camera.projectionMatrix().mult(matrices[2]);
 
-            for(&matrices) |*mat|
+            for (&matrices) |*mat|
                 mat.* = mat.transpose();
 
             cmd.pushVertexUniformData(0, Matrix4f, &matrices);
@@ -214,7 +214,8 @@ pub fn main() !void {
             const mat_idx = parsed_mesh.primitives[0].material.?;
             const sampler_binding = materials.items[mat_idx].createSamplerBinding(sampler.id);
             pass.bindFragmentSamplers(0, &sampler_binding);
-            pass.bindFragmentSamplers(sampler_binding.len, &[_]c.SDL_GPUTextureSamplerBinding{.{.sampler = sampler.id, .texture = textures.getLast().id}});
+            pass.bindFragmentSamplers(sampler_binding.len, &[_]c.SDL_GPUTextureSamplerBinding{.{ .sampler = sampler.id, .texture = textures.getLast().id }});
+            // pass.bindFragmentSamplers(sampler_binding.len, &[_]c.SDL_GPUTextureSamplerBinding{.{ .sampler = sampler.id, .texture = defaults.texture_defaults.?.environment.id }});
             cmd.pushFragmentUniformData(0, u8, materials.items[mat_idx].createUniformBinding().toBuffer());
 
             if (buffer.index_buffer) |index| {

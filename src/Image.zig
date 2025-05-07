@@ -50,11 +50,11 @@ pub fn rawBytes(self: Self) []const u8 {
 
 pub fn extractRegion(self: Self, region: Extent3d, offset: Extent3d, allocator: std.mem.Allocator) Self {
     var res = Self.init_empty(region, self.format, allocator);
-    for(0..region.height) |y| {
+    for (0..region.height) |y| {
         const src_width_bytes = self.extent.width * self.format.byteCount();
         const dst_width_bytes = region.width * self.format.byteCount();
         const start = (y + offset.height) * src_width_bytes + offset.width * self.format.byteCount();
-        res.data.appendSliceAssumeCapacity(self.data.items[start..start+dst_width_bytes]);
+        res.data.appendSliceAssumeCapacity(self.data.items[start .. start + dst_width_bytes]);
     }
 
     return res;

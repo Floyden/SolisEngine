@@ -158,8 +158,8 @@ test "quaternion to matrix" {
         0.0, 0.0, 1.0,
     });
     const expected_c = matrix.Matrix3f.from(&[_]f32{
-        1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0,
+        1.0, 0.0,  0.0,
+        0.0, 0.0,  1.0,
         0.0, -1.0, 0.0,
     });
 

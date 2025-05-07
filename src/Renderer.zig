@@ -112,19 +112,19 @@ pub fn createTextureFromImage(self: *Renderer, image: Image) !texture.Handle {
 }
 
 pub fn createCubeTextureFromImage(self: *Renderer, image: Image) !texture.Handle {
-    const cube_extent = Extent3d{.width = image.extent.width / 4, .height = image.extent.height / 3, .depth = 6};
+    const cube_extent = Extent3d{ .width = image.extent.width / 4, .height = image.extent.height / 3, .depth = 6 };
     std.debug.assert(cube_extent.height == cube_extent.width);
 
-    const offsets = [_]Extent3d {
-        .{.width = cube_extent.width * 2, .height = cube_extent.height * 1}, // X- 
-        .{.width = cube_extent.width * 0, .height = cube_extent.height * 1}, // X+
-        .{.width = cube_extent.width * 1, .height = cube_extent.height * 0}, // Y+ 
-        .{.width = cube_extent.width * 1, .height = cube_extent.height * 2}, 
-        .{.width = cube_extent.width * 1, .height = cube_extent.height * 1},
-        .{.width = cube_extent.width * 3, .height = cube_extent.height * 1}, 
+    const offsets = [_]Extent3d{
+        .{ .width = cube_extent.width * 2, .height = cube_extent.height * 1 }, // X-
+        .{ .width = cube_extent.width * 0, .height = cube_extent.height * 1 }, // X+
+        .{ .width = cube_extent.width * 1, .height = cube_extent.height * 0 }, // Y+
+        .{ .width = cube_extent.width * 1, .height = cube_extent.height * 2 },
+        .{ .width = cube_extent.width * 1, .height = cube_extent.height * 1 },
+        .{ .width = cube_extent.width * 3, .height = cube_extent.height * 1 },
     };
 
-    var images = [_]Image {
+    var images = [_]Image{
         image.extractRegion(cube_extent, offsets[0], image.allocator),
         image.extractRegion(cube_extent, offsets[1], image.allocator),
         image.extractRegion(cube_extent, offsets[2], image.allocator),
@@ -132,7 +132,7 @@ pub fn createCubeTextureFromImage(self: *Renderer, image: Image) !texture.Handle
         image.extractRegion(cube_extent, offsets[4], image.allocator),
         image.extractRegion(cube_extent, offsets[5], image.allocator),
     };
-    defer for(&images)|*img| img.deinit();
+    defer for (&images) |*img| img.deinit();
 
     const handle = try self.createTexture(.{
         .extent = cube_extent,
@@ -142,19 +142,18 @@ pub fn createCubeTextureFromImage(self: *Renderer, image: Image) !texture.Handle
         .label = "CubeMap",
     });
 
-
     const image_size: u32 = @intCast(images[0].rawBytes().len);
     const buf_transfer = self.createTransferBufferNamed(@intCast(image_size * images.len), c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "CubeTextureTransferBuffer") catch |e| return e;
     defer self.releaseTransferBuffer(buf_transfer);
 
-    for(images, 0..) |img, i| 
+    for (images, 0..) |img, i|
         self.copyToTransferBuffer(buf_transfer, img.data.items, @intCast(image_size * i));
 
     var cmd = self.acquireCommandBuffer() orelse return SDL_ERROR.Fail;
     defer cmd.submit();
 
     cmd.beginCopyPass();
-    for(0..6) | i| {
+    for (0..6) |i| {
         const source = c.SDL_GPUTextureTransferInfo{
             .transfer_buffer = buf_transfer,
             .offset = @intCast(image_size * i),
@@ -166,7 +165,7 @@ pub fn createCubeTextureFromImage(self: *Renderer, image: Image) !texture.Handle
             .w = cube_extent.width,
             .h = cube_extent.height,
             .d = 1,
-            .layer = @as(u32,@intCast(i)),
+            .layer = @as(u32, @intCast(i)),
         });
 
         c.SDL_UploadToGPUTexture(cmd.copy_pass, &source, &destination, false);

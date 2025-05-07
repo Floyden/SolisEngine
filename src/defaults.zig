@@ -10,33 +10,45 @@ pub const TextureDefaults = struct {
     base_tex: TextureHandle,
     normals_tex: TextureHandle,
     metal_rough_tex: TextureHandle,
+    environment: TextureHandle,
 
-    pub fn init(allocator: std.mem.Allocator, renderer: *Renderer) !TextureDefaults {
+    pub fn init(allocator: std.mem.Allocator, renderer: *Renderer) !void {
         const base = Image.init_fill(&[_]u8{ 255, 255, 255, 255 }, .{ .width = 1, .height = 1 }, .rgba8unorm, allocator);
         const normals = Image.init_fill(&[_]u8{ 128, 128, 255, 255 }, .{ .width = 1, .height = 1 }, .rgba8unorm, allocator);
         const metal_rough = Image.init_fill(&[_]u8{ 255, 255, 255, 255 }, .{ .width = 1, .height = 1 }, .rgba8unorm, allocator);
+        const black_cube = Image.init_fill(&[_]u8{ 0, 0, 0, 0 }, .{ .width = 4, .height = 3 }, .rgba8unorm, allocator);
 
         const base_tex = try renderer.createTextureFromImage(base);
         const normals_tex = try renderer.createTextureFromImage(normals);
         const metal_rough_tex = try renderer.createTextureFromImage(metal_rough);
+        const environment = try renderer.createCubeTextureFromImage(black_cube);
 
-        return TextureDefaults{
+        texture_defaults = TextureDefaults{
             .base = base,
             .normals = normals,
             .metal_rough = metal_rough,
             .base_tex = base_tex,
             .normals_tex = normals_tex,
             .metal_rough_tex = metal_rough_tex,
+            .environment = environment,
         };
     }
 
-    pub fn deinit(self: *TextureDefaults, renderer: *Renderer) void {
-        self.base.deinit();
-        self.normals.deinit();
-        self.metal_rough.deinit();
-        renderer.releaseTexture(self.base_tex);
-        renderer.releaseTexture(self.normals_tex);
-        renderer.releaseTexture(self.metal_rough_tex);
+    pub fn deinit(renderer: *Renderer) void {
+        if(texture_defaults) |*default| {
+            default.base.deinit();
+            default.normals.deinit();
+            default.metal_rough.deinit();
+            renderer.releaseTexture(default.base_tex);
+            renderer.releaseTexture(default.normals_tex);
+            renderer.releaseTexture(default.metal_rough_tex);
+            renderer.releaseTexture(default.environment);
+        }
+    }
+
+    pub fn get() TextureDefaults {
+        if(texture_defaults == null) std.debug.panic("Failed to initialize TextureDefaults", .{});
+        return texture_defaults.?;
     }
 };
 

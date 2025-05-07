@@ -117,7 +117,7 @@ void main() {
    envDir.xy *= -1.0; // Vulkan coordinate system 
    vec3 id_env_color = texture(enviromentSampler, envDir).rgb;
 
-   vec3 id_kd = (1.0 - id_specular) * (1.0 - metallic);
+   // vec3 id_kd = (1.0 - id_specular) * (1.0 - metallic);
 
-   out_color.xyz += id_env_color * id_specular + id_kd * base_color.rgb * (1.0 / PI);
+   out_color.xyz += id_env_color * id_specular;
 }

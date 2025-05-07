@@ -39,10 +39,10 @@ pub fn toMatrix(self: Self) Matrix4f {
 
 const std = @import("std");
 test "toMatrix" {
-    const res_a = (Self {
+    const res_a = (Self{
         .scale = Vector3f.ones,
         .rotation = Quaternion{ .x = @sqrt(2.0) / 2.0, .y = 0, .z = 0.0, .w = -@sqrt(2.0) / 2.0 },
-        .translation = Vector3f.from(&[_]f32{1.0, 2.0, 3.0}),
+        .translation = Vector3f.from(&[_]f32{ 1.0, 2.0, 3.0 }),
     }).toMatrix();
 
     const expected_a = Matrix4f.from(&[_]f32{
