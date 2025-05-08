@@ -25,6 +25,7 @@ const Renderer = solis.render.Renderer;
 const Shader = solis.render.Shader;
 const ShaderImporter = solis.render.ShaderImporter;
 const defaults = solis.defaults;
+const ecs = solis.ecs;
 
 const Events = solis.events.Events;
 
@@ -36,8 +37,13 @@ pub fn main() !void {
         return;
     }
 
-    var asset_server = assets.Server.init(std.heap.page_allocator);
-    defer asset_server.deinit();
+    const world = ecs.init();
+    defer _ = ecs.fini(world);
+
+    ecs.COMPONENT(world, assets.Server);
+    _ = ecs.singleton_set(world, assets.Server, assets.Server.init(std.heap.page_allocator));
+    var asset_server = ecs.singleton_get_mut(world, assets.Server).?;
+
     try asset_server.register_importer(Image, assets.ImageImporter);
     try asset_server.register_importer(Shader, ShaderImporter);
 
@@ -55,15 +61,17 @@ pub fn main() !void {
     defer c.SDL_Quit();
 
     // Video subsystem & windows
-    var window = Window.init() catch |e| return e;
-    defer window.deinit();
+    ecs.COMPONENT(world, Window);
+    const window_handle = ecs.new_entity(world, "Main Window");
+    _ = ecs.set(world, window_handle, Window, try Window.init());
+    var window = ecs.get_mut(world, window_handle, Window).?;
 
     const WindowResized = struct { window: *Window, width: u32, height: u32 };
     var window_events = Events(WindowResized).init(allocator);
     defer window_events.deinit();
     var window_event_reader = window_events.reader();
 
-    var renderer = Renderer.init(&window) catch |e| return e;
+    var renderer = try Renderer.init(window);
     defer renderer.deinit();
     defaults.TextureDefaults.init(allocator, &renderer) catch @panic("OOM");
     defer defaults.TextureDefaults.deinit(&renderer);
@@ -126,7 +134,7 @@ pub fn main() !void {
     }
     if (parsed.images) |parsed_images| {
         for (0..parsed_images.len) |i| {
-            const img = try parsed.loadImage(i, &asset_server);
+            const img = try parsed.loadImage(i, asset_server);
             defer asset_server.unload(Image, img);
 
             try textures.append(try renderer.createTextureFromImage(asset_server.get(Image, img).?.*));
@@ -164,7 +172,7 @@ pub fn main() !void {
         while (c.SDL_PollEvent(&event) and !done) {
             switch (event.type) {
                 c.SDL_EVENT_QUIT, c.SDL_EVENT_WINDOW_CLOSE_REQUESTED => done = true,
-                c.SDL_EVENT_WINDOW_RESIZED => try window_events.emit(.{ .window = &window, .width = @intCast(event.window.data1), .height = @intCast(event.window.data2) }),
+                c.SDL_EVENT_WINDOW_RESIZED => try window_events.emit(.{ .window = window, .width = @intCast(event.window.data1), .height = @intCast(event.window.data2) }),
                 else => {},
             }
         }
