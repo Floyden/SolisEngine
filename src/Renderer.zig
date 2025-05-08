@@ -116,105 +116,38 @@ pub fn createTextureFromImage(self: *Renderer, image: Image) !texture.Handle {
     }, image.rawBytes());
 }
 
-/// Creates a cube texture from an image by extracting regions for each face.
-/// Returns a texture handle or an error if creation fails
-pub fn createCubeTextureFromImage(self: *Renderer, image: Image) !texture.Handle {
-    const cube_extent = Extent3d{ .width = image.extent.width / 4, .height = image.extent.height / 3, .depth = 6 };
-    std.debug.assert(cube_extent.height == cube_extent.width);
-
-    const offsets = [_]Extent3d{
-        .{ .width = cube_extent.width * 2, .height = cube_extent.height * 1 }, // X-
-        .{ .width = cube_extent.width * 0, .height = cube_extent.height * 1 }, // X+
-        .{ .width = cube_extent.width * 1, .height = cube_extent.height * 0 }, // Y+
-        .{ .width = cube_extent.width * 1, .height = cube_extent.height * 2 },
-        .{ .width = cube_extent.width * 1, .height = cube_extent.height * 1 },
-        .{ .width = cube_extent.width * 3, .height = cube_extent.height * 1 },
-    };
-
-    var images = [_]Image{
-        image.extractRegion(cube_extent, offsets[0], image.allocator),
-        image.extractRegion(cube_extent, offsets[1], image.allocator),
-        image.extractRegion(cube_extent, offsets[2], image.allocator),
-        image.extractRegion(cube_extent, offsets[3], image.allocator),
-        image.extractRegion(cube_extent, offsets[4], image.allocator),
-        image.extractRegion(cube_extent, offsets[5], image.allocator),
-    };
-    defer for (&images) |*img| img.deinit();
-
-    const handle = try self.createTexture(.{
-        .extent = cube_extent,
-        .format = image.format,
-        .usage = .sampler,
-        .type = .cube,
-        .label = "CubeMap",
-    });
-
-    const image_size: u32 = @intCast(images[0].rawBytes().len);
-    const transfer_buffer = try self.createTransferBufferNamed(@intCast(image_size * images.len), c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "CubeTextureTransferBuffer");
-    defer self.releaseTransferBuffer(transfer_buffer);
-
-    for (images, 0..) |img, i|
-        self.copyToTransferBuffer(transfer_buffer, img.data.items, @intCast(image_size * i));
-
-    var command_buffer = try self.acquireCommandBuffer();
-    defer command_buffer.submit();
-
-    command_buffer.beginCopyPass();
-    for (0..6) |i| {
-        const source = c.SDL_GPUTextureTransferInfo{
-            .transfer_buffer = transfer_buffer,
-            .offset = @intCast(image_size * i),
-            .pixels_per_row = 0,
-            .rows_per_layer = 0,
-        };
-        const destination = std.mem.zeroInit(c.SDL_GPUTextureRegion, .{
-            .texture = handle.id,
-            .w = cube_extent.width,
-            .h = cube_extent.height,
-            .d = 1,
-            .layer = @as(u32, @intCast(i)),
-        });
-
-        c.SDL_UploadToGPUTexture(command_buffer.copy_pass, &source, &destination, false);
-    }
-    command_buffer.endCopyPass();
-    _ = c.SDL_WaitForGPUIdle(self.device);
-    return handle;
-}
-
 /// Creates a texture with the given description and data.
 /// Returns a texture handle or an error if creation fails.
 pub fn createTextureWithData(self: *Renderer, desc: texture.Description, data: []const u8) !texture.Handle {
     const handle = try self.createTexture(desc);
 
     // Transfer image data
-    {
-        const transfer_buffer = try self.createTransferBufferNamed(@intCast(data.len), c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "TexTransferBuffer");
-        defer self.releaseTransferBuffer(transfer_buffer);
+    const transfer_buffer = try self.createTransferBufferNamed(@intCast(data.len), c.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, "TexTransferBuffer");
+    defer self.releaseTransferBuffer(transfer_buffer);
 
-        self.copyToTransferBuffer(transfer_buffer, data, 0);
+    self.copyToTransferBuffer(transfer_buffer, data, 0);
 
-        var command_buffer = try self.acquireCommandBuffer();
-        defer command_buffer.submit();
+    var command_buffer = try self.acquireCommandBuffer();
+    defer command_buffer.submit();
 
-        command_buffer.beginCopyPass();
-        const source = c.SDL_GPUTextureTransferInfo{
-            .transfer_buffer = transfer_buffer,
-            .offset = 0,
-            .pixels_per_row = desc.extent.width,
-            .rows_per_layer = desc.extent.height,
-        };
-        const destination = std.mem.zeroInit(c.SDL_GPUTextureRegion, .{
-            .texture = handle.id,
-            .w = desc.extent.width,
-            .h = desc.extent.height,
-            .d = desc.extent.depth,
-        });
+    command_buffer.beginCopyPass();
+    // TODO: Export this part to the cmdbuffer
+    const source = c.SDL_GPUTextureTransferInfo{
+        .transfer_buffer = transfer_buffer,
+        .offset = 0,
+        .pixels_per_row = desc.extent.width,
+        .rows_per_layer = desc.extent.height,
+    };
+    const destination = std.mem.zeroInit(c.SDL_GPUTextureRegion, .{
+        .texture = handle.id,
+        .w = desc.extent.width,
+        .h = desc.extent.height,
+        .d = desc.extent.depth,
+    });
 
-        c.SDL_UploadToGPUTexture(command_buffer.copy_pass, &source, &destination, true);
+    c.SDL_UploadToGPUTexture(command_buffer.copy_pass, &source, &destination, true);
 
-        command_buffer.endCopyPass();
-    }
+    command_buffer.endCopyPass();
     return handle;
 }
 

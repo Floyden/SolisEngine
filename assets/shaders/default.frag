@@ -16,8 +16,9 @@ struct Light {
 layout(set = 2, binding = 0) uniform sampler2D textureSampler;
 layout(set = 2, binding = 1) uniform sampler2D normalSampler;
 layout(set = 2, binding = 2) uniform sampler2D metallicSampler; // contains (ao, metalic, roughness)
-layout(set = 2, binding = 3) uniform samplerCube enviromentSampler; 
-layout(std430, set = 2, binding = 4) buffer Lights {
+layout(set = 2, binding = 3) uniform samplerCube enviromentSamplerSpecular; 
+layout(set = 2, binding = 4) uniform samplerCube enviromentSamplerDiffuse; 
+layout(std430, set = 2, binding = 5) buffer Lights {
    Light lights[];
 };
 
@@ -115,9 +116,7 @@ void main() {
    vec3 id_specular = specularReflectionRoughness(parameters.n_dot_vdir, spec_color, roughness);
    vec3 envDir = normalize(reflect(parameters.view_dir, normal));
    envDir.xy *= -1.0; // Vulkan coordinate system 
-   vec3 id_env_color = texture(enviromentSampler, envDir).rgb;
-
-   // vec3 id_kd = (1.0 - id_specular) * (1.0 - metallic);
+   vec3 id_env_color = texture(enviromentSamplerSpecular, envDir).rgb;
 
    out_color.xyz += id_env_color * id_specular;
 }

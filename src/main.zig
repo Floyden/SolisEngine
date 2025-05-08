@@ -6,7 +6,7 @@ const c = external.c;
 pub const Extent3d = @import("Extent3d.zig");
 pub const Window = @import("Window.zig");
 const Camera = @import("Camera.zig");
-const Renderer = @import("Renderer.zig");
+pub const Renderer = @import("Renderer.zig");
 const Light = @import("light.zig").Light;
 const Gltf = @import("Gltf.zig");
 const Material = @import("PBRMaterial.zig");
@@ -20,6 +20,7 @@ const Vector3f = matrix.Vector3f;
 const Vector4f = matrix.Vector4f;
 const Matrix3f = matrix.Matrix3f;
 const Matrix4f = matrix.Matrix4f;
+const EnvironmentMap = @import("renderer/EnvironmentMap.zig");
 const TextureFormat = @import("renderer/texture.zig").Format;
 const Texture = @import("renderer/texture.zig").Handle;
 const RenderPass = @import("renderer/RenderPass.zig");
@@ -129,10 +130,12 @@ pub fn main() !void {
         }
     }
 
+    var environment_map : EnvironmentMap = undefined; 
+    defer environment_map.deinit(&renderer);
     {
         const img = try asset_server.load(Image, "assets/textures/cubemap.jpg");
         defer asset_server.unload(Image, img);
-        try textures.append(try renderer.createCubeTextureFromImage(asset_server.get(Image, img).?.*));
+        environment_map = try EnvironmentMap.initFromImage(&renderer, asset_server.get(Image, img).?.*, allocator);
     }
 
     const sampler = try renderer.createSampler(.{});
@@ -212,9 +215,9 @@ pub fn main() !void {
 
             const parsed_mesh = parsed.meshes.?[node.mesh.?];
             const mat_idx = parsed_mesh.primitives[0].material.?;
-            const sampler_binding = materials.items[mat_idx].createSamplerBinding(sampler);
-            pass.bindFragmentSamplers(0, &sampler_binding);
-            pass.bindFragmentSamplers(sampler_binding.len, &[_]c.SDL_GPUTextureSamplerBinding{.{ .sampler = sampler.id, .texture = textures.getLast().id }});
+            const material_bindings = materials.items[mat_idx].createSamplerBinding(sampler);
+            pass.bindFragmentSamplers(0, &material_bindings);
+            pass.bindFragmentSamplers(material_bindings.len, &environment_map.createSamplerBinding(sampler));
             cmd.pushFragmentUniformData(0, u8, materials.items[mat_idx].createUniformBinding().toBuffer());
 
             if (buffer.index_buffer) |index| {
