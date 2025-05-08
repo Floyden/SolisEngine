@@ -41,11 +41,11 @@ pub fn createUniformBinding(self: Self) UniformBinding {
     };
 }
 
-pub fn createSamplerBinding(self: Self, sampler_id: *c.SDL_GPUSampler) [3]c.SDL_GPUTextureSamplerBinding {
+pub fn createSamplerBinding(self: Self, sampler: SamplerHandle) [3]c.SDL_GPUTextureSamplerBinding {
     // TODO: store sampler somewhere else
     return [_]c.SDL_GPUTextureSamplerBinding{
-        .{ .sampler = sampler_id, .texture = if (self.base_color_texture) |tex| tex.id else TextureDefaults.get().base_tex.id },
-        .{ .sampler = sampler_id, .texture = if (self.normal_texture) |tex| tex.id else TextureDefaults.get().normals_tex.id },
-        .{ .sampler = sampler_id, .texture = if (self.metallic_roughness_texture) |tex| tex.id else TextureDefaults.get().metal_rough_tex.id },
+        .{ .sampler = sampler.id, .texture = if (self.base_color_texture) |tex| tex.id else TextureDefaults.get().base_tex.id },
+        .{ .sampler = sampler.id, .texture = if (self.normal_texture) |tex| tex.id else TextureDefaults.get().normals_tex.id },
+        .{ .sampler = sampler.id, .texture = if (self.metallic_roughness_texture) |tex| tex.id else TextureDefaults.get().metal_rough_tex.id },
     };
 }

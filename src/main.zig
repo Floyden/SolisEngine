@@ -212,7 +212,7 @@ pub fn main() !void {
 
             const parsed_mesh = parsed.meshes.?[node.mesh.?];
             const mat_idx = parsed_mesh.primitives[0].material.?;
-            const sampler_binding = materials.items[mat_idx].createSamplerBinding(sampler.id);
+            const sampler_binding = materials.items[mat_idx].createSamplerBinding(sampler);
             pass.bindFragmentSamplers(0, &sampler_binding);
             pass.bindFragmentSamplers(sampler_binding.len, &[_]c.SDL_GPUTextureSamplerBinding{.{ .sampler = sampler.id, .texture = textures.getLast().id }});
             cmd.pushFragmentUniformData(0, u8, materials.items[mat_idx].createUniformBinding().toBuffer());
