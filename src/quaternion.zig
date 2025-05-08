@@ -91,7 +91,7 @@ pub fn Quaternion(comptime T: type) type {
             const yz = a.y * a.z;
             const yw = a.y * a.w;
             const zw = a.z * a.w;
-            return matrix.Matrix(T, 3, 3).from(&[_]T{
+            return matrix.Matrix(T, 3, 3).create(.{
                 2 * (ww + xx) - 1,
                 2 * (xy - zw),
                 2 * (xz + yw),
@@ -147,17 +147,17 @@ test "quaternion to matrix" {
     const res_a = a.toMatrix3();
     const res_b = b.toMatrix3();
     const res_c = c.toMatrix3();
-    const expected_a = matrix.Matrix3f.from(&[_]f32{
+    const expected_a = matrix.Matrix3f.create(.{
         0.0, -1.0, 0.0,
         1.0, 0.0,  0.0,
         0.0, 0.0,  1.0,
     });
-    const expected_b = matrix.Matrix3f.from(&[_]f32{
+    const expected_b = matrix.Matrix3f.create(.{
         1.0, 0.0, 0.0,
         0.0, 1.0, 0.0,
         0.0, 0.0, 1.0,
     });
-    const expected_c = matrix.Matrix3f.from(&[_]f32{
+    const expected_c = matrix.Matrix3f.create(.{
         1.0, 0.0,  0.0,
         0.0, 0.0,  1.0,
         0.0, -1.0, 0.0,

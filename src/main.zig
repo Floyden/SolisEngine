@@ -106,8 +106,8 @@ pub fn main() !void {
     // Lights
     var lights = std.ArrayList(Light).init(allocator);
     defer lights.deinit();
-    try lights.append(Light.createPoint(Vector3f.from(&[_]f32{ 0.0, 5.0, 0.0 }), Vector4f.from(&[_]f32{ 1.0, 1.0, 1.0, 1.0 }), 40));
-    try lights.append(Light.createDirectional(Vector3f.from(&[_]f32{ 1.0, 0.0, 2.0 }).normalize(), Vector4f.from(&[_]f32{ 1.0, 1.0, 1.0, 1.0 }), 0.5));
+    try lights.append(Light.createPoint(Vector3f.create(.{ 0.0, 5.0, 0.0 }), Vector4f.create(.{ 1.0, 1.0, 1.0, 1.0 }), 40));
+    try lights.append(Light.createDirectional(Vector3f.create(.{ 1.0, 0.0, 2.0 }).normalize(), Vector4f.create(.{ 1.0, 1.0, 1.0, 1.0 }), 0.5));
 
     const lights_buffer = try renderer.createBufferNamed(@intCast(lights.items.len * @sizeOf(Light)), c.SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ, "Lights");
     defer renderer.releaseBuffer(lights_buffer);
@@ -165,7 +165,7 @@ pub fn main() !void {
             }
         }
         c.SDL_Delay(16);
-        lights.items[1].direction = Vector4f.from(&[_]f32{ @sin(angle), 0.0, @cos(angle), 0.0 });
+        lights.items[1].direction = Vector4f.create(.{ @sin(angle), 0.0, @cos(angle), 0.0 });
         angle += 0.03;
         try renderer.uploadDataToBuffer(@intCast(@sizeOf(Light)), lights_buffer, lights.items[1].toBuffer());
 

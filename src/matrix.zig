@@ -35,6 +35,15 @@ pub fn Matrix(T: type, rows: usize, cols: usize) type {
             @memcpy(self.data[0..], values);
             return self;
         }
+        
+        /// Constructs a matrix from a tuple. The tuple length must be equal to Rows * Cols.
+        pub fn create(values: anytype) Self {
+            std.debug.assert(values.len == Cols * Rows);
+            var self: Self = undefined;
+            inline for(&self.data, values) |*dst, src| 
+                dst.* = src;
+            return self;
+        }
 
         fn atMatrix(self: Self, x: usize, y: usize) T {
             return self.data[y * Cols + x];
