@@ -29,6 +29,8 @@ const Shader = @import("renderer/Shader.zig");
 const ShaderImporter = @import("renderer/ShaderImporter.zig");
 const defaults = @import("defaults.zig");
 
+const Events = @import("event.zig").Events;
+
 const CommandBuffer = @import("renderer/CommandBuffer.zig");
 const SDL_ERROR = Window.SDL_ERROR;
 
@@ -59,6 +61,11 @@ pub fn main() !void {
     // Video subsystem & windows
     var window = Window.init() catch |e| return e;
     defer window.deinit();
+
+    const WindowResized = struct{ window: *Window, width: u32, height: u32 };
+    var window_events = Events(WindowResized).init(allocator);
+    defer window_events.deinit();
+    var window_event_reader = window_events.reader();
 
     var renderer = Renderer.init(&window) catch |e| return e;
     defer renderer.deinit();
@@ -161,6 +168,7 @@ pub fn main() !void {
         while (c.SDL_PollEvent(&event) and !done) {
             switch (event.type) {
                 c.SDL_EVENT_QUIT, c.SDL_EVENT_WINDOW_CLOSE_REQUESTED => done = true,
+                c.SDL_EVENT_WINDOW_RESIZED => try window_events.emit(.{.window = &window, .width = @intCast(event.window.data1), .height = @intCast(event.window.data2) }),
                 else => {},
             }
         }
@@ -177,10 +185,10 @@ pub fn main() !void {
             continue;
         };
 
-        if (window.has_resized) {
+        while(window_event_reader.next()) |resize| {
             renderer.releaseTexture(tex_depth);
             tex_depth = try renderer.createTexture(.{
-                .extent = .{ .width = @intCast(window.size[0]), .height = @intCast(window.size[1]) },
+                .extent = .{ .width = resize.width, .height = resize.height },
                 .format = TextureFormat.depth16unorm,
                 .usage = .depth_stencil_target,
                 .label = "Depth Texture",
