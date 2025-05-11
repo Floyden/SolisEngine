@@ -49,7 +49,7 @@ pub fn set(self: *Self, entity: ecs.entity_t, T: type, val: T) *T {
 pub fn registerEvent(self: *Self, T: type) void {
     ecs.COMPONENT(self.inner, events.Events(T));
     ecs.COMPONENT(self.inner, events.EventReader(T));
-    // TODO: EventWriter
+    ecs.COMPONENT(self.inner, events.EventWriter(T));
     // TODO: Add destructor for events
     _ = self.setSingleton(events.Events(T), events.Events(T).init(self.allocator));
 }
@@ -57,4 +57,9 @@ pub fn registerEvent(self: *Self, T: type) void {
 pub fn getEventReader(self: *Self, T: type) ?events.EventReader(T) {
     const queue = self.getSingleton(events.Events(T)) orelse return null;
     return events.EventReader(T).create(queue);
+}
+
+pub fn getEventWriter(self: *Self, T: type) ?events.EventWriter(T) {
+    const queue = self.getSingletonMut(events.Events(T)) orelse return null;
+    return events.EventWriter(T).create(queue);
 }
