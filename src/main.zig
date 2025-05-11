@@ -37,8 +37,10 @@ pub fn main() !void {
         std.log.err("Expected at least one argument", .{});
         return;
     }
+    const allocator = std.heap.page_allocator;
+    const file_path: []const u8 = @ptrCast(std.os.argv[1][0..std.mem.len(std.os.argv[1])]);
 
-    var world = World.init();
+    var world = World.init(allocator);
     defer world.deinit();
 
     world.register(assets.Server);
@@ -46,9 +48,6 @@ pub fn main() !void {
 
     try asset_server.register_importer(Image, assets.ImageImporter);
     try asset_server.register_importer(Shader, ShaderImporter);
-
-    const allocator = std.heap.page_allocator;
-    const file_path: []const u8 = @ptrCast(std.os.argv[1][0..std.mem.len(std.os.argv[1])]);
 
     const parsed = try Gltf.parseFromFile(std.heap.page_allocator, file_path);
     const meshes = try parsed.parseMeshes(std.heap.page_allocator);
@@ -65,10 +64,10 @@ pub fn main() !void {
     const window_handle = world.newEntity("Main Window");
     var window = world.set(window_handle, Window, try Window.init());
 
-    const WindowResized = struct { window: *Window, width: u32, height: u32 };
-    var window_events = Events(WindowResized).init(allocator);
-    defer window_events.deinit();
-    var window_event_reader = window_events.reader();
+    const WindowResized = struct{ window: *Window, width: u32, height: u32 };
+    world.registerEvent(WindowResized);
+    var window_events = world.getSingletonMut(Events(WindowResized)).?;
+    var window_event_reader = world.getEventReader(WindowResized).?;
 
     var renderer = try Renderer.init(window);
     defer renderer.deinit();
