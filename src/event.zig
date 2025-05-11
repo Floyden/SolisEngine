@@ -27,8 +27,12 @@ pub fn Events(comptime Event: type) type {
             try self.current.append(event);
         }
 
-        pub fn reader(self: *Self) EventReader(Event) {
+        pub fn reader(self: *const Self) EventReader(Event) {
             return EventReader(Event).create(self);
+        }
+        
+        pub fn writer(self: *Self) EventWriter(Event) {
+            return EventWriter(Event).create(self);
         }
 
         pub fn update(self: *Self) void {
@@ -78,6 +82,23 @@ pub fn EventReader(comptime Event: type) type {
     };
 }
 
+pub fn EventWriter(comptime Event: type) type {
+    return struct {
+        const Self = @This();
+        events: *Events(Event),
+        
+        pub fn create(events: *Events(Event)) Self {
+            return .{ 
+                .events = events, 
+            };
+        }
+
+        pub fn emit(self: *Self, event: Event) !void {
+            try self.events.emit(event);
+        }
+    };
+}
+
 test "Basic Events" {
     const allocator = std.testing.allocator;
     const TestEvent = struct { id: usize };
@@ -86,11 +107,12 @@ test "Basic Events" {
     defer events.deinit();
 
     var reader = events.reader();
+    var writer = events.writer();
 
-    try events.emit(.{.id = 1 });
-    try events.emit(.{.id = 2 });
+    try writer.emit(.{.id = 1 });
+    try writer.emit(.{.id = 2 });
     events.update();
-    try events.emit(.{.id = 3 });
+    try writer.emit(.{.id = 3 });
 
 
     try std.testing.expectEqual(@as(?usize, 1), reader.next().?.id);
@@ -100,7 +122,7 @@ test "Basic Events" {
    
     reader.reset();
     events.update();
-    try events.emit(.{.id = 4 });
+    try writer.emit(.{.id = 4 });
     
     try std.testing.expectEqual(@as(?usize, 3), reader.next().?.id);
     try std.testing.expectEqual(@as(?usize, 4), reader.next().?.id);
