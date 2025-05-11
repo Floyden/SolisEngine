@@ -26,6 +26,7 @@ const Shader = solis.render.Shader;
 const ShaderImporter = solis.render.ShaderImporter;
 const defaults = solis.defaults;
 const ecs = solis.ecs;
+const World = solis.World;
 
 const Events = solis.events.Events;
 
@@ -37,12 +38,11 @@ pub fn main() !void {
         return;
     }
 
-    const world = ecs.init();
-    defer _ = ecs.fini(world);
+    var world = World.init();
+    defer world.deinit();
 
-    ecs.COMPONENT(world, assets.Server);
-    _ = ecs.singleton_set(world, assets.Server, assets.Server.init(std.heap.page_allocator));
-    var asset_server = ecs.singleton_get_mut(world, assets.Server).?;
+    world.register(assets.Server);
+    var asset_server = world.setSingleton(assets.Server, assets.Server.init(std.heap.page_allocator));
 
     try asset_server.register_importer(Image, assets.ImageImporter);
     try asset_server.register_importer(Shader, ShaderImporter);
@@ -61,10 +61,9 @@ pub fn main() !void {
     defer c.SDL_Quit();
 
     // Video subsystem & windows
-    ecs.COMPONENT(world, Window);
-    const window_handle = ecs.new_entity(world, "Main Window");
-    _ = ecs.set(world, window_handle, Window, try Window.init());
-    var window = ecs.get_mut(world, window_handle, Window).?;
+    world.register(Window);
+    const window_handle = world.newEntity("Main Window");
+    var window = world.set(window_handle, Window, try Window.init());
 
     const WindowResized = struct { window: *Window, width: u32, height: u32 };
     var window_events = Events(WindowResized).init(allocator);
