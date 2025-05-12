@@ -1,8 +1,7 @@
 const Quaternion = @import("quaternion.zig").Quaternion(f32);
-const matrix = @import("matrix.zig");
-const Vector3f = matrix.Vector3f;
-const Matrix3f = matrix.Matrix3f;
-const Matrix4f = matrix.Matrix4f;
+const Vector3f = @import("solis").Vector3f;
+const Matrix3f = @import("solis").Matrix3f;
+const Matrix4f = @import("solis").Matrix4f;
 
 const Self = @This();
 

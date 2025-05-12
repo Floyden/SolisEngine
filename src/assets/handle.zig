@@ -1,22 +1,25 @@
-const uuids = @import("solis").uuid;
-const Uuid = uuids.Uuid;
-const type_id = @import("solis").type_id;
+const solis = @import("solis");
+const typeId = solis.typeId;
+const TypeId = solis.TypeId;
+
+const Uuid = solis.Uuid;
+const uuidNew = solis.uuidNew;
 
 pub const HandleAny = struct {
     uuid: Uuid,
-    typeId: type_id.TypeId,
+    typeId: TypeId,
 
     pub fn new(comptime T: type) HandleAny {
         return .{
-            .uuid = uuids.new(),
-            .typeId = type_id.typeId(T),
+            .uuid = uuidNew(),
+            .typeId = typeId(T),
         };
     }
 
     pub fn with_uuid(comptime T: type, uuid: Uuid) HandleAny {
         return .{
             .uuid = uuid,
-            .typeId = type_id.typeId(T),
+            .typeId = typeId(T),
         };
     }
 };

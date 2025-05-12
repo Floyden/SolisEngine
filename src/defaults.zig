@@ -1,8 +1,8 @@
 const std = @import("std");
-const Image = @import("Image.zig");
-const Renderer = @import("Renderer.zig");
-const TextureHandle = @import("renderer/texture.zig").Handle;
-const EnvironmentMap = @import("renderer/EnvironmentMap.zig");
+const Image = @import("solis").Image;
+const Renderer = @import("solis").render.Renderer;
+const TextureHandle = @import("solis").render.TextureHandle;
+const EnvironmentMap = @import("solis").render.EnvironmentMap;
 
 pub const TextureDefaults = struct {
     base: Image,
@@ -17,7 +17,7 @@ pub const TextureDefaults = struct {
         const base = Image.init_fill(&[_]u8{ 255, 255, 255, 255 }, .{ .width = 1, .height = 1 }, .rgba8unorm, allocator);
         const normals = Image.init_fill(&[_]u8{ 128, 128, 255, 255 }, .{ .width = 1, .height = 1 }, .rgba8unorm, allocator);
         const metal_rough = Image.init_fill(&[_]u8{ 255, 255, 255, 255 }, .{ .width = 1, .height = 1 }, .rgba8unorm, allocator);
-        const black_cube = Image.init_fill(&[_]u8{ 0, 0, 0, 0 }, .{ .width = 4*8, .height = 3*8 }, .rgba8unorm, allocator);
+        const black_cube = Image.init_fill(&[_]u8{ 0, 0, 0, 0 }, .{ .width = 4 * 8, .height = 3 * 8 }, .rgba8unorm, allocator);
 
         const base_tex = try renderer.createTextureFromImage(base);
         const normals_tex = try renderer.createTextureFromImage(normals);

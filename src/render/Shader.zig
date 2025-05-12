@@ -1,7 +1,9 @@
 const std = @import("std");
-const vertex_data = @import("solis").vertex_data;
-const spirv = @import("solis").external.spirv;
-const c = @import("solis").external.c;
+const solis = @import("solis");
+
+const c = solis.external.c;
+const spirv = solis.external.spirv;
+const vertex_data = solis.vertex_data;
 
 const Self = @This();
 

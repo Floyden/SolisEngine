@@ -1,17 +1,20 @@
 const std = @import("std");
+const solis = @import("solis");
+
+
+const AssetServer = solis.assets.Server;
+const ElementDesc = solis.mesh.ElementDesc;
+const ElementType = solis.mesh.ElementType;
+const ElementUsage = solis.mesh.ElementUsage;
+const Handle = solis.assets.Handle;
+const Image = solis.Image;
 const json = std.json;
-
-const zigimg = @import("zigimg");
-
-const mesh = @import("mesh.zig");
-const Mesh = @import("mesh.zig").Mesh;
-const Handle = @import("assets.zig").Handle;
-const AssetServer = @import("assets.zig").Server;
-const Image = @import("Image.zig");
-const Transformation = @import("Transformation.zig");
-const Matrix4f = @import("matrix.zig").Matrix4f;
-const RenderTexture = @import("renderer/texture.zig").Handle;
-const PBRMaterial = @import("PBRMaterial.zig");
+const Matrix4f = solis.Matrix4f;
+const Mesh = solis.mesh.Mesh;
+const PBRMaterial = solis.PBRMaterial;
+const TextureHandle = solis.render.TextureHandle;
+const Transformation = solis.Transformation;
+const zigimg = solis.zigimg;
 
 const Self = @This();
 
@@ -209,16 +212,16 @@ pub fn parseFromSlice(allocator: std.mem.Allocator, buffer: []const u8) !Self {
     return res.value;
 }
 
-pub fn parseVertexUsage(value: []const u8) ?struct { mesh.ElementUsage, u32 } {
+pub fn parseVertexUsage(value: []const u8) ?struct { ElementUsage, u32 } {
     if (std.mem.eql(u8, value, "POSITION")) {
-        return .{ mesh.ElementUsage.position, 0 };
+        return .{ ElementUsage.position, 0 };
     } else if (std.mem.eql(u8, value, "NORMAL")) {
-        return .{ mesh.ElementUsage.normal, 0 };
+        return .{ ElementUsage.normal, 0 };
     } else if (std.mem.eql(u8, value, "TANGENT")) {
-        return .{ mesh.ElementUsage.tangent, 0 };
+        return .{ ElementUsage.tangent, 0 };
     } else if (std.mem.startsWith(u8, value, "TEXCOORD_")) {
         const index = std.fmt.parseInt(u32, value[9..], 10) catch return null;
-        return .{ mesh.ElementUsage.texcoord, index };
+        return .{ ElementUsage.texcoord, index };
     }
     std.log.err("Unknown vertex usage: {s}", .{value});
     return null;
@@ -301,7 +304,7 @@ pub fn loadMetalRoughImage(self: Self, asset_server: *AssetServer, mat_idx: u32)
     return null;
 }
 
-pub fn parseMaterials(self: Self, allocator: std.mem.Allocator, textures: []const RenderTexture) !std.ArrayList(PBRMaterial) {
+pub fn parseMaterials(self: Self, allocator: std.mem.Allocator, textures: []const TextureHandle) !std.ArrayList(PBRMaterial) {
     var materials = std.ArrayList(PBRMaterial).init(allocator);
     errdefer materials.deinit();
 
@@ -342,17 +345,17 @@ pub fn parseMeshData(self: Self, mesh_index: usize, allocator: std.mem.Allocator
     const buffer_offsets: []u32 = allocator.alloc(u32, attributes.count()) catch @panic("OOM");
     for (attributes.keys(), buffer_offsets) |attr_key, *offset| {
         const accessor = self.accessors.?[attributes.get(attr_key).?];
-        var element_desc: mesh.ElementDesc = undefined;
+        var element_desc: ElementDesc = undefined;
         const view = self.bufferViews.?[accessor.bufferView.?];
         // TODO: This is probably really hacky and only works if the entire mesh uses one buffer
         offset.* = accessor.byteOffset + view.byteOffset;
         element_desc.type = blk: switch (accessor.componentType) {
             .Float => {
                 switch (accessor.componentCount().?) {
-                    1 => break :blk mesh.ElementType.float1,
-                    2 => break :blk mesh.ElementType.float2,
-                    3 => break :blk mesh.ElementType.float3,
-                    4 => break :blk mesh.ElementType.float4,
+                    1 => break :blk ElementType.float1,
+                    2 => break :blk ElementType.float2,
+                    3 => break :blk ElementType.float3,
+                    4 => break :blk ElementType.float4,
                     else => return error.InvalidMesh,
                 }
             },
@@ -426,7 +429,7 @@ pub fn parseMeshData(self: Self, mesh_index: usize, allocator: std.mem.Allocator
             mesh_res.index_buffer = index_buffer;
         }
 
-        const target_desc = [_]mesh.ElementDesc{
+        const target_desc = [_]ElementDesc{
             .{ .usage = .position, .type = .float3, .offset = 0, .index = 0 },
             .{ .usage = .color, .type = .float3, .offset = 3 * @sizeOf(f32), .index = 0 },
             .{ .usage = .normal, .type = .float3, .offset = 6 * @sizeOf(f32), .index = 0 },

@@ -20,6 +20,14 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const root = b.addModule("solis", .{
+        .root_source_file = b.path("src/solis.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    root.addImport("solis", root);
+    root.addImport("zigimg", zigimg_dependency.module("zigimg"));
+
     const exe = b.addExecutable(.{
         .name = "Solis",
         .root_source_file = b.path("src/main.zig"),
@@ -27,8 +35,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    exe.root_module.addImport("solis", exe.root_module);
-    exe.root_module.addImport("zigimg", zigimg_dependency.module("zigimg"));
+    exe.root_module.addImport("solis", root);
     exe.linkLibC();
     exe.linkSystemLibrary("SDL3");
     exe.linkSystemLibrary("glslang");

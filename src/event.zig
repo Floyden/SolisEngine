@@ -7,7 +7,7 @@ pub fn Events(comptime Event: type) type {
         next_id: usize,
         current: std.ArrayList(Event),
         old: std.ArrayList(Event),
-        
+
         pub fn init(allocator: std.mem.Allocator) Self {
             return .{
                 .next_id = 0,
@@ -30,7 +30,7 @@ pub fn Events(comptime Event: type) type {
         pub fn reader(self: *const Self) EventReader(Event) {
             return EventReader(Event).create(self);
         }
-        
+
         pub fn writer(self: *Self) EventWriter(Event) {
             return EventWriter(Event).create(self);
         }
@@ -47,32 +47,31 @@ pub fn EventReader(comptime Event: type) type {
         const Self = @This();
         events: *const Events(Event),
         next_event: usize,
-        
+
         pub fn create(events: *const Events(Event)) Self {
-            return .{ 
-                .events = events, 
+            return .{
+                .events = events,
                 .next_event = 0,
             };
         }
 
         pub fn next(self: *Self) ?Event {
             const latest = self.events.next_id;
-            if(self.next_event >= latest) return null; // no new events
-            if(self.events.current.items.len == 0 and self.events.old.items.len == 0) return null; // no events at all
+            if (self.next_event >= latest) return null; // no new events
+            if (self.events.current.items.len == 0 and self.events.old.items.len == 0) return null; // no events at all
 
             const current_base = latest - self.events.current.items.len;
             const old_base = current_base - self.events.old.items.len;
             defer self.next_event += 1;
-            if(current_base <= self.next_event) { // next event is a current event
+            if (current_base <= self.next_event) { // next event is a current event
                 return self.events.current.items[self.next_event - current_base];
-            } else if(old_base <= self.next_event) { // next event is an old event
+            } else if (old_base <= self.next_event) { // next event is an old event
                 return self.events.old.items[self.next_event - old_base];
             } else { // has not been called for a while, refresh indices
                 self.next_event = old_base;
-                if(self.events.old.items.len > 0) {
+                if (self.events.old.items.len > 0) {
                     return self.events.old.items[0];
-                } else 
-                    return self.events.current.items[0];
+                } else return self.events.current.items[0];
             }
         }
 
@@ -86,10 +85,10 @@ pub fn EventWriter(comptime Event: type) type {
     return struct {
         const Self = @This();
         events: *Events(Event),
-        
+
         pub fn create(events: *Events(Event)) Self {
-            return .{ 
-                .events = events, 
+            return .{
+                .events = events,
             };
         }
 
@@ -109,21 +108,20 @@ test "Basic Events" {
     var reader = events.reader();
     var writer = events.writer();
 
-    try writer.emit(.{.id = 1 });
-    try writer.emit(.{.id = 2 });
+    try writer.emit(.{ .id = 1 });
+    try writer.emit(.{ .id = 2 });
     events.update();
-    try writer.emit(.{.id = 3 });
-
+    try writer.emit(.{ .id = 3 });
 
     try std.testing.expectEqual(@as(?usize, 1), reader.next().?.id);
     try std.testing.expectEqual(@as(?usize, 2), reader.next().?.id);
     try std.testing.expectEqual(@as(?usize, 3), reader.next().?.id);
     try std.testing.expectEqual(@as(?TestEvent, null), reader.next());
-   
+
     reader.reset();
     events.update();
-    try writer.emit(.{.id = 4 });
-    
+    try writer.emit(.{ .id = 4 });
+
     try std.testing.expectEqual(@as(?usize, 3), reader.next().?.id);
     try std.testing.expectEqual(@as(?usize, 4), reader.next().?.id);
     try std.testing.expectEqual(@as(?TestEvent, null), reader.next());

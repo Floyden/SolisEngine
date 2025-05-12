@@ -1,15 +1,16 @@
 const std = @import("std");
-const Extent3d = @import("solis").Extent3d;
-const Image = @import("solis").Image;
-const Renderer = @import("solis").Renderer;
-const c = @import("solis").external.c;
+const solis = @import("solis");
 
-const texture = @import("texture.zig");
+const Extent3d = solis.Extent3d;
+const Image = solis.Image;
+const Renderer = @import("Renderer.zig");
 const SamplerHandle = @import("sampler.zig").Handle;
+const c = solis.external.c;
+const texture = @import("texture.zig");
 
 const Self = @This();
 
-specular_texture: texture.Handle, 
+specular_texture: texture.Handle,
 diffuse_texture: texture.Handle,
 
 pub fn initFromImage(renderer: *Renderer, specular_image: Image, allocator: std.mem.Allocator) !Self {
@@ -48,13 +49,13 @@ fn generateDiffuse(specular_image: Image, allocator: std.mem.Allocator) !Image {
     std.debug.assert(specular_image.format == .rgba8unorm);
 
     var res = Image.init_empty(extent, specular_image.format, allocator);
-    
-    for(0..extent.height) |by| {
-        for(0..extent.width) |bx| {
-            var colors = [4]u32{0, 0, 0, 0};
 
-            for(0..8) |y| {
-                for(0..8) |x| {
+    for (0..extent.height) |by| {
+        for (0..extent.width) |bx| {
+            var colors = [4]u32{ 0, 0, 0, 0 };
+
+            for (0..8) |y| {
+                for (0..8) |x| {
                     const p_x = bx * 8 + x;
                     const p_y = by * 8 + y;
                     const idx = (p_y * specular_image.extent.width + p_x) * 4;
@@ -65,15 +66,14 @@ fn generateDiffuse(specular_image: Image, allocator: std.mem.Allocator) !Image {
                 }
             }
 
-            for(colors) |val| res.data.appendAssumeCapacity(@intCast(val / 64));
+            for (colors) |val| res.data.appendAssumeCapacity(@intCast(val / 64));
         }
     }
     return res;
 }
 
-
 fn loadTexture(renderer: *Renderer, image: Image) !texture.Handle {
-    const cube_extent = Extent3d{ .width = image.extent.width / 4, .height = image.extent.height / 3, .depth = 6};
+    const cube_extent = Extent3d{ .width = image.extent.width / 4, .height = image.extent.height / 3, .depth = 6 };
     std.debug.assert(cube_extent.height == cube_extent.width);
 
     const offsets = [_]Extent3d{
@@ -135,5 +135,3 @@ fn loadTexture(renderer: *Renderer, image: Image) !texture.Handle {
     command_buffer.endCopyPass();
     return handle;
 }
-
-

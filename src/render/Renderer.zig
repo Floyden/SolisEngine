@@ -1,17 +1,17 @@
 const std = @import("std");
-const Extent3d = @import("Extent3d.zig");
-const Window = @import("Window.zig");
-const CommandBuffer = @import("renderer/CommandBuffer.zig");
-const SDL_ERROR = Window.SDL_ERROR;
-const Image = @import("Image.zig");
-pub const PixelFormat = @import("zigimg").PixelFormat;
-const c = @import("solis").external.c;
-const spirv = @import("solis").external.spirv;
-pub const sampler = @import("renderer/sampler.zig");
-pub const texture = @import("renderer/texture.zig");
-pub const GraphicsPipeline = @import("renderer/GraphicsPipeline.zig");
-pub const Shader = @import("renderer/Shader.zig");
-pub const Buffer = @import("renderer/Buffer.zig");
+const solis = @import("solis");
+
+const Buffer = @import("Buffer.zig");
+const CommandBuffer = @import("CommandBuffer.zig");
+const GraphicsPipeline = @import("GraphicsPipeline.zig");
+const Shader = @import("Shader.zig");
+const c = solis.external.c;
+const sampler = @import("sampler.zig");
+const texture = @import("texture.zig");
+
+const Image = solis.Image;
+const Window = solis.Window;
+const SDL_ERROR = Window.SDL_ERROR; // TODO: Replace
 
 const Renderer = @This();
 window: *Window,

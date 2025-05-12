@@ -1,7 +1,9 @@
 const std = @import("std");
-const Extent3d = @import("Extent3d.zig");
-const SamplerDescription = @import("renderer/sampler.zig").Description;
-pub const TextureFormat = @import("renderer/texture.zig").Format;
+const solis = @import("solis");
+
+const Extent3d = solis.Extent3d;
+const SamplerDescription = solis.render.TextureDesc;
+pub const TextureFormat = solis.render.TextureFormat;
 
 const Self = @This();
 

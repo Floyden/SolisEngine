@@ -1,10 +1,11 @@
 const std = @import("std");
-const c = @import("solis").external.c;
-const Window = @import("solis").Window;
+const solis = @import("solis");
 
-const texture = @import("texture.zig");
-const RenderPass = @import("RenderPass.zig");
 const Buffer = @import("Buffer.zig");
+const RenderPass = @import("RenderPass.zig");
+const Window = solis.Window;
+const c = solis.external.c;
+const texture = @import("texture.zig");
 
 const CommandBuffer = @This();
 handle: *c.SDL_GPUCommandBuffer,

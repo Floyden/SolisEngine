@@ -1,7 +1,9 @@
 const std = @import("std");
-const Allocator = @import("std").mem.Allocator;
-const zigimg = @import("zigimg");
-const Image = @import("solis").Image;
+const solis = @import("solis");
+
+const Allocator = std.mem.Allocator;
+const Image = solis.Image;
+const zigimg = solis.zigimg;
 
 const Self = @This();
 

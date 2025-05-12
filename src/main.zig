@@ -1,37 +1,33 @@
 const std = @import("std");
-const zigimg = @import("zigimg");
+const solis = @import("solis");
 
-pub const external = @import("external.zig");
-const c = external.c;
-pub const Extent3d = @import("Extent3d.zig");
-pub const Window = @import("Window.zig");
-const Camera = @import("Camera.zig");
-pub const Renderer = @import("Renderer.zig");
-const Light = @import("light.zig").Light;
-const Gltf = @import("Gltf.zig");
-const Material = @import("PBRMaterial.zig");
-pub const type_id = @import("type_id.zig");
-pub const uuid = @import("uuid.zig");
-pub const Image = @import("Image.zig");
-pub const assets = @import("assets.zig");
-pub const mesh = @import("mesh.zig");
-pub const matrix = @import("matrix.zig");
+const c = solis.external.c;
+const Extent3d = solis.Extent3d;
+const Window = solis.Window;
+const Camera = solis.Camera;
+const Light = solis.light.Light;
+const Gltf = solis.Gltf;
+const Material = solis.PBRMaterial;
+const Image = solis.Image;
+const assets = solis.assets;
+const mesh = solis.mesh;
+const matrix = solis.matrix;
 const Vector3f = matrix.Vector3f;
 const Vector4f = matrix.Vector4f;
 const Matrix3f = matrix.Matrix3f;
 const Matrix4f = matrix.Matrix4f;
-const EnvironmentMap = @import("renderer/EnvironmentMap.zig");
-const TextureFormat = @import("renderer/texture.zig").Format;
-const Texture = @import("renderer/texture.zig").Handle;
-const RenderPass = @import("renderer/RenderPass.zig");
-const Buffer = @import("renderer/Buffer.zig");
-const Shader = @import("renderer/Shader.zig");
-const ShaderImporter = @import("renderer/ShaderImporter.zig");
-const defaults = @import("defaults.zig");
+const Buffer = solis.render.Buffer;
+const RenderPass = solis.render.RenderPass;
+const EnvironmentMap = solis.render.EnvironmentMap;
+const Texture = solis.render.TextureHandle;
+const TextureFormat = solis.render.TextureFormat;
+const Renderer = solis.render.Renderer;
+const Shader = solis.render.Shader;
+const ShaderImporter = solis.render.ShaderImporter;
+const defaults = solis.defaults;
 
-const Events = @import("event.zig").Events;
+const Events = solis.events.Events;
 
-const CommandBuffer = @import("renderer/CommandBuffer.zig");
 const SDL_ERROR = Window.SDL_ERROR;
 
 pub fn main() !void {
@@ -62,7 +58,7 @@ pub fn main() !void {
     var window = Window.init() catch |e| return e;
     defer window.deinit();
 
-    const WindowResized = struct{ window: *Window, width: u32, height: u32 };
+    const WindowResized = struct { window: *Window, width: u32, height: u32 };
     var window_events = Events(WindowResized).init(allocator);
     defer window_events.deinit();
     var window_event_reader = window_events.reader();
@@ -137,7 +133,7 @@ pub fn main() !void {
         }
     }
 
-    var environment_map : EnvironmentMap = undefined; 
+    var environment_map: EnvironmentMap = undefined;
     defer environment_map.deinit(&renderer);
     {
         const img = try asset_server.load(Image, "assets/textures/cubemap.jpg");
@@ -168,7 +164,7 @@ pub fn main() !void {
         while (c.SDL_PollEvent(&event) and !done) {
             switch (event.type) {
                 c.SDL_EVENT_QUIT, c.SDL_EVENT_WINDOW_CLOSE_REQUESTED => done = true,
-                c.SDL_EVENT_WINDOW_RESIZED => try window_events.emit(.{.window = &window, .width = @intCast(event.window.data1), .height = @intCast(event.window.data2) }),
+                c.SDL_EVENT_WINDOW_RESIZED => try window_events.emit(.{ .window = &window, .width = @intCast(event.window.data1), .height = @intCast(event.window.data2) }),
                 else => {},
             }
         }
@@ -185,7 +181,7 @@ pub fn main() !void {
             continue;
         };
 
-        while(window_event_reader.next()) |resize| {
+        while (window_event_reader.next()) |resize| {
             renderer.releaseTexture(tex_depth);
             tex_depth = try renderer.createTexture(.{
                 .extent = .{ .width = resize.width, .height = resize.height },

@@ -1,15 +1,18 @@
-const texture = @import("renderer/texture.zig");
-const SamplerHandle = @import("renderer/sampler.zig").Handle;
+const solis = @import("solis");
+
+const SamplerHandle = solis.render.SamplerHandle;
 const TextureDefaults = @import("defaults.zig").TextureDefaults;
-const c = @import("solis").external.c;
+const TextureHandle = solis.render.TextureHandle;
+const c = solis.external.c;
+
 const Self = @This();
 
 // Base colors. If the texture is defined, the final base color will be base_color * base_color_texture_sample
 base_color: [4]f32 = .{ 1.0, 1.0, 1.0, 1.0 },
-base_color_texture: ?texture.Handle = null,
+base_color_texture: ?TextureHandle = null,
 
 // Contains the ambient occlusion, metallic and roughness textures in the respective RGB channels.
-metallic_roughness_texture: ?texture.Handle = null,
+metallic_roughness_texture: ?TextureHandle = null,
 
 // How metallic the material appears. Allowed values are [0.0, 1.0].
 // If the texture is defined (green channel of metallic_roughness_texture),
@@ -21,7 +24,7 @@ metallic: f32 = 0.0,
 // the final value will be roughness * roughness_texture_sample
 roughness: f32 = 0.0,
 
-normal_texture: ?texture.Handle = null,
+normal_texture: ?TextureHandle = null,
 
 pub const UniformBinding = extern struct {
     base_color: [4]f32,

@@ -1,7 +1,9 @@
-const texture = @import("texture.zig");
+const c = @import("solis").external.c;
+
 const Buffer = @import("Buffer.zig");
 const GraphicsPipeline = @import("GraphicsPipeline.zig");
-const c = @import("solis").external.c;
+const texture = @import("texture.zig");
+
 const Self = @This();
 
 pub const ColorTarget = struct {

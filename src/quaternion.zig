@@ -1,5 +1,5 @@
 const std = @import("std");
-const matrix = @import("matrix.zig");
+const matrix = @import("solis").matrix;
 const Matrix3f = matrix.Matrix3f;
 const Matrix4f = matrix.Matrix4f;
 

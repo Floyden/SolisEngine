@@ -1,12 +1,15 @@
 const std = @import("std");
-const type_id = @import("solis").type_id;
+const solis = @import("solis");
+
 const Handle = @import("handle.zig").Handle;
 const HandleAny = @import("handle.zig").HandleAny;
+const TypeId = solis.TypeId;
+const typeId = solis.typeId;
 
 const Self = @This();
 
 allocator: std.mem.Allocator,
-importers: std.AutoHashMapUnmanaged(type_id.TypeId, *const anyopaque),
+importers: std.AutoHashMapUnmanaged(TypeId, *const anyopaque),
 loaded_assets: std.AutoHashMapUnmanaged(HandleAny, *anyopaque),
 
 // TODO: Metadata (Path, Type, ...)
@@ -27,13 +30,13 @@ pub fn deinit(self: *Self) void {
 }
 
 pub fn register_importer(self: *Self, comptime T: type, comptime importer: type) !void {
-    try self.importers.put(self.allocator, type_id.typeId(T), importer.import);
+    try self.importers.put(self.allocator, typeId(T), importer.import);
 }
 
 pub fn load(self: *Self, comptime T: type, path: []const u8) !Handle(T) {
     // TODO: check if the asset has been loaded already.
     // TODO: Figure out error handling
-    const importer = @as(*const fn (std.mem.Allocator, path: []const u8) ?T, @ptrCast(self.importers.get(type_id.typeId(T)) orelse return error.ImporterNotFound));
+    const importer = @as(*const fn (std.mem.Allocator, path: []const u8) ?T, @ptrCast(self.importers.get(typeId(T)) orelse return error.ImporterNotFound));
     const handle = Handle(T).new();
     const dest = try self.allocator.create(T);
     dest.* = importer(self.allocator, path) orelse {

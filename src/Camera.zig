@@ -1,6 +1,7 @@
-const matrix = @import("matrix.zig");
-const Matrix4f = matrix.Matrix4f;
-const Matrix3f = matrix.Matrix3f;
+const solis = @import("solis");
+const matrix = solis.matrix;
+const Matrix4f = solis.Matrix4f;
+const Matrix3f = solis.Matrix3f;
 
 const Self = @This();
 

@@ -1,5 +1,5 @@
 const std = @import("std");
-const Allocator = @import("std").mem.Allocator;
+const Allocator = std.mem.Allocator;
 const Shader = @import("Shader.zig");
 
 const Self = @This();

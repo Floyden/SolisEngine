@@ -1,7 +1,9 @@
-const PixelFormat = @import("zigimg").PixelFormat;
 const std = @import("std");
-const c = @import("solis").external.c;
-const Extent3d = @import("solis").Extent3d;
+const solis = @import("solis");
+
+const c = solis.external.c;
+const Extent3d = solis.Extent3d;
+const PixelFormat = solis.zigimg.PixelFormat;
 
 pub const Handle = struct {
     id: *c.SDL_GPUTexture,
@@ -18,7 +20,7 @@ pub const Description = struct {
 pub const Usage = enum {
     sampler,
     depth_stencil_target,
-    
+
     pub fn toSDLFormat(self: Usage) u32 {
         return switch (self) {
             .sampler => c.SDL_GPU_TEXTUREUSAGE_SAMPLER,
