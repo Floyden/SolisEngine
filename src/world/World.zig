@@ -62,6 +62,25 @@ pub fn getEventWriter(self: *Self, T: type) ?events.EventWriter(T) {
     const queue = self.getSingletonMut(events.Events(T)) orelse return null;
     return events.EventWriter(T).create(queue);
 }
-// pub fn addSystem(self: *Self, system: anytype) void {
-//
-// }
+
+pub fn addSystem(self: *Self, system: anytype) void {
+    const SystemType = @TypeOf(system);
+    const systemInfo = @typeInfo(SystemType);
+    if(systemInfo != .@"fn") @compileError("Only Functions supported in World.addSystem");
+
+    const params = systemInfo.@"fn".params;
+    inline for (params) |param| {
+        if(param.type) |ptype| {
+            if(ptype.WorldParameter == events.EventReader) {
+                const queue = self.getSingleton(events.Events(ptype.EventType));
+                std.log.debug("Reader {?}", .{queue});
+            } else if(ptype.WorldParameter == events.EventWriter) {
+                std.log.debug("Writer", .{});
+            }
+        }
+    }
+    // Extract paramters
+    // Query: create query_desc_t & ecs query
+    //
+}
+

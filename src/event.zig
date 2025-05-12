@@ -42,20 +42,22 @@ pub fn Events(comptime Event: type) type {
     };
 }
 
-pub fn EventReader(comptime Event: type) type {
+pub fn EventReader(comptime T: type) type {
     return struct {
+        pub const WorldParameter = EventReader;
+        pub const EventType = T;
         const Self = @This();
-        events: *const Events(Event),
+        events: *const Events(EventType),
         next_event: usize,
 
-        pub fn create(events: *const Events(Event)) Self {
+        pub fn create(events: *const Events(EventType)) Self {
             return .{
                 .events = events,
                 .next_event = 0,
             };
         }
 
-        pub fn next(self: *Self) ?Event {
+        pub fn next(self: *Self) ?EventType {
             const latest = self.events.next_id;
             if (self.next_event >= latest) return null; // no new events
             if (self.events.current.items.len == 0 and self.events.old.items.len == 0) return null; // no events at all
@@ -81,18 +83,20 @@ pub fn EventReader(comptime Event: type) type {
     };
 }
 
-pub fn EventWriter(comptime Event: type) type {
+pub fn EventWriter(comptime T: type) type {
     return struct {
+        pub const WorldParameter = EventWriter;
+        pub const EventType = T;
         const Self = @This();
-        events: *Events(Event),
+        events: *Events(EventType),
 
-        pub fn create(events: *Events(Event)) Self {
+        pub fn create(events: *Events(EventType)) Self {
             return .{
                 .events = events,
             };
         }
 
-        pub fn emit(self: *Self, event: Event) !void {
+        pub fn emit(self: *Self, event: EventType) !void {
             try self.events.emit(event);
         }
     };

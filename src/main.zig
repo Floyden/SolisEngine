@@ -29,8 +29,15 @@ const ecs = solis.ecs;
 const World = solis.world.World;
 
 const Events = solis.events.Events;
+const EventReader = solis.events.EventReader;
+const EventWriter = solis.events.EventWriter;
 
 const SDL_ERROR = Window.SDL_ERROR;
+
+const WindowResized = struct{ window: *Window, width: u32, height: u32 };
+fn testFn(_: EventReader(WindowResized), _: EventWriter(WindowResized)) void {
+
+}
 
 pub fn main() !void {
     if (std.os.argv.len < 2) {
@@ -64,11 +71,11 @@ pub fn main() !void {
     const window_handle = world.newEntity("Main Window");
     var window = world.set(window_handle, Window, try Window.init());
 
-    const WindowResized = struct{ window: *Window, width: u32, height: u32 };
     world.registerEvent(WindowResized);
     _ = world.getSingletonMut(Events(WindowResized)).?;
     var window_event_reader = world.getEventReader(WindowResized).?;
     var window_event_writer = world.getEventWriter(WindowResized).?;
+    world.addSystem(testFn);
 
     var renderer = try Renderer.init(window);
     defer renderer.deinit();
