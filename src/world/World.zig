@@ -1,7 +1,6 @@
 const std = @import("std");
 const ecs = @import("zflecs");
-const events = @import("event.zig");
-
+const events = @import("solis").events;
 
 const Self = @This();
 inner : *ecs.world_t,
@@ -63,3 +62,6 @@ pub fn getEventWriter(self: *Self, T: type) ?events.EventWriter(T) {
     const queue = self.getSingletonMut(events.Events(T)) orelse return null;
     return events.EventWriter(T).create(queue);
 }
+// pub fn addSystem(self: *Self, system: anytype) void {
+//
+// }

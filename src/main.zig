@@ -26,7 +26,7 @@ const Shader = solis.render.Shader;
 const ShaderImporter = solis.render.ShaderImporter;
 const defaults = solis.defaults;
 const ecs = solis.ecs;
-const World = solis.World;
+const World = solis.world.World;
 
 const Events = solis.events.Events;
 
