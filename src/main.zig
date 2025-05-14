@@ -35,8 +35,12 @@ const EventWriter = solis.events.EventWriter;
 const SDL_ERROR = Window.SDL_ERROR;
 
 const WindowResized = struct{ window: *Window, width: u32, height: u32 };
-fn testFn(_: EventReader(WindowResized), _: EventWriter(WindowResized)) void {
-
+fn testFn(reader: EventReader(WindowResized), writer: EventWriter(WindowResized)) void {
+    // const window: Window = undefined;
+    // writer.emit(.{.window = &window, .width = 420, .height = 69});
+    //
+    std.log.debug("Reader: {?}", .{reader});
+    std.log.debug("Writer: {?}", .{writer});
 }
 
 pub fn main() !void {
@@ -75,7 +79,7 @@ pub fn main() !void {
     _ = world.getSingletonMut(Events(WindowResized)).?;
     var window_event_reader = world.getEventReader(WindowResized).?;
     var window_event_writer = world.getEventWriter(WindowResized).?;
-    world.addSystem(testFn);
+    try world.addSystem(testFn);
 
     var renderer = try Renderer.init(window);
     defer renderer.deinit();
@@ -173,6 +177,7 @@ pub fn main() !void {
     // Main loop
     var done = false;
     var event: c.SDL_Event = undefined;
+    world.update();
     while (!done) {
         window.update();
         while (c.SDL_PollEvent(&event) and !done) {

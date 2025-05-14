@@ -17,6 +17,10 @@ pub fn deinit(self: *Self) void {
     _ = ecs.fini(self.inner);
 }
 
+pub fn update(self: *Self) void {
+    _  =ecs.progress(self.inner, 0);
+}
+
 pub fn register(self: *Self, T: type) void {
     ecs.COMPONENT(self.inner, T);
 }
@@ -63,24 +67,96 @@ pub fn getEventWriter(self: *Self, T: type) ?events.EventWriter(T) {
     return events.EventWriter(T).create(queue);
 }
 
-pub fn addSystem(self: *Self, system: anytype) void {
-    const SystemType = @TypeOf(system);
-    const systemInfo = @typeInfo(SystemType);
-    if(systemInfo != .@"fn") @compileError("Only Functions supported in World.addSystem");
+fn parseParamTuple(args: []type) type {
+    const fields = comptime blk: {
+        var res: [args.len]std.builtin.Type.StructField = undefined;
+        for(args, &res, 0..) |arg, *field, i| {
+            field.* = .{
+                .name = std.fmt.comptimePrint("{d}", .{i}),
+                .type = arg,
+                .default_value_ptr = null,
+                .is_comptime = false,
+                .alignment = @alignOf(arg),
+            };
+        }
+        break :blk res;
+    };
 
-    const params = systemInfo.@"fn".params;
-    inline for (params) |param| {
+    return @Type(.{
+        .@"struct" = .{
+            .layout = .auto,
+            .fields = &fields,
+            .decls = &.{},
+            .is_tuple = true,
+        }
+    });
+}
+
+pub fn addSystem(self: *Self, system: anytype) !void {
+    const SystemType = @TypeOf(system);
+    const system_info = @typeInfo(SystemType);
+    if(system_info != .@"fn") @compileError("Only Functions supported in World.addSystem");
+
+    const params = system_info.@"fn".params;
+    comptime var type_array : [params.len]type = undefined;
+
+    // Extract paramters
+    inline for (params, type_array[0..]) |param, *types| {
         if(param.type) |ptype| {
+            types.* = ptype;
+        } else @compileError("Parameter Type is null");
+    }
+
+    const TupleType = parseParamTuple(&type_array);
+    const Context = comptime struct {
+        callback: *const SystemType,
+        params : TupleType,
+        allocator: std.mem.Allocator,
+
+        fn free(self_ptr_opt: ?*anyopaque) callconv(.c) void {
+            if(self_ptr_opt) |self_ptr| {
+                var self_ctx: *@This() = @alignCast(@ptrCast(self_ptr));
+                self_ctx.allocator.destroy(self_ctx);
+            }
+        }
+
+        fn invoke(iter: *ecs.iter_t) callconv(.c) void {
+            const ctx_opt = iter.callback_ctx;
+            if(ctx_opt) |ctx_ptr| {
+                const ctx: *@This() = @alignCast(@ptrCast(ctx_ptr));
+                @call(.auto, ctx.callback, ctx.params);
+            }
+        }
+
+    };
+
+    // Create and fill parameter tuple 
+    const ctx: *Context = try self.allocator.create(Context);
+    const tuple = &ctx.params;
+    ctx.callback = system;
+    ctx.allocator = self.allocator;
+    inline for(params, 0..) |param, i| {
+        const field_name = comptime std.fmt.comptimePrint("{}", .{i});
+        if(param.type) |ptype| {
+            // TODO: This should be done in a more generic way
             if(ptype.WorldParameter == events.EventReader) {
                 const queue = self.getSingleton(events.Events(ptype.EventType));
-                std.log.debug("Reader {?}", .{queue});
+                @field(tuple.*, field_name) = queue.?.reader();
             } else if(ptype.WorldParameter == events.EventWriter) {
-                std.log.debug("Writer", .{});
+                const queue = self.getSingletonMut(events.Events(ptype.EventType));
+                @field(tuple.*, field_name) = queue.?.writer();
             }
         }
     }
-    // Extract paramters
-    // Query: create query_desc_t & ecs query
-    //
-}
 
+    // Query: create query_desc_t & ecs query
+    const system_name = comptime std.fmt.comptimePrint("{s}_callback", .{@typeName(SystemType)});
+    var system_desc : ecs.system_desc_t = .{
+        .entity = self.newEntity(system_name),
+        .callback = Context.invoke,
+        .callback_ctx = ctx,
+        .callback_ctx_free = Context.free,
+    };
+
+    _ = ecs.SYSTEM(self.inner, @typeName(SystemType), ecs.OnUpdate, &system_desc);
+}
