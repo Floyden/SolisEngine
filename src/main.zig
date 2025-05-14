@@ -81,7 +81,7 @@ pub fn main() !void {
     world.registerEvent(WindowResized);
     _ = world.getSingletonMut(Events(WindowResized)).?;
     // var window_event_reader = world.getEventReader(WindowResized).?;
-    var window_event_writer = world.getEventWriter(WindowResized).?;
+    // var window_event_writer = world.getEventWriter(WindowResized).?;
     try world.addSystem(testFn);
 
     var renderer = try Renderer.init(window);
@@ -186,7 +186,7 @@ pub fn main() !void {
         while (c.SDL_PollEvent(&event) and !done) {
             switch (event.type) {
                 c.SDL_EVENT_QUIT, c.SDL_EVENT_WINDOW_CLOSE_REQUESTED => done = true,
-                c.SDL_EVENT_WINDOW_RESIZED => try window_event_writer.emit(.{.window = window, .width = @intCast(event.window.data1), .height = @intCast(event.window.data2) }),
+                // c.SDL_EVENT_WINDOW_RESIZED => try window_event_writer.emit(.{.window = window, .width = @intCast(event.window.data1), .height = @intCast(event.window.data2) }),
                 else => {},
             }
         }

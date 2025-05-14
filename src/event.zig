@@ -99,10 +99,15 @@ pub fn EventWriter(comptime T: type) type {
         const Self = @This();
         events: *Events(EventType),
 
-        pub fn create(events: *Events(EventType)) Self {
-            return .{
-                .events = events,
-            };
+        pub fn init(world: *World, _: u64) Self {
+            const events_opt = world.getSingletonMut(Events(EventType));
+
+            if(events_opt) |events| {
+                return Self {
+                    .events = events,
+                };
+            }
+            std.debug.panic("Event ({?}) not initialized ", .{EventType});
         }
 
         pub fn emit(self: Self, event: EventType) !void {

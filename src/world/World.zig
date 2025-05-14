@@ -58,16 +58,6 @@ pub fn registerEvent(self: *Self, T: type) void {
     _ = self.setSingleton(events.Events(T), events.Events(T).init(self.allocator));
 }
 
-pub fn getEventReader(self: *Self, T: type) ?events.EventReader(T) {
-    const queue = self.getSingleton(events.Events(T)) orelse return null;
-    return events.EventReader(T).create(queue);
-}
-
-pub fn getEventWriter(self: *Self, T: type) ?events.EventWriter(T) {
-    const queue = self.getSingletonMut(events.Events(T)) orelse return null;
-    return events.EventWriter(T).create(queue);
-}
-
 fn parseParamTuple(args: []type) type {
     const fields = comptime blk: {
         var res: [args.len]std.builtin.Type.StructField = undefined;
@@ -140,16 +130,8 @@ pub fn addSystem(self: *Self, system: anytype) !void {
     ctx.allocator = self.allocator;
     inline for(params, 0..) |param, i| {
         const field_name = comptime std.fmt.comptimePrint("{}", .{i});
-        if(param.type) |ptype| {
-            // TODO: This should be done in a more generic way
-            if(ptype.WorldParameter == events.EventReader) {
-                // const queue = self.getSingleton(events.Events(ptype.EventType));
-                @field(tuple.*, field_name) = ptype.init(self, system_entity);
-            } else if(ptype.WorldParameter == events.EventWriter) {
-                const queue = self.getSingletonMut(events.Events(ptype.EventType));
-                @field(tuple.*, field_name) = queue.?.writer();
-            }
-        }
+        if(param.type) |ptype| 
+            @field(tuple.*, field_name) = ptype.init(self, system_entity);
     }
 
     // Query: create query_desc_t & ecs query
