@@ -83,6 +83,7 @@ fn parseParamTuple(args: []type) type {
     });
 }
 
+// TODO: Add support for error values in systems
 pub fn addSystem(self: *Self, system: anytype) !void {
     const SystemType = @TypeOf(system);
     const system_info = @typeInfo(SystemType);

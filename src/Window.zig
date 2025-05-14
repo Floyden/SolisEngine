@@ -34,3 +34,14 @@ pub fn getAspect(self: Window) f32 {
     const height: f32 = @floatFromInt(self.size[1]);
     return width / height;
 }
+
+// Window Events
+pub const Resized = struct {
+    window: c.SDL_WindowID, // TODO: Abstract this away
+    width: i32,
+    height: i32,
+};
+
+pub const Event = union {
+    resized: Resized
+};

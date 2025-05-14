@@ -27,6 +27,7 @@ const ShaderImporter = solis.render.ShaderImporter;
 const defaults = solis.defaults;
 const ecs = solis.ecs;
 const World = solis.world.World;
+const Query = solis.world.Query;
 
 const Events = solis.events.Events;
 const EventReader = solis.events.EventReader;
@@ -34,16 +35,19 @@ const EventWriter = solis.events.EventWriter;
 
 const SDL_ERROR = Window.SDL_ERROR;
 
-const WindowResized = struct{ window: *Window, width: u32, height: u32 };
-fn testFn(reader: EventReader(WindowResized), writer: EventWriter(WindowResized)) void {
-    var window: Window = undefined;
-    writer.emit(.{.window = &window, .width = 420, .height = 69}) catch @panic("Yeet");
+const SystemEvent = union {
+    close_request: bool,
+};
 
-    const next = reader.next();
-    std.debug.assert(next != null);
-    std.debug.assert(next.?.width == 420);
-    std.debug.assert(next.?.height == 69);
-    std.log.debug("Success", .{});
+fn handleSDLEvents(window_events: EventWriter(Window.Event), system_events: EventWriter(SystemEvent)) void {
+    var event: c.SDL_Event = undefined;
+    while (c.SDL_PollEvent(&event)) {
+        switch (event.type) {
+            c.SDL_EVENT_QUIT, c.SDL_EVENT_WINDOW_CLOSE_REQUESTED => system_events.emit(.{ .close_request = true }) catch @panic("OOM?"),
+            c.SDL_EVENT_WINDOW_RESIZED => window_events.emit(.{.resized = Window.Resized{.window = event.window.windowID, .width = @intCast(event.window.data1), .height = @intCast(event.window.data2) }}) catch @panic("OOM?"),
+            else => {},
+        }
+    }
 }
 
 pub fn main() !void {
@@ -75,14 +79,13 @@ pub fn main() !void {
 
     // Video subsystem & windows
     world.register(Window);
+    world.register(Texture);
     const window_handle = world.newEntity("Main Window");
     var window = world.set(window_handle, Window, try Window.init());
 
-    world.registerEvent(WindowResized);
-    _ = world.getSingletonMut(Events(WindowResized)).?;
-    // var window_event_reader = world.getEventReader(WindowResized).?;
-    // var window_event_writer = world.getEventWriter(WindowResized).?;
-    try world.addSystem(testFn);
+    world.registerEvent(Window.Event);
+    world.registerEvent(SystemEvent);
+    try world.addSystem(handleSDLEvents);
 
     var renderer = try Renderer.init(window);
     defer renderer.deinit();
@@ -101,14 +104,14 @@ pub fn main() !void {
     defer renderer.destroyGraphicsPipeline(pipeline);
 
     // window textures
-    var tex_depth = try renderer.createTexture(.{
+    const tex_depth = world.set(window_handle, Texture,  try renderer.createTexture(.{
         .extent = .{ .width = @intCast(window.size[0]), .height = @intCast(window.size[1]) },
         .format = TextureFormat.depth16unorm,
         .usage = .depth_stencil_target,
         .type = .image2d,
         .label = "Depth Texture",
-    });
-    defer renderer.releaseTexture(tex_depth);
+    }));
+    defer renderer.releaseTexture(tex_depth.*);
 
     // Buffers
     const BufferPair = struct { vertex_buffer: Buffer, index_buffer: ?Buffer };
@@ -177,18 +180,16 @@ pub fn main() !void {
     camera.position[2] = -2.5;
 
     var angle: f32 = 0;
+    const reader_ent = world.newEntity("SystemEventReader");
+    const system_events = EventReader(SystemEvent).init(&world, reader_ent);
+
     // Main loop
     var done = false;
-    var event: c.SDL_Event = undefined;
-    world.update();
     while (!done) {
         window.update();
-        while (c.SDL_PollEvent(&event) and !done) {
-            switch (event.type) {
-                c.SDL_EVENT_QUIT, c.SDL_EVENT_WINDOW_CLOSE_REQUESTED => done = true,
-                // c.SDL_EVENT_WINDOW_RESIZED => try window_event_writer.emit(.{.window = window, .width = @intCast(event.window.data1), .height = @intCast(event.window.data2) }),
-                else => {},
-            }
+        world.update();
+        while(system_events.next()) |sys_event| {
+            if(sys_event.close_request) done = true;
         }
         c.SDL_Delay(16);
         lights.items[1].direction = Vector4f.create(.{ @sin(angle), 0.0, @cos(angle), 0.0 });
@@ -205,8 +206,8 @@ pub fn main() !void {
 
         // while (window_event_reader.next()) |resize| {
         if(false){
-            renderer.releaseTexture(tex_depth);
-            tex_depth = try renderer.createTexture(.{
+            renderer.releaseTexture(tex_depth.*);
+            tex_depth.* = try renderer.createTexture(.{
                 // .extent = .{ .width = resize.width, .height = resize.height },
                 .extent = .{ .width = 0, .height = 0 },
                 .format = TextureFormat.depth16unorm,
@@ -218,7 +219,7 @@ pub fn main() !void {
         }
 
         const color_target = RenderPass.ColorTarget{ .texture = swapchain_texture, .clear_color = .{ 0.1, 0.1, 0.1, 1.0 } };
-        const depth_target = RenderPass.DepthStencilTarget{ .texture = tex_depth };
+        const depth_target = RenderPass.DepthStencilTarget{ .texture = tex_depth.* };
 
         const pass = cmd.createRenderPass(color_target, depth_target) orelse @panic("Could not create RenderPass");
         pass.bindGraphicsPipeline(pipeline);
