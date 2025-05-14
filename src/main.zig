@@ -36,11 +36,14 @@ const SDL_ERROR = Window.SDL_ERROR;
 
 const WindowResized = struct{ window: *Window, width: u32, height: u32 };
 fn testFn(reader: EventReader(WindowResized), writer: EventWriter(WindowResized)) void {
-    // const window: Window = undefined;
-    // writer.emit(.{.window = &window, .width = 420, .height = 69});
-    //
-    std.log.debug("Reader: {?}", .{reader});
-    std.log.debug("Writer: {?}", .{writer});
+    var window: Window = undefined;
+    writer.emit(.{.window = &window, .width = 420, .height = 69}) catch @panic("Yeet");
+
+    const next = reader.next();
+    std.debug.assert(next != null);
+    std.debug.assert(next.?.width == 420);
+    std.debug.assert(next.?.height == 69);
+    std.log.debug("Success", .{});
 }
 
 pub fn main() !void {
@@ -77,7 +80,7 @@ pub fn main() !void {
 
     world.registerEvent(WindowResized);
     _ = world.getSingletonMut(Events(WindowResized)).?;
-    var window_event_reader = world.getEventReader(WindowResized).?;
+    // var window_event_reader = world.getEventReader(WindowResized).?;
     var window_event_writer = world.getEventWriter(WindowResized).?;
     try world.addSystem(testFn);
 
@@ -200,10 +203,12 @@ pub fn main() !void {
             continue;
         };
 
-        while (window_event_reader.next()) |resize| {
+        // while (window_event_reader.next()) |resize| {
+        if(false){
             renderer.releaseTexture(tex_depth);
             tex_depth = try renderer.createTexture(.{
-                .extent = .{ .width = resize.width, .height = resize.height },
+                // .extent = .{ .width = resize.width, .height = resize.height },
+                .extent = .{ .width = 0, .height = 0 },
                 .format = TextureFormat.depth16unorm,
                 .usage = .depth_stencil_target,
                 .label = "Depth Texture",

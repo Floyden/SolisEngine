@@ -53,6 +53,7 @@ pub fn registerEvent(self: *Self, T: type) void {
     ecs.COMPONENT(self.inner, events.Events(T));
     ecs.COMPONENT(self.inner, events.EventReader(T));
     ecs.COMPONENT(self.inner, events.EventWriter(T));
+    ecs.COMPONENT(self.inner, events.EventCursor(T));
     // TODO: Add destructor for events
     _ = self.setSingleton(events.Events(T), events.Events(T).init(self.allocator));
 }
@@ -130,6 +131,8 @@ pub fn addSystem(self: *Self, system: anytype) !void {
 
     };
 
+    const system_entity = self.newEntity(@typeName(SystemType));
+
     // Create and fill parameter tuple 
     const ctx: *Context = try self.allocator.create(Context);
     const tuple = &ctx.params;
@@ -140,8 +143,8 @@ pub fn addSystem(self: *Self, system: anytype) !void {
         if(param.type) |ptype| {
             // TODO: This should be done in a more generic way
             if(ptype.WorldParameter == events.EventReader) {
-                const queue = self.getSingleton(events.Events(ptype.EventType));
-                @field(tuple.*, field_name) = queue.?.reader();
+                // const queue = self.getSingleton(events.Events(ptype.EventType));
+                @field(tuple.*, field_name) = ptype.init(self, system_entity);
             } else if(ptype.WorldParameter == events.EventWriter) {
                 const queue = self.getSingletonMut(events.Events(ptype.EventType));
                 @field(tuple.*, field_name) = queue.?.writer();
@@ -150,13 +153,13 @@ pub fn addSystem(self: *Self, system: anytype) !void {
     }
 
     // Query: create query_desc_t & ecs query
-    const system_name = comptime std.fmt.comptimePrint("{s}_callback", .{@typeName(SystemType)});
     var system_desc : ecs.system_desc_t = .{
-        .entity = self.newEntity(system_name),
+        .entity = system_entity,
         .callback = Context.invoke,
         .callback_ctx = ctx,
         .callback_ctx_free = Context.free,
     };
 
-    _ = ecs.SYSTEM(self.inner, @typeName(SystemType), ecs.OnUpdate, &system_desc);
+    const system_name = comptime std.fmt.comptimePrint("{s}_system", .{@typeName(SystemType)});
+    _ = ecs.SYSTEM(self.inner, system_name, ecs.OnUpdate, &system_desc);
 }
