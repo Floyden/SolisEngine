@@ -58,7 +58,7 @@ pub fn registerEvent(self: *Self, T: type) void {
     _ = self.setSingleton(events.Events(T), events.Events(T).init(self.allocator));
 }
 
-fn parseParamTuple(args: []type) type {
+pub fn parseParamTuple(args: []const type) type {
     const fields = comptime blk: {
         var res: [args.len]std.builtin.Type.StructField = undefined;
         for(args, &res, 0..) |arg, *field, i| {
@@ -132,7 +132,7 @@ pub fn addSystem(self: *Self, system: anytype) !void {
     inline for(params, 0..) |param, i| {
         const field_name = comptime std.fmt.comptimePrint("{}", .{i});
         if(param.type) |ptype| 
-            @field(tuple.*, field_name) = ptype.init(self, system_entity);
+            @field(tuple.*, field_name) = try ptype.init(self, system_entity);
     }
 
     // Query: create query_desc_t & ecs query

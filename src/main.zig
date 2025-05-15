@@ -50,6 +50,15 @@ fn handleSDLEvents(window_events: EventWriter(Window.Event), system_events: Even
     }
 }
 
+fn handleWindowResized(window_events: EventReader(Window.Event), query: Query(.{Texture, Window, Camera})) void {
+    var iter = query.iter();
+    defer iter.deinit();
+    // std.log.debug("{any}", .{iter.next()});
+
+    while(window_events.next()) |_| {
+    }
+}
+
 pub fn main() !void {
     if (std.os.argv.len < 2) {
         std.log.err("Expected at least one argument", .{});
@@ -80,12 +89,14 @@ pub fn main() !void {
     // Video subsystem & windows
     world.register(Window);
     world.register(Texture);
+    world.register(Camera);
     const window_handle = world.newEntity("Main Window");
     var window = world.set(window_handle, Window, try Window.init());
 
     world.registerEvent(Window.Event);
     world.registerEvent(SystemEvent);
     try world.addSystem(handleSDLEvents);
+    try world.addSystem(handleWindowResized);
 
     var renderer = try Renderer.init(window);
     defer renderer.deinit();
@@ -176,12 +187,12 @@ pub fn main() !void {
         try materials.append(Material{});
 
     // Camera
-    var camera = Camera{ .aspect = window.getAspect() };
+    const camera = world.set(window_handle, Camera, .{.aspect = window.getAspect()});
     camera.position[2] = -2.5;
 
     var angle: f32 = 0;
     const reader_ent = world.newEntity("SystemEventReader");
-    const system_events = EventReader(SystemEvent).init(&world, reader_ent);
+    const system_events = try EventReader(SystemEvent).init(&world, reader_ent);
 
     // Main loop
     var done = false;
