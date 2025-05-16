@@ -25,16 +25,17 @@ pub fn register(self: *Self, T: type) void {
     ecs.COMPONENT(self.inner, T);
 }
 
-pub fn setSingleton(self: *Self, T: type, value: T) *T {
+pub fn registerGlobal(self: *Self, T: type, value: T) *T {
+    ecs.COMPONENT(self.inner, T);
     _ = ecs.singleton_set(self.inner, T, value);
     return ecs.singleton_get_mut(self.inner, T).?;
 }
 
-pub fn getSingleton(self: *const Self, T: type) ?*const T {
+pub fn getGlobal(self: *const Self, T: type) ?*const T {
     return ecs.singleton_get(self.inner, T);
 }
 
-pub fn getSingletonMut(self: *Self, T: type) ?*T {
+pub fn getGlobalMut(self: *Self, T: type) ?*T {
     return ecs.singleton_get_mut(self.inner, T);
 }
 
@@ -47,6 +48,14 @@ pub fn set(self: *Self, entity: ecs.entity_t, T: type, val: T) *T {
     return ecs.get_mut(self.inner, entity, T).?;
 }
 
+pub fn get(self: *Self, entity: ecs.entity_t, T: type) *const T {
+    return ecs.get(self.inner, entity, T).?;
+}
+
+pub fn getMut(self: *Self, entity: ecs.entity_t, T: type) * T {
+    return ecs.get_mut(self.inner, entity, T).?;
+}
+
 /// -------- Event Handling ----------------
 
 pub fn registerEvent(self: *Self, T: type) void {
@@ -55,7 +64,7 @@ pub fn registerEvent(self: *Self, T: type) void {
     ecs.COMPONENT(self.inner, events.EventWriter(T));
     ecs.COMPONENT(self.inner, events.EventCursor(T));
     // TODO: Add destructor for events
-    _ = self.setSingleton(events.Events(T), events.Events(T).init(self.allocator));
+    _ = self.registerGlobal(events.Events(T), events.Events(T).init(self.allocator));
 }
 
 pub fn parseParamTuple(args: []const type) type {

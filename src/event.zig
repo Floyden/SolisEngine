@@ -54,7 +54,7 @@ pub fn EventReader(comptime T: type) type {
         cursor: *EventCursor(T),
 
         pub fn init(world: *World, entity: u64) !Self {
-            const events_opt = world.getSingleton(Events(EventType));
+            const events_opt = world.getGlobal(Events(EventType));
 
             if(events_opt) |events| {
                 const cursor = world.set(entity, EventCursor(T), .{});
@@ -100,7 +100,7 @@ pub fn EventWriter(comptime T: type) type {
         events: *Events(EventType),
 
         pub fn init(world: *World, _: u64) !Self {
-            const events_opt = world.getSingletonMut(Events(EventType));
+            const events_opt = world.getGlobalMut(Events(EventType));
 
             if(events_opt) |events| {
                 return Self {
