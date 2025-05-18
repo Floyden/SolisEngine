@@ -209,7 +209,6 @@ pub fn main() !void {
     // Main loop
     var done = false;
     while (!done) {
-        window.update();
         world.update();
         while(system_events.next()) |sys_event| {
             if(sys_event.close_request) done = true;
