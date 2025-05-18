@@ -17,6 +17,8 @@ pub const mesh = @import("mesh.zig");
 pub const render = @import("render.zig");
 pub const typeId = @import("type_id.zig").typeId;
 pub const uuidNew = @import("uuid.zig").new;
+pub const ecs = @import("zflecs");
+pub const world = @import("world.zig");
 pub const zigimg = @import("zigimg");
 
 

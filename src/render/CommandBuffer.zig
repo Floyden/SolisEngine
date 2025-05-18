@@ -22,7 +22,7 @@ pub fn beginCopyPass(self: *CommandBuffer) void {
     self.copy_pass = c.SDL_BeginGPUCopyPass(self.handle);
 }
 
-pub fn acquireSwapchain(self: CommandBuffer, window: Window) ?texture.Handle {
+pub fn acquireSwapchain(self: CommandBuffer, window: *const Window) ?texture.Handle {
     var swapchain_texture: ?*c.SDL_GPUTexture = null;
     _ = c.SDL_AcquireGPUSwapchainTexture(self.handle, window.handle, &swapchain_texture, null, null);
     return if (swapchain_texture) |handle| .{ .id = handle } else null;

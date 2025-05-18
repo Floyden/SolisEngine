@@ -19,6 +19,11 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    
+    const zflecs_dependency = b.dependency("zflecs", .{
+        .target = target,
+        .optimize = optimize,
+    });
 
     const root = b.addModule("solis", .{
         .root_source_file = b.path("src/solis.zig"),
@@ -27,6 +32,7 @@ pub fn build(b: *std.Build) void {
     });
     root.addImport("solis", root);
     root.addImport("zigimg", zigimg_dependency.module("zigimg"));
+    root.addImport("zflecs", zflecs_dependency.module("root"));
 
     const exe = b.addExecutable(.{
         .name = "Solis",
@@ -35,8 +41,9 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    exe.root_module.addImport("solis", root);
     exe.linkLibC();
+    exe.root_module.addImport("solis", root);
+    exe.linkLibrary(zflecs_dependency.artifact("flecs"));
     exe.linkSystemLibrary("SDL3");
     exe.linkSystemLibrary("glslang");
     exe.linkSystemLibrary("glslang-default-resource-limits");

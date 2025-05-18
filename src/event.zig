@@ -1,4 +1,5 @@
 const std = @import("std");
+const World = @import("solis").world.World;
 
 pub fn Events(comptime Event: type) type {
     return struct {
@@ -27,10 +28,6 @@ pub fn Events(comptime Event: type) type {
             try self.current.append(event);
         }
 
-        pub fn reader(self: *const Self) EventReader(Event) {
-            return EventReader(Event).create(self);
-        }
-
         pub fn writer(self: *Self) EventWriter(Event) {
             return EventWriter(Event).create(self);
         }
@@ -42,33 +39,47 @@ pub fn Events(comptime Event: type) type {
     };
 }
 
-pub fn EventReader(comptime Event: type) type {
-    return struct {
-        const Self = @This();
-        events: *const Events(Event),
-        next_event: usize,
+// Wrapper around index for storing it in the ECS
+pub fn EventCursor(comptime T: type) type {
+    _ = T;
+    return struct { index: usize = 0 };
+}
 
-        pub fn create(events: *const Events(Event)) Self {
-            return .{
-                .events = events,
-                .next_event = 0,
-            };
+pub fn EventReader(comptime T: type) type {
+    return struct {
+        pub const WorldParameter = EventReader;
+        pub const EventType = T;
+        const Self = @This();
+        events: *const Events(EventType),
+        cursor: *EventCursor(T),
+
+        pub fn init(world: *World, entity: u64) !Self {
+            const events_opt = world.getGlobal(Events(EventType));
+
+            if(events_opt) |events| {
+                const cursor = world.set(entity, EventCursor(T), .{});
+                return Self {
+                    .events = events,
+                    .cursor = cursor,
+                };
+            }
+            std.debug.panic("Event ({?}) not initialized ", .{EventType});
         }
 
-        pub fn next(self: *Self) ?Event {
+        pub fn next(self: Self) ?EventType {
             const latest = self.events.next_id;
-            if (self.next_event >= latest) return null; // no new events
+            if (self.cursor.index >= latest) return null; // no new events
             if (self.events.current.items.len == 0 and self.events.old.items.len == 0) return null; // no events at all
 
             const current_base = latest - self.events.current.items.len;
             const old_base = current_base - self.events.old.items.len;
-            defer self.next_event += 1;
-            if (current_base <= self.next_event) { // next event is a current event
-                return self.events.current.items[self.next_event - current_base];
-            } else if (old_base <= self.next_event) { // next event is an old event
-                return self.events.old.items[self.next_event - old_base];
+            defer self.cursor.index += 1;
+            if (current_base <= self.cursor.index) { // next event is a current event
+                return self.events.current.items[self.cursor.index - current_base];
+            } else if (old_base <= self.cursor.index) { // next event is an old event
+                return self.events.old.items[self.cursor.index - old_base];
             } else { // has not been called for a while, refresh indices
-                self.next_event = old_base;
+                self.cursor.index = old_base;
                 if (self.events.old.items.len > 0) {
                     return self.events.old.items[0];
                 } else return self.events.current.items[0];
@@ -76,23 +87,30 @@ pub fn EventReader(comptime Event: type) type {
         }
 
         pub fn reset(self: *Self) void {
-            self.next_event = self.events.next_id - self.events.current.items.len - self.events.old.items.len;
+            self.cursor.index = self.events.next_id - self.events.current.items.len - self.events.old.items.len;
         }
     };
 }
 
-pub fn EventWriter(comptime Event: type) type {
+pub fn EventWriter(comptime T: type) type {
     return struct {
+        pub const WorldParameter = EventWriter;
+        pub const EventType = T;
         const Self = @This();
-        events: *Events(Event),
+        events: *Events(EventType),
 
-        pub fn create(events: *Events(Event)) Self {
-            return .{
-                .events = events,
-            };
+        pub fn init(world: *World, _: u64) !Self {
+            const events_opt = world.getGlobalMut(Events(EventType));
+
+            if(events_opt) |events| {
+                return Self {
+                    .events = events,
+                };
+            }
+            std.debug.panic("Event ({?}) not initialized ", .{EventType});
         }
 
-        pub fn emit(self: *Self, event: Event) !void {
+        pub fn emit(self: Self, event: EventType) !void {
             try self.events.emit(event);
         }
     };
@@ -105,7 +123,11 @@ test "Basic Events" {
     var events = Events(TestEvent).init(allocator);
     defer events.deinit();
 
-    var reader = events.reader();
+    var cursor = EventCursor(TestEvent) {};
+    var reader = EventReader(TestEvent){
+        .events = &events,
+        .cursor = &cursor,
+    };
     var writer = events.writer();
 
     try writer.emit(.{ .id = 1 });

@@ -29,6 +29,10 @@
             .url = "git+https://github.com/zigimg/zigimg.git#1f149946766a10bb8f7d5aa783dfdb6991aa32a8",
             .hash = "zigimg-0.1.0-AAAAACcfEQCmpZ9qJQVSekJWaSLeHEcXvTCATd8x-4od",
         },
+        .zflecs = .{
+            .url = "git+https://github.com/Floyden/zflecs.git#08b3ea1c8d75488dfa82cd8f69df7f2eb6c285bf",
+            .hash = "zflecs-0.2.0-dev-1PN3yjlONQCtElkxO9gKDCUVX_BLs4ZShaoAk_KSly_J",
+        },
     },
     .paths = .{
         "build.zig",
