@@ -107,10 +107,10 @@ pub fn main() !void {
 
     world.registerEvent(Window.Event);
     world.registerEvent(SystemEvent);
-    try world.addSystem(handleSDLEvents);
+    try world.addSystem(handleSDLEvents, .{});
 
     var renderer = world.registerGlobal(Renderer, try Renderer.init(window));
-    try world.addSystem(handleWindowResized);
+    try world.addSystem(handleWindowResized, .{});
 
     defaults.TextureDefaults.init(allocator, renderer) catch @panic("OOM");
     defer defaults.TextureDefaults.deinit(renderer);

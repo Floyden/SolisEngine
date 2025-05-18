@@ -92,8 +92,12 @@ pub fn parseParamTuple(args: []const type) type {
     });
 }
 
+const SystemDescription = struct {
+    stage: ?u64 = null,
+};
+
 // TODO: Add support for error values in systems
-pub fn addSystem(self: *Self, system: anytype) !void {
+pub fn addSystem(self: *Self, system: anytype, desc: SystemDescription) !void {
     const SystemType = @TypeOf(system);
     const system_info = @typeInfo(SystemType);
     if(system_info != .@"fn") @compileError("Only Functions supported in World.addSystem");
@@ -153,5 +157,6 @@ pub fn addSystem(self: *Self, system: anytype) !void {
     };
 
     const system_name = comptime std.fmt.comptimePrint("{s}_system", .{@typeName(SystemType)});
-    _ = ecs.SYSTEM(self.inner, system_name, ecs.OnUpdate, &system_desc);
+    const system_stage = if (desc.stage) |stage| stage else ecs.OnUpdate;
+    _ = ecs.SYSTEM(self.inner, system_name, system_stage, &system_desc);
 }
