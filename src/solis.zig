@@ -12,6 +12,7 @@ pub const assets = @import("assets.zig");
 pub const defaults = @import("defaults.zig");
 pub const events = @import("event.zig");
 pub const external = @import("external.zig");
+pub const input = @import("input.zig");
 pub const light = @import("light.zig");
 pub const mesh = @import("mesh.zig");
 pub const render = @import("render.zig");

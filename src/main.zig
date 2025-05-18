@@ -25,6 +25,7 @@ const Renderer = solis.render.Renderer;
 const Shader = solis.render.Shader;
 const ShaderImporter = solis.render.ShaderImporter;
 const defaults = solis.defaults;
+const input = solis.input;
 const ecs = solis.ecs;
 const World = solis.world.World;
 const Query = solis.world.Query;
@@ -40,13 +41,30 @@ const SystemEvent = union {
     close_request: bool,
 };
 
-fn handleSDLEvents(window_events: EventWriter(Window.Event), system_events: EventWriter(SystemEvent)) void {
+fn handleSDLEvents(window_events: EventWriter(Window.Event), input_events: EventWriter(input.InputEvent), system_events: EventWriter(SystemEvent)) void {
     var event: c.SDL_Event = undefined;
     while (c.SDL_PollEvent(&event)) {
         switch (event.type) {
             c.SDL_EVENT_QUIT, c.SDL_EVENT_WINDOW_CLOSE_REQUESTED => system_events.emit(.{ .close_request = true }) catch @panic("OOM?"),
             c.SDL_EVENT_WINDOW_RESIZED => window_events.emit(.{.resized = Window.Resized{.window = event.window.windowID, .width = @intCast(event.window.data1), .height = @intCast(event.window.data2) }}) catch @panic("OOM?"),
+            c.SDL_EVENT_KEY_DOWN => input_events.emit(.{.key_event = .{.down = true, .key_code = event.key.key, .scan_code = event.key.scancode, .mod = event.key.mod}}) catch @panic("OOM?"),
+            c.SDL_EVENT_KEY_UP => input_events.emit(.{.key_event = .{.down = false, .key_code = event.key.key, .scan_code = event.key.scancode, .mod = event.key.mod}}) catch @panic("OOM?"),
             else => {},
+        }
+    }
+}
+
+fn cameraMover(key_input: Global(input.KeyboardInput), query: Query(.{Camera})) void {
+    var iter = query.iter();
+    // defer iter.deinit();
+    // _ = key_input;
+    while(iter.next()) |iter_val| {
+        var camera= @field(iter_val, "0") orelse continue;
+        // _ = &camera;
+        if(key_input.get().isKeyDown(c.SDL_SCANCODE_D)) {
+            camera[0].position[0] -= 0.02;
+        } else if(key_input.get().isKeyDown(c.SDL_SCANCODE_A)) {
+            camera[0].position[0] += 0.02;
         }
     }
 }
@@ -88,6 +106,7 @@ pub fn main() !void {
 
     // world.register(assets.Server);
     var asset_server = world.registerGlobal(assets.Server, assets.Server.init(std.heap.page_allocator));
+    _ = world.registerGlobal(input.KeyboardInput, .init(allocator));
 
     try asset_server.register_importer(Image, assets.ImageImporter);
     try asset_server.register_importer(Shader, ShaderImporter);
@@ -107,7 +126,10 @@ pub fn main() !void {
 
     world.registerEvent(Window.Event);
     world.registerEvent(SystemEvent);
-    try world.addSystem(handleSDLEvents, .{});
+    world.registerEvent(input.InputEvent);
+    try world.addSystem(handleSDLEvents, .{.stage = ecs.PreUpdate});
+    try world.addSystem(input.keyboardInputSystem, .{.stage = ecs.PreUpdate});
+    try world.addSystem(cameraMover, .{});
 
     var renderer = world.registerGlobal(Renderer, try Renderer.init(window));
     try world.addSystem(handleWindowResized, .{});
