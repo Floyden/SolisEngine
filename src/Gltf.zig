@@ -1,7 +1,6 @@
 const std = @import("std");
 const solis = @import("solis");
 
-
 const AssetServer = solis.assets.Server;
 const ElementDesc = solis.mesh.ElementDesc;
 const ElementType = solis.mesh.ElementType;

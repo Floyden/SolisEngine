@@ -23,10 +23,10 @@ pub fn isKeyDown(self: Self, key: u32) bool {
 }
 
 pub fn keyboardInputSystem(input: Global(Self), input_events: EventReader(InputEvent)) void {
-    while(input_events.next()) |event| {
+    while (input_events.next()) |event| {
         switch (event) {
             .key_event => |key_event| {
-                if(key_event.down) {
+                if (key_event.down) {
                     input.getMut().pressed.put(key_event.scan_code, null) catch @panic("OOM");
                 } else {
                     _ = input.getMut().pressed.swapRemove(key_event.scan_code);

@@ -46,9 +46,9 @@ fn handleSDLEvents(window_events: EventWriter(Window.Event), input_events: Event
     while (c.SDL_PollEvent(&event)) {
         switch (event.type) {
             c.SDL_EVENT_QUIT, c.SDL_EVENT_WINDOW_CLOSE_REQUESTED => system_events.emit(.{ .close_request = true }) catch @panic("OOM?"),
-            c.SDL_EVENT_WINDOW_RESIZED => window_events.emit(.{.resized = Window.Resized{.window = event.window.windowID, .width = @intCast(event.window.data1), .height = @intCast(event.window.data2) }}) catch @panic("OOM?"),
-            c.SDL_EVENT_KEY_DOWN => input_events.emit(.{.key_event = .{.down = true, .key_code = event.key.key, .scan_code = event.key.scancode, .mod = event.key.mod}}) catch @panic("OOM?"),
-            c.SDL_EVENT_KEY_UP => input_events.emit(.{.key_event = .{.down = false, .key_code = event.key.key, .scan_code = event.key.scancode, .mod = event.key.mod}}) catch @panic("OOM?"),
+            c.SDL_EVENT_WINDOW_RESIZED => window_events.emit(.{ .resized = Window.Resized{ .window = event.window.windowID, .width = @intCast(event.window.data1), .height = @intCast(event.window.data2) } }) catch @panic("OOM?"),
+            c.SDL_EVENT_KEY_DOWN => input_events.emit(.{ .key_event = .{ .down = true, .key_code = event.key.key, .scan_code = event.key.scancode, .mod = event.key.mod } }) catch @panic("OOM?"),
+            c.SDL_EVENT_KEY_UP => input_events.emit(.{ .key_event = .{ .down = false, .key_code = event.key.key, .scan_code = event.key.scancode, .mod = event.key.mod } }) catch @panic("OOM?"),
             else => {},
         }
     }
@@ -58,24 +58,24 @@ fn cameraMover(key_input: Global(input.KeyboardInput), query: Query(.{Camera})) 
     var iter = query.iter();
     // defer iter.deinit();
     // _ = key_input;
-    while(iter.next()) |iter_val| {
-        var camera= @field(iter_val, "0") orelse continue;
+    while (iter.next()) |iter_val| {
+        var camera = @field(iter_val, "0") orelse continue;
         // _ = &camera;
-        if(key_input.get().isKeyDown(c.SDL_SCANCODE_D)) {
+        if (key_input.get().isKeyDown(c.SDL_SCANCODE_D)) {
             camera[0].position[0] -= 0.02;
-        } else if(key_input.get().isKeyDown(c.SDL_SCANCODE_A)) {
+        } else if (key_input.get().isKeyDown(c.SDL_SCANCODE_A)) {
             camera[0].position[0] += 0.02;
         }
     }
 }
 
-fn handleWindowResized(window_events: EventReader(Window.Event), query: Query(.{Texture, Window, Camera}), renderer: Global(Renderer)) void {
+fn handleWindowResized(window_events: EventReader(Window.Event), query: Query(.{ Texture, Window, Camera }), renderer: Global(Renderer)) void {
     var iter = query.iter();
     defer iter.deinit();
 
     var texture, const window, var camera = iter.next() orelse return;
 
-    while(window_events.next()) |event| {
+    while (window_events.next()) |event| {
         renderer.getMut().releaseTexture(texture.?[0]);
         texture.?[0] = renderer.getMut().createTexture(.{
             .extent = .{ .width = @intCast(event.resized.width), .height = @intCast(event.resized.height) },
@@ -127,8 +127,8 @@ pub fn main() !void {
     world.registerEvent(Window.Event);
     world.registerEvent(SystemEvent);
     world.registerEvent(input.InputEvent);
-    try world.addSystem(handleSDLEvents, .{.stage = ecs.PreUpdate});
-    try world.addSystem(input.keyboardInputSystem, .{.stage = ecs.PreUpdate});
+    try world.addSystem(handleSDLEvents, .{ .stage = ecs.PreUpdate });
+    try world.addSystem(input.keyboardInputSystem, .{ .stage = ecs.PreUpdate });
     try world.addSystem(cameraMover, .{});
 
     var renderer = world.registerGlobal(Renderer, try Renderer.init(window));
@@ -149,7 +149,7 @@ pub fn main() !void {
     defer renderer.destroyGraphicsPipeline(pipeline);
 
     // window textures
-    _ = world.set(window_handle, Texture,  try renderer.createTexture(.{
+    _ = world.set(window_handle, Texture, try renderer.createTexture(.{
         .extent = .{ .width = @intCast(window.size[0]), .height = @intCast(window.size[1]) },
         .format = TextureFormat.depth16unorm,
         .usage = .depth_stencil_target,
@@ -221,7 +221,7 @@ pub fn main() !void {
         try materials.append(Material{});
 
     // Camera
-    const camera = world.set(window_handle, Camera, .{.aspect = window.getAspect()});
+    const camera = world.set(window_handle, Camera, .{ .aspect = window.getAspect() });
     camera.position[2] = -2.5;
 
     var angle: f32 = 0;
@@ -232,8 +232,8 @@ pub fn main() !void {
     var done = false;
     while (!done) {
         world.update();
-        while(system_events.next()) |sys_event| {
-            if(sys_event.close_request) done = true;
+        while (system_events.next()) |sys_event| {
+            if (sys_event.close_request) done = true;
         }
         c.SDL_Delay(16);
         lights.items[1].direction = Vector4f.create(.{ @sin(angle), 0.0, @cos(angle), 0.0 });

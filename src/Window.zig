@@ -32,6 +32,4 @@ pub const Resized = struct {
     height: i32,
 };
 
-pub const Event = union {
-    resized: Resized
-};
+pub const Event = union { resized: Resized };

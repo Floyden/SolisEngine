@@ -3,7 +3,7 @@ const ecs = @import("zflecs");
 const events = @import("solis").events;
 
 const Self = @This();
-inner : *ecs.world_t,
+inner: *ecs.world_t,
 allocator: std.mem.Allocator,
 
 pub fn init(allocator: std.mem.Allocator) Self {
@@ -18,7 +18,7 @@ pub fn deinit(self: *Self) void {
 }
 
 pub fn update(self: *Self) void {
-    _  =ecs.progress(self.inner, 0);
+    _ = ecs.progress(self.inner, 0);
 }
 
 pub fn register(self: *Self, T: type) void {
@@ -52,12 +52,11 @@ pub fn get(self: *Self, entity: ecs.entity_t, T: type) *const T {
     return ecs.get(self.inner, entity, T).?;
 }
 
-pub fn getMut(self: *Self, entity: ecs.entity_t, T: type) * T {
+pub fn getMut(self: *Self, entity: ecs.entity_t, T: type) *T {
     return ecs.get_mut(self.inner, entity, T).?;
 }
 
 /// -------- Event Handling ----------------
-
 pub fn registerEvent(self: *Self, T: type) void {
     ecs.COMPONENT(self.inner, events.Events(T));
     ecs.COMPONENT(self.inner, events.EventReader(T));
@@ -70,7 +69,7 @@ pub fn registerEvent(self: *Self, T: type) void {
 pub fn parseParamTuple(args: []const type) type {
     const fields = comptime blk: {
         var res: [args.len]std.builtin.Type.StructField = undefined;
-        for(args, &res, 0..) |arg, *field, i| {
+        for (args, &res, 0..) |arg, *field, i| {
             field.* = .{
                 .name = std.fmt.comptimePrint("{d}", .{i}),
                 .type = arg,
@@ -82,14 +81,12 @@ pub fn parseParamTuple(args: []const type) type {
         break :blk res;
     };
 
-    return @Type(.{
-        .@"struct" = .{
-            .layout = .auto,
-            .fields = &fields,
-            .decls = &.{},
-            .is_tuple = true,
-        }
-    });
+    return @Type(.{ .@"struct" = .{
+        .layout = .auto,
+        .fields = &fields,
+        .decls = &.{},
+        .is_tuple = true,
+    } });
 }
 
 const SystemDescription = struct {
@@ -100,14 +97,14 @@ const SystemDescription = struct {
 pub fn addSystem(self: *Self, system: anytype, desc: SystemDescription) !void {
     const SystemType = @TypeOf(system);
     const system_info = @typeInfo(SystemType);
-    if(system_info != .@"fn") @compileError("Only Functions supported in World.addSystem");
+    if (system_info != .@"fn") @compileError("Only Functions supported in World.addSystem");
 
     const params = system_info.@"fn".params;
-    comptime var type_array : [params.len]type = undefined;
+    comptime var type_array: [params.len]type = undefined;
 
     // Extract paramters
     inline for (params, type_array[0..]) |param, *types| {
-        if(param.type) |ptype| {
+        if (param.type) |ptype| {
             types.* = ptype;
         } else @compileError("Parameter Type is null");
     }
@@ -115,11 +112,11 @@ pub fn addSystem(self: *Self, system: anytype, desc: SystemDescription) !void {
     const TupleType = parseParamTuple(&type_array);
     const Context = comptime struct {
         callback: *const SystemType,
-        params : TupleType,
+        params: TupleType,
         allocator: std.mem.Allocator,
 
         fn free(self_ptr_opt: ?*anyopaque) callconv(.c) void {
-            if(self_ptr_opt) |self_ptr| {
+            if (self_ptr_opt) |self_ptr| {
                 var self_ctx: *@This() = @alignCast(@ptrCast(self_ptr));
                 self_ctx.allocator.destroy(self_ctx);
             }
@@ -127,29 +124,28 @@ pub fn addSystem(self: *Self, system: anytype, desc: SystemDescription) !void {
 
         fn invoke(iter: *ecs.iter_t) callconv(.c) void {
             const ctx_opt = iter.callback_ctx;
-            if(ctx_opt) |ctx_ptr| {
+            if (ctx_opt) |ctx_ptr| {
                 const ctx: *@This() = @alignCast(@ptrCast(ctx_ptr));
                 @call(.auto, ctx.callback, ctx.params);
             }
         }
-
     };
 
     const system_entity = self.newEntity(@typeName(SystemType));
 
-    // Create and fill parameter tuple 
+    // Create and fill parameter tuple
     const ctx: *Context = try self.allocator.create(Context);
     const tuple = &ctx.params;
     ctx.callback = system;
     ctx.allocator = self.allocator;
-    inline for(params, 0..) |param, i| {
+    inline for (params, 0..) |param, i| {
         const field_name = comptime std.fmt.comptimePrint("{}", .{i});
-        if(param.type) |ptype| 
+        if (param.type) |ptype|
             @field(tuple.*, field_name) = try ptype.init(self, system_entity);
     }
 
     // Query: create query_desc_t & ecs query
-    var system_desc : ecs.system_desc_t = .{
+    var system_desc: ecs.system_desc_t = .{
         .entity = system_entity,
         .callback = Context.invoke,
         .callback_ctx = ctx,

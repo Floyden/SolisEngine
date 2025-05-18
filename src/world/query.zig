@@ -9,7 +9,7 @@ fn parseTupleTypes(comptime tuple: anytype) [@typeInfo(@TypeOf(tuple)).@"struct"
     const fields = type_info.@"struct".fields;
     const type_array: [fields.len]type = comptime blk: {
         var res: [fields.len]type = undefined;
-        for(&res, 0..) |*dst, i| {
+        for (&res, 0..) |*dst, i| {
             const field_name = std.fmt.comptimePrint("{}", .{i});
             dst.* = @field(tuple, field_name);
         }
@@ -21,7 +21,7 @@ fn parseTupleTypes(comptime tuple: anytype) [@typeInfo(@TypeOf(tuple)).@"struct"
 fn TupleSlice(args: []const type) type {
     const fields = comptime blk: {
         var res: [args.len]std.builtin.Type.StructField = undefined;
-        for(args, &res, 0..) |arg, *field, i| {
+        for (args, &res, 0..) |arg, *field, i| {
             field.* = .{
                 .name = std.fmt.comptimePrint("{d}", .{i}),
                 .type = ?[]arg,
@@ -33,16 +33,13 @@ fn TupleSlice(args: []const type) type {
         break :blk res;
     };
 
-    return @Type(.{
-        .@"struct" = .{
-            .layout = .auto,
-            .fields = &fields,
-            .decls = &.{},
-            .is_tuple = true,
-        }
-    });
+    return @Type(.{ .@"struct" = .{
+        .layout = .auto,
+        .fields = &fields,
+        .decls = &.{},
+        .is_tuple = true,
+    } });
 }
-
 
 const Camera = @import("solis").Camera;
 pub fn QueryIter(comptime Types: []const type) type {
@@ -54,7 +51,7 @@ pub fn QueryIter(comptime Types: []const type) type {
         pub fn next(self: *Self) ?TypeTuple {
             if (!ecs.iter_next(&self.inner)) return null;
             var res: TypeTuple = undefined;
-            inline for(Types, 0..) |T, i| {
+            inline for (Types, 0..) |T, i| {
                 const field_name = std.fmt.comptimePrint("{}", .{i});
                 @field(res, field_name) = ecs.field(&self.inner, T, i);
             }
@@ -77,23 +74,18 @@ pub fn Query(comptime tuple: anytype) type {
         world: *World,
 
         pub fn init(world: *World, entity: u64) !Self {
-            var desc = ecs.query_desc_t {
+            var desc = ecs.query_desc_t{
                 .entity = entity,
             };
-            inline for(TupleArray, 0..) |T, i| {
+            inline for (TupleArray, 0..) |T, i| {
                 desc.terms[i] = .{ .id = ecs.id(T) };
             }
 
-            return .{ 
-                .inner = try ecs.query_init(world.inner, &desc), 
-                .world = world 
-            };
+            return .{ .inner = try ecs.query_init(world.inner, &desc), .world = world };
         }
 
         pub fn iter(self: Self) QueryIter(&TupleArray) {
-            return QueryIter(&TupleArray) {
-                .inner = ecs.query_iter(self.world.inner, self.inner)
-            };
+            return QueryIter(&TupleArray){ .inner = ecs.query_iter(self.world.inner, self.inner) };
         }
     };
 }

@@ -22,7 +22,6 @@ pub const ecs = @import("zflecs");
 pub const world = @import("world.zig");
 pub const zigimg = @import("zigimg");
 
-
 pub const matrix = @import("matrix.zig");
 pub const Matrix2f = matrix.Matrix2f;
 pub const Matrix3f = matrix.Matrix3f;

@@ -8,8 +8,8 @@ pub fn Global(T: type) type {
         world: *World,
         value: *T,
         pub fn init(world: *World, _: u64) !Self {
-            return .{ 
-                .world = world, 
+            return .{
+                .world = world,
                 .value = world.getGlobalMut(T) orelse std.debug.panic("Unregistered Type ({?})", .{T}),
             };
         }
@@ -20,6 +20,6 @@ pub fn Global(T: type) type {
 
         pub fn getMut(self: Self) *T {
             return self.value;
-        } 
+        }
     };
 }

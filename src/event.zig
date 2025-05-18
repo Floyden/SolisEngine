@@ -56,9 +56,9 @@ pub fn EventReader(comptime T: type) type {
         pub fn init(world: *World, entity: u64) !Self {
             const events_opt = world.getGlobal(Events(EventType));
 
-            if(events_opt) |events| {
+            if (events_opt) |events| {
                 const cursor = world.set(entity, EventCursor(T), .{});
-                return Self {
+                return Self{
                     .events = events,
                     .cursor = cursor,
                 };
@@ -102,8 +102,8 @@ pub fn EventWriter(comptime T: type) type {
         pub fn init(world: *World, _: u64) !Self {
             const events_opt = world.getGlobalMut(Events(EventType));
 
-            if(events_opt) |events| {
-                return Self {
+            if (events_opt) |events| {
+                return Self{
                     .events = events,
                 };
             }
@@ -123,7 +123,7 @@ test "Basic Events" {
     var events = Events(TestEvent).init(allocator);
     defer events.deinit();
 
-    var cursor = EventCursor(TestEvent) {};
+    var cursor = EventCursor(TestEvent){};
     var reader = EventReader(TestEvent){
         .events = &events,
         .cursor = &cursor,
