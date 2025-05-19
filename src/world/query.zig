@@ -41,7 +41,7 @@ fn TupleSlice(args: []const type) type {
     } });
 }
 
-const Camera = @import("solis").Camera;
+// TODO: Ensure that QueryIter does not have to be deinitialized manually
 pub fn QueryIter(comptime Types: []const type) type {
     return struct {
         const Self = @This();
@@ -57,7 +57,6 @@ pub fn QueryIter(comptime Types: []const type) type {
             }
             return res;
         }
-
         pub fn deinit(self: *Self) void {
             ecs.iter_fini(&self.inner);
         }
@@ -84,6 +83,7 @@ pub fn Query(comptime tuple: anytype) type {
             return .{ .inner = try ecs.query_init(world.inner, &desc), .world = world };
         }
 
+        /// The iter needs to be deinitialized if not exhausted.
         pub fn iter(self: Self) QueryIter(&TupleArray) {
             return QueryIter(&TupleArray){ .inner = ecs.query_iter(self.world.inner, self.inner) };
         }

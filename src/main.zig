@@ -56,11 +56,8 @@ fn handleSDLEvents(window_events: EventWriter(Window.Event), input_events: Event
 
 fn cameraMover(key_input: Global(input.KeyboardInput), query: Query(.{Camera})) void {
     var iter = query.iter();
-    // defer iter.deinit();
-    // _ = key_input;
     while (iter.next()) |iter_val| {
         var camera = @field(iter_val, "0") orelse continue;
-        // _ = &camera;
         if (key_input.get().isKeyDown(c.SDL_SCANCODE_D)) {
             camera[0].position[0] -= 0.02;
         } else if (key_input.get().isKeyDown(c.SDL_SCANCODE_A)) {
