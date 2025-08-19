@@ -58,9 +58,9 @@ fn cameraMover(key_input: Global(input.KeyboardInput), query: Query(.{Camera})) 
     var iter = query.iter();
     while (iter.next()) |iter_val| {
         var camera = @field(iter_val, "0") orelse continue;
-        if (key_input.get().isKeyDown(c.SDL_SCANCODE_D)) {
+        if (key_input.get().isKeyPressed(c.SDL_SCANCODE_D)) {
             camera[0].position[0] -= 0.02;
-        } else if (key_input.get().isKeyDown(c.SDL_SCANCODE_A)) {
+        } else if (key_input.get().isKeyPressed(c.SDL_SCANCODE_A)) {
             camera[0].position[0] += 0.02;
         }
     }
