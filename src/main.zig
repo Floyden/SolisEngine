@@ -25,6 +25,7 @@ const Renderer = solis.render.Renderer;
 const Shader = solis.render.Shader;
 const system_event = solis.system_event;
 const ShaderImporter = solis.render.ShaderImporter;
+const MeshBuffer = solis.render.MeshBuffer;
 const defaults = solis.defaults;
 const input = solis.input;
 const ecs = solis.ecs;
@@ -132,18 +133,13 @@ pub fn main() !void {
     defer renderer.releaseTexture(world.getMut(window_handle, Texture).*);
 
     // Buffers
-    const BufferPair = struct { vertex_buffer: Buffer, index_buffer: ?Buffer };
-    var buffers = std.ArrayList(BufferPair).init(allocator);
+    var buffers = std.ArrayList(MeshBuffer).init(allocator);
     for (meshes.items) |item| {
-        const vertex_buffer = try renderer.createBufferFromData(item.data.?, c.SDL_GPU_BUFFERUSAGE_VERTEX, "Vertex Buffer");
-        const index_buffer = if (item.index_buffer) |buf| try renderer.createBufferFromData(buf.rawBytes(), c.SDL_GPU_BUFFERUSAGE_INDEX, "Index Buffer") else null;
-        try buffers.append(.{ .vertex_buffer = vertex_buffer, .index_buffer = index_buffer });
+        try buffers.append(try MeshBuffer.init(renderer, item));
     }
     defer {
         for (buffers.items) |buffer| {
-            renderer.releaseBuffer(buffer.vertex_buffer);
-            if (buffer.index_buffer) |idx|
-                renderer.releaseBuffer(idx);
+            buffer.deinit(renderer);
         }
         buffers.deinit();
     }
@@ -224,7 +220,7 @@ pub fn main() !void {
         const color_target = RenderPass.ColorTarget{ .texture = swapchain_texture, .clear_color = .{ 0.1, 0.1, 0.1, 1.0 } };
         const depth_target = RenderPass.DepthStencilTarget{ .texture = world.getMut(window_handle, Texture).* };
 
-        const pass = cmd.createRenderPass(color_target, depth_target) orelse @panic("Could not create RenderPass");
+        var pass = cmd.createRenderPass(color_target, depth_target) orelse @panic("Could not create RenderPass");
         pass.bindGraphicsPipeline(pipeline);
         pass.bindFragmentStorageBuffers(0, &.{lights_buffer.handle});
 
@@ -242,8 +238,7 @@ pub fn main() !void {
             cmd.pushVertexUniformData(0, Matrix4f, &matrices);
 
             const buffer = buffers.items[node.mesh.?];
-            const vertex_binding = c.SDL_GPUBufferBinding{ .buffer = buffer.vertex_buffer.handle, .offset = 0 };
-            pass.bindVertexBuffers(0, &.{vertex_binding});
+            buffer.bind(&pass, 0);
 
             const parsed_mesh = parsed.meshes.?[node.mesh.?];
             const mat_idx = parsed_mesh.primitives[0].material.?;
@@ -252,12 +247,10 @@ pub fn main() !void {
             pass.bindFragmentSamplers(material_bindings.len, &environment_map.createSamplerBinding(sampler));
             cmd.pushFragmentUniformData(0, u8, materials.items[mat_idx].createUniformBinding().toBuffer());
 
-            if (buffer.index_buffer) |index| {
-                const index_binding = c.SDL_GPUBufferBinding{ .buffer = index.handle, .offset = 0 };
-                pass.bindIndexBuffers(&index_binding, meshes.items[0].index_buffer.?.elementType());
-                pass.drawPrimitivesIndexed(meshes.items[0].index_buffer.?.size());
+            if (buffer.index_buffer) |_| {
+                pass.drawPrimitivesIndexed(buffer.element_count);
             } else {
-                pass.drawPrimitives(meshes.items[0].num_vertices);
+                pass.drawPrimitives(buffer.element_count);
             }
         }
 

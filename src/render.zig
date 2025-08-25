@@ -2,6 +2,7 @@ pub const Buffer = @import("render/Buffer.zig");
 pub const CommandBuffer = @import("render/CommandBuffer.zig");
 pub const EnvironmentMap = @import("render/EnvironmentMap.zig");
 pub const GraphicsPipeline = @import("render/GraphicsPipeline.zig");
+pub const MeshBuffer = @import("render/MeshBuffer.zig");
 pub const RenderPass = @import("render/RenderPass.zig");
 pub const Renderer = @import("render/Renderer.zig");
 pub const SamplerDesc = @import("render/sampler.zig").Description;
