@@ -7,7 +7,12 @@ handle: *c.SDL_GPUGraphicsPipeline,
 vertex_shader: Shader,
 fragment_shader: Shader,
 
+pub const ShaderRef = union(enum) {
+    handle: Shader,
+    path: []const u8,
+};
+
 pub const Description = struct {
-    vertex_shader: Shader,
-    fragment_shader: Shader,
+    vertex_shader: ShaderRef,
+    fragment_shader: ShaderRef,
 };

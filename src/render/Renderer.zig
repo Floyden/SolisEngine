@@ -1,32 +1,34 @@
 const std = @import("std");
+
 const solis = @import("solis");
+const c = solis.external.c;
+const Image = solis.Image;
+const Window = solis.Window;
+const SDL_ERROR = Window.SDL_ERROR;
+const World = solis.world.World;
 
 const Buffer = @import("Buffer.zig");
 const CommandBuffer = @import("CommandBuffer.zig");
 const GraphicsPipeline = @import("GraphicsPipeline.zig");
-const Shader = @import("Shader.zig");
-const c = solis.external.c;
 const sampler = @import("sampler.zig");
+const Shader = @import("Shader.zig");
 const texture = @import("texture.zig");
-
-const Image = solis.Image;
-const Window = solis.Window;
-const SDL_ERROR = Window.SDL_ERROR; // TODO: Replace
+const assets = solis.assets;
 
 const Renderer = @This();
 window: *Window,
+world: *World,
 device: *c.SDL_GPUDevice,
 sample_count: c.SDL_GPUSampleCount,
 
 /// Initializes the Renderer with a given window. Returns an error if it is unable to create a GPU device or claim the window.
-pub fn init(window: *Window) !Renderer {
-    // GPU Device init
+pub fn init(world: *World, window: *Window) !Renderer {
     const device = c.SDL_CreateGPUDevice(c.SDL_GPU_SHADERFORMAT_SPIRV, true, null) orelse return error.UnableToCreateGPUDevice;
     if (!c.SDL_ClaimWindowForGPUDevice(device, window.handle)) return error.UnableToClaimWindowForGPU;
 
     const sample_count: c.SDL_GPUSampleCount = c.SDL_GPU_SAMPLECOUNT_1;
 
-    return .{ .window = window, .device = device, .sample_count = sample_count };
+    return .{ .world = world, .window = window, .device = device, .sample_count = sample_count };
 }
 
 /// Deinitializes the Renderer and releases associated resources
@@ -35,11 +37,21 @@ pub fn deinit(self: *Renderer) void {
 }
 
 /// Creates a graphics pipeline with the specified description. Returns an error if the shader or pipeline creation fails.
-pub fn createGraphicsPipeline(self: Renderer, desc: GraphicsPipeline.Description) !GraphicsPipeline {
+pub fn createGraphicsPipeline(self: Renderer, asset_server: *assets.Server, desc: GraphicsPipeline.Description) !GraphicsPipeline {
+    const vertex_shader = switch (desc.vertex_shader) {
+        .handle => |shader| shader,
+        .path => |path| asset_server.fetch(Shader, path).?.*,
+    };
+
+    const fragment_shader = switch (desc.fragment_shader) {
+        .handle => |shader| shader,
+        .path => |path| asset_server.fetch(Shader, path).?.*,
+    };
+
     // Shaders, Can be destroyed after pipeline is created
-    const v_shader = try loadSPIRVShader(self.device, desc.vertex_shader);
+    const v_shader = try loadSPIRVShader(self.device, vertex_shader);
     defer c.SDL_ReleaseGPUShader(self.device, v_shader);
-    const f_shader = try loadSPIRVShader(self.device, desc.fragment_shader);
+    const f_shader = try loadSPIRVShader(self.device, fragment_shader);
     defer c.SDL_ReleaseGPUShader(self.device, f_shader);
 
     // Graphics Pipeline
@@ -47,7 +59,7 @@ pub fn createGraphicsPipeline(self: Renderer, desc: GraphicsPipeline.Description
 
     var vertex_offset: u32 = 0;
     var vertex_attributes: [16]c.SDL_GPUVertexAttribute = undefined;
-    for (desc.vertex_shader.inputs.items, 0..) |input, i| {
+    for (vertex_shader.inputs.items, 0..) |input, i| {
         vertex_attributes[i] = .{
             .location = @intCast(i),
             .buffer_slot = 0,
@@ -87,7 +99,7 @@ pub fn createGraphicsPipeline(self: Renderer, desc: GraphicsPipeline.Description
         .vertex_input_state = .{
             .num_vertex_buffers = 1,
             .vertex_buffer_descriptions = &vertex_buffer_desc,
-            .num_vertex_attributes = @as(u32, @intCast(desc.vertex_shader.inputs.items.len)),
+            .num_vertex_attributes = @as(u32, @intCast(vertex_shader.inputs.items.len)),
             .vertex_attributes = &vertex_attributes,
         },
         .rasterizer_state = .{
@@ -97,12 +109,22 @@ pub fn createGraphicsPipeline(self: Renderer, desc: GraphicsPipeline.Description
         .props = 0,
     });
     const pipeline = c.SDL_CreateGPUGraphicsPipeline(self.device, &pipelinedesc) orelse return error.GraphicsPipelineCreationFailed;
-    return GraphicsPipeline{ .handle = pipeline, .vertex_shader = desc.vertex_shader, .fragment_shader = desc.fragment_shader };
+    return GraphicsPipeline{ .handle = pipeline, .vertex_shader = vertex_shader, .fragment_shader = fragment_shader };
 }
 
 /// Releases the provided GraphicsPipeline
 pub fn destroyGraphicsPipeline(self: Renderer, pipeline: GraphicsPipeline) void {
     c.SDL_ReleaseGPUGraphicsPipeline(self.device, pipeline.handle);
+}
+
+pub fn createDefaultGraphicsPipeline(self: Renderer, asset_server: *assets.Server) !GraphicsPipeline {
+    return try self.createGraphicsPipeline(
+        asset_server,
+        .{
+            .vertex_shader = .{ .path = "./assets/shaders/default.vert" },
+            .fragment_shader = .{ .path = "./assets/shaders/default.frag" },
+        },
+    );
 }
 
 /// Creates a 2D texture from an image.

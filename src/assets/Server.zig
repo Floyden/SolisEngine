@@ -60,3 +60,9 @@ pub fn get(self: *Self, comptime T: type, handle: Handle(T)) ?*T {
     if (asset) |val| return @alignCast(@ptrCast(val));
     return null;
 }
+
+pub fn fetch(self: *Self, comptime T: type, path: []const u8) ?*T {
+    const res = self.load(T, path) catch return null;
+    if (res.is_empty()) return null;
+    return self.get(T, res);
+}

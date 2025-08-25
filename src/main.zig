@@ -112,21 +112,13 @@ pub fn main() !void {
     try world.addSystem(input.keyboardInputSystem, .{ .stage = ecs.PreUpdate });
     try world.addSystem(cameraMover, .{});
 
-    var renderer = world.registerGlobal(Renderer, try Renderer.init(window));
+    var renderer = world.registerGlobal(Renderer, try Renderer.init(&world, window));
     try world.addSystem(handleWindowResized, .{});
 
     defaults.TextureDefaults.init(allocator, renderer) catch @panic("OOM");
     defer defaults.TextureDefaults.deinit(renderer);
 
-    const vs_handle = try asset_server.load(Shader, "./assets/shaders/default.vert");
-    defer asset_server.unload(Shader, vs_handle);
-    const fs_handle = try asset_server.load(Shader, "./assets/shaders/default.frag");
-    defer asset_server.unload(Shader, fs_handle);
-
-    const pipeline = try renderer.createGraphicsPipeline(.{
-        .vertex_shader = asset_server.get(Shader, vs_handle).?.*,
-        .fragment_shader = asset_server.get(Shader, fs_handle).?.*,
-    });
+    const pipeline = try renderer.createDefaultGraphicsPipeline(asset_server);
     defer renderer.destroyGraphicsPipeline(pipeline);
 
     // window textures
