@@ -8,6 +8,7 @@ pub const TypeId = @import("type_id.zig").TypeId;
 pub const Uuid = @import("uuid.zig").Uuid;
 
 pub const Window = @import("Window.zig");
+pub const system_event = @import("core/system_event.zig");
 pub const assets = @import("assets.zig");
 pub const defaults = @import("defaults.zig");
 pub const events = @import("event.zig");

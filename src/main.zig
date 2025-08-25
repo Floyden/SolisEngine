@@ -23,6 +23,7 @@ const Texture = solis.render.TextureHandle;
 const TextureFormat = solis.render.TextureFormat;
 const Renderer = solis.render.Renderer;
 const Shader = solis.render.Shader;
+const system_event = solis.system_event;
 const ShaderImporter = solis.render.ShaderImporter;
 const defaults = solis.defaults;
 const input = solis.input;
@@ -36,23 +37,6 @@ const EventReader = solis.events.EventReader;
 const EventWriter = solis.events.EventWriter;
 
 const SDL_ERROR = Window.SDL_ERROR;
-
-const SystemEvent = union {
-    close_request: bool,
-};
-
-fn handleSDLEvents(window_events: EventWriter(Window.Event), input_events: EventWriter(input.InputEvent), system_events: EventWriter(SystemEvent)) void {
-    var event: c.SDL_Event = undefined;
-    while (c.SDL_PollEvent(&event)) {
-        switch (event.type) {
-            c.SDL_EVENT_QUIT, c.SDL_EVENT_WINDOW_CLOSE_REQUESTED => system_events.emit(.{ .close_request = true }) catch @panic("OOM?"),
-            c.SDL_EVENT_WINDOW_RESIZED => window_events.emit(.{ .resized = Window.Resized{ .window = event.window.windowID, .width = @intCast(event.window.data1), .height = @intCast(event.window.data2) } }) catch @panic("OOM?"),
-            c.SDL_EVENT_KEY_DOWN => input_events.emit(.{ .key_event = .{ .down = true, .key_code = event.key.key, .scan_code = event.key.scancode, .mod = event.key.mod } }) catch @panic("OOM?"),
-            c.SDL_EVENT_KEY_UP => input_events.emit(.{ .key_event = .{ .down = false, .key_code = event.key.key, .scan_code = event.key.scancode, .mod = event.key.mod } }) catch @panic("OOM?"),
-            else => {},
-        }
-    }
-}
 
 fn cameraMover(key_input: Global(input.KeyboardInput), query: Query(.{Camera})) void {
     var iter = query.iter();
@@ -122,9 +106,9 @@ pub fn main() !void {
     var window = world.set(window_handle, Window, try Window.init());
 
     world.registerEvent(Window.Event);
-    world.registerEvent(SystemEvent);
+    world.registerEvent(system_event.SystemEvent);
     world.registerEvent(input.InputEvent);
-    try world.addSystem(handleSDLEvents, .{ .stage = ecs.PreUpdate });
+    try world.addSystem(system_event.handleSDLEvents, .{ .stage = ecs.PreUpdate });
     try world.addSystem(input.keyboardInputSystem, .{ .stage = ecs.PreUpdate });
     try world.addSystem(cameraMover, .{});
 
@@ -223,7 +207,7 @@ pub fn main() !void {
 
     var angle: f32 = 0;
     const reader_ent = world.newEntity("SystemEventReader");
-    const system_events = try EventReader(SystemEvent).init(&world, reader_ent);
+    const system_events = try EventReader(system_event.SystemEvent).init(&world, reader_ent);
 
     // Main loop
     var done = false;
