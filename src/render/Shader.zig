@@ -60,26 +60,28 @@ uniform_buffers: std.ArrayList(u32),
 storage_buffers: std.ArrayList(u32),
 storage_textures: std.ArrayList(u32),
 samplers: std.ArrayList(u32),
+allocator: std.mem.Allocator,
 
 pub fn init(desc: Description, allocator: std.mem.Allocator) !Self {
-    var code = std.ArrayList(u32).init(allocator);
+    var code: std.ArrayList(u32) = .empty;
     switch (desc.source_type) {
         .spirv => {
-            try code.appendSlice(@alignCast(@ptrCast(desc.code)));
+            try code.appendSlice(allocator, @ptrCast(@alignCast(desc.code)));
         },
         .glsl => {
-            try compileGlslShader(desc.code, desc.stage, &code);
+            try compileGlslShader(allocator, desc.code, desc.stage, &code);
         },
     }
     var res = Self{
         .code = code,
         .stage = desc.stage,
-        .inputs = std.ArrayList(ResourceInfo).init(allocator),
-        .outputs = std.ArrayList(u32).init(allocator),
-        .uniform_buffers = std.ArrayList(u32).init(allocator),
-        .storage_buffers = std.ArrayList(u32).init(allocator),
-        .storage_textures = std.ArrayList(u32).init(allocator),
-        .samplers = std.ArrayList(u32).init(allocator),
+        .inputs = .empty,
+        .outputs = .empty,
+        .uniform_buffers = .empty,
+        .storage_buffers = .empty,
+        .storage_textures = .empty,
+        .samplers = .empty,
+        .allocator = allocator,
     };
     try res.analyze();
 
@@ -97,7 +99,7 @@ pub fn deinit(self: *Self) void {
 }
 
 // TODO:Implement a preprocessor which calls glslang_shader_preprocess to handle includes
-pub fn compileGlslShader(code: []const u8, stage: Stage, destination: *std.ArrayList(u32)) !void {
+pub fn compileGlslShader(allocator: std.mem.Allocator, code: []const u8, stage: Stage, destination: *std.ArrayList(u32)) !void {
     _ = spirv.glslang_initialize_process();
     defer spirv.glslang_finalize_process();
 
@@ -149,7 +151,7 @@ pub fn compileGlslShader(code: []const u8, stage: Stage, destination: *std.Array
     }
     spirv.glslang_program_SPIRV_generate(program, glslang_stage);
     const length = spirv.glslang_program_SPIRV_get_size(program);
-    try destination.resize(length);
+    try destination.resize(allocator, length);
     spirv.glslang_program_SPIRV_get(program, @ptrCast(destination.items.ptr));
 }
 
@@ -172,7 +174,7 @@ fn analyze(self: *Self) !void {
 
     // Input
     if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_STAGE_INPUT, &resource_list, &resource_list_size) != 0) @panic("Fail");
-    try self.inputs.resize(resource_list_size);
+    try self.inputs.resize(self.allocator, resource_list_size);
     for (resource_list[0..resource_list_size]) |res| {
         const type_handle = spirv.spvc_compiler_get_type_handle(compiler, res.type_id);
         const location = spirv.spvc_compiler_get_decoration(compiler, res.id, spirv.SpvDecorationLocation);
@@ -185,21 +187,21 @@ fn analyze(self: *Self) !void {
 
     // Output
     if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_STAGE_OUTPUT, &resource_list, &resource_list_size) != 0) @panic("Fail");
-    self.outputs.resize(resource_list_size) catch @panic("OOM");
+    self.outputs.resize(self.allocator, resource_list_size) catch @panic("OOM");
 
     // uniform
     if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_UNIFORM_BUFFER, &resource_list, &resource_list_size) != 0) @panic("Fail");
-    self.uniform_buffers.resize(resource_list_size) catch @panic("OOM");
+    self.uniform_buffers.resize(self.allocator, resource_list_size) catch @panic("OOM");
 
     // storage buffers
     if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_STORAGE_BUFFER, &resource_list, &resource_list_size) != 0) @panic("Fail");
-    self.storage_buffers.resize(resource_list_size) catch @panic("OOM");
+    self.storage_buffers.resize(self.allocator, resource_list_size) catch @panic("OOM");
 
     // storage buffers
     if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_STORAGE_IMAGE, &resource_list, &resource_list_size) != 0) @panic("Fail");
-    self.storage_textures.resize(resource_list_size) catch @panic("OOM");
+    self.storage_textures.resize(self.allocator, resource_list_size) catch @panic("OOM");
 
     // num_samplers
     if (spirv.spvc_resources_get_resource_list_for_type(resources, spirv.SPVC_RESOURCE_TYPE_SAMPLED_IMAGE, &resource_list, &resource_list_size) != 0) @panic("Fail");
-    self.samplers.resize(resource_list_size) catch @panic("OOM");
+    self.samplers.resize(self.allocator, resource_list_size) catch @panic("OOM");
 }

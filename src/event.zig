@@ -5,27 +5,29 @@ pub fn Events(comptime Event: type) type {
     return struct {
         const Self = @This();
 
+        allocator: std.mem.Allocator,
         next_id: usize,
         current: std.ArrayList(Event),
         old: std.ArrayList(Event),
 
         pub fn init(allocator: std.mem.Allocator) Self {
             return .{
+                .allocator = allocator,
                 .next_id = 0,
-                .current = std.ArrayList(Event).init(allocator),
-                .old = std.ArrayList(Event).init(allocator),
+                .current = .empty,
+                .old = .empty,
             };
         }
 
         pub fn deinit(self: *Self) void {
-            self.current.deinit();
-            self.old.deinit();
+            self.current.deinit(self.allocator);
+            self.old.deinit(self.allocator);
         }
 
         // TODO: Replace with a writer
         pub fn emit(self: *Self, event: Event) !void {
             self.next_id += 1;
-            try self.current.append(event);
+            try self.current.append(self.allocator, event);
         }
 
         pub fn writer(self: *Self) EventWriter(Event) {
@@ -63,7 +65,7 @@ pub fn EventReader(comptime T: type) type {
                     .cursor = cursor,
                 };
             }
-            std.debug.panic("Event ({?}) not initialized ", .{EventType});
+            std.debug.panic("Event ({}) not initialized ", .{EventType});
         }
 
         pub fn next(self: Self) ?EventType {
@@ -107,7 +109,7 @@ pub fn EventWriter(comptime T: type) type {
                     .events = events,
                 };
             }
-            std.debug.panic("Event ({?}) not initialized ", .{EventType});
+            std.debug.panic("Event ({}) not initialized ", .{EventType});
         }
 
         pub fn emit(self: Self, event: EventType) !void {

@@ -117,7 +117,7 @@ pub fn addSystem(self: *Self, system: anytype, desc: SystemDescription) !void {
 
         fn free(self_ptr_opt: ?*anyopaque) callconv(.c) void {
             if (self_ptr_opt) |self_ptr| {
-                var self_ctx: *@This() = @alignCast(@ptrCast(self_ptr));
+                var self_ctx: *@This() = @ptrCast(@alignCast(self_ptr));
                 self_ctx.allocator.destroy(self_ctx);
             }
         }
@@ -125,7 +125,7 @@ pub fn addSystem(self: *Self, system: anytype, desc: SystemDescription) !void {
         fn invoke(iter: *ecs.iter_t) callconv(.c) void {
             const ctx_opt = iter.callback_ctx;
             if (ctx_opt) |ctx_ptr| {
-                const ctx: *@This() = @alignCast(@ptrCast(ctx_ptr));
+                const ctx: *@This() = @ptrCast(@alignCast(ctx_ptr));
                 @call(.auto, ctx.callback, ctx.params);
             }
         }

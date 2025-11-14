@@ -6,17 +6,17 @@ const Self = @This();
 
 pub fn import(allocator: Allocator, path: []const u8) ?Shader {
     const file = std.fs.cwd().openFile(path, .{}) catch |e| {
-        std.log.err("ShaderImporter: {?}, Path: {s}", .{ e, path });
+        std.log.err("ShaderImporter: {}, Path: {s}", .{ e, path });
         return null;
     };
     defer file.close();
 
     const stat = file.stat() catch |e| {
-        std.log.err("ShaderImporter: {?}, Path: {s}", .{ e, path });
+        std.log.err("ShaderImporter: {}, Path: {s}", .{ e, path });
         return null;
     };
     const code = file.readToEndAlloc(allocator, stat.size) catch |e| {
-        std.log.err("ShaderImporter: {?}, Path: {s}", .{ e, path });
+        std.log.err("ShaderImporter: {}, Path: {s}", .{ e, path });
         return null;
     };
 
@@ -34,7 +34,7 @@ pub fn import(allocator: Allocator, path: []const u8) ?Shader {
     };
 
     return Shader.init(desc, allocator) catch |e| {
-        std.log.err("ShaderImporter: {?}, Path: {s}", .{ e, path });
+        std.log.err("ShaderImporter: {}, Path: {s}", .{ e, path });
         return null;
     };
 }

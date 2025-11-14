@@ -43,7 +43,7 @@ pub fn init_fill(data: []const u8, extent: Extent3d, format: TextureFormat, allo
 }
 
 pub fn deinit(self: *Self) void {
-    self.data.deinit();
+    self.data.deinit(self.allocator);
 }
 
 pub fn rawBytes(self: Self) []const u8 {

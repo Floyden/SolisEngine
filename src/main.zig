@@ -93,9 +93,9 @@ pub fn main() !void {
     try asset_server.register_importer(Image, assets.ImageImporter);
     try asset_server.register_importer(Shader, ShaderImporter);
 
-    const parsed = try Gltf.parseFromFile(std.heap.page_allocator, file_path);
-    const meshes = try parsed.parseMeshes(std.heap.page_allocator);
-    defer meshes.deinit();
+    const parsed = try Gltf.parseFromFile(allocator, file_path);
+    var meshes = try parsed.parseMeshes(allocator);
+    defer meshes.deinit(allocator);
 
     if (meshes.items.len == 0) return error.NoMeshesFound;
 
@@ -133,22 +133,22 @@ pub fn main() !void {
     defer renderer.releaseTexture(world.getMut(window_handle, Texture).*);
 
     // Buffers
-    var buffers = std.ArrayList(MeshBuffer).init(allocator);
+    var buffers: std.ArrayList(MeshBuffer) = .empty;
     for (meshes.items) |item| {
-        try buffers.append(try MeshBuffer.init(renderer, item));
+        try buffers.append(allocator, try MeshBuffer.init(renderer, item));
     }
     defer {
         for (buffers.items) |buffer| {
             buffer.deinit(renderer);
         }
-        buffers.deinit();
+        buffers.deinit(allocator);
     }
 
     // Lights
-    var lights = std.ArrayList(Light).init(allocator);
-    defer lights.deinit();
-    try lights.append(Light.createPoint(Vector3f.create(.{ 0.0, 5.0, 0.0 }), Vector4f.create(.{ 1.0, 1.0, 1.0, 1.0 }), 40));
-    try lights.append(Light.createDirectional(Vector3f.create(.{ 1.0, 0.0, 2.0 }).normalize(), Vector4f.create(.{ 1.0, 1.0, 1.0, 1.0 }), 0.5));
+    var lights: std.ArrayList(Light) = .empty;
+    defer lights.deinit(allocator);
+    try lights.append(allocator, Light.createPoint(Vector3f.create(.{ 0.0, 5.0, 0.0 }), Vector4f.create(.{ 1.0, 1.0, 1.0, 1.0 }), 40));
+    try lights.append(allocator, Light.createDirectional(Vector3f.create(.{ 1.0, 0.0, 2.0 }).normalize(), Vector4f.create(.{ 1.0, 1.0, 1.0, 1.0 }), 0.5));
 
     const lights_buffer = try renderer.createBufferNamed(@intCast(lights.items.len * @sizeOf(Light)), c.SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ, "Lights");
     defer renderer.releaseBuffer(lights_buffer);
@@ -157,17 +157,22 @@ pub fn main() !void {
         try renderer.uploadDataToBuffer(@intCast(i * @sizeOf(Light)), lights_buffer, light.toBuffer());
 
     // Image Texture
-    var textures = std.ArrayList(Texture).init(allocator);
+    var textures: std.ArrayList(Texture) = .empty;
     defer {
         for (textures.items) |texture| renderer.releaseTexture(texture);
-        textures.deinit();
+        textures.deinit(allocator);
     }
+
+    // var buf: [4096]u8 = undefined;
+    // const res = try std.os.getFdPath(std.fs.cwd().fd, &buf);
+    std.log.debug("Path: {s}", .{try std.fs.cwd().realpathAlloc(allocator, ".")});
     if (parsed.images) |parsed_images| {
         for (0..parsed_images.len) |i| {
-            const img = try parsed.loadImage(i, asset_server);
-            defer asset_server.unload(Image, img);
+            const img_handle = parsed.loadImage(i, asset_server) catch @panic("Failed to load Image");
+            defer asset_server.unload(Image, img_handle);
+            const img = asset_server.get(Image, img_handle) orelse @panic("Failed to load Image Handle");
 
-            try textures.append(try renderer.createTextureFromImage(asset_server.get(Image, img).?.*));
+            try textures.append(allocator, try renderer.createTextureFromImage(img.*));
         }
     }
 
@@ -184,10 +189,10 @@ pub fn main() !void {
 
     // Materials
     var materials = try parsed.parseMaterials(allocator, textures.items);
-    defer materials.deinit();
+    defer materials.deinit(allocator);
 
     if (materials.items.len == 0)
-        try materials.append(Material{});
+        try materials.append(allocator, Material{});
 
     // Camera
     const camera = world.set(window_handle, Camera, .{ .aspect = window.getAspect() });

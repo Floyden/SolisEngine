@@ -25,13 +25,13 @@
     // Once all dependencies are fetched, `zig build` no longer requires
     // internet connectivity.
     .dependencies = .{
-        .zigimg = .{
-            .url = "git+https://github.com/zigimg/zigimg.git#1f149946766a10bb8f7d5aa783dfdb6991aa32a8",
-            .hash = "zigimg-0.1.0-AAAAACcfEQCmpZ9qJQVSekJWaSLeHEcXvTCATd8x-4od",
-        },
         .zflecs = .{
-            .url = "git+https://github.com/Floyden/zflecs.git#08b3ea1c8d75488dfa82cd8f69df7f2eb6c285bf",
-            .hash = "zflecs-0.2.0-dev-1PN3yjlONQCtElkxO9gKDCUVX_BLs4ZShaoAk_KSly_J",
+            .url = "git+https://github.com/zig-gamedev/zflecs.git#9c484724d7245f585a1a7d8ac67e91f0d764951d",
+            .hash = "zflecs-0.2.0-dev-1PN3ym9mOgCyE8w0DdK_Uf7FAob-nm0Dp_lZKR3QyJaC",
+        },
+        .zigimg = .{
+            .url = "git+https://github.com/zigimg/zigimg.git#f5783e87627cbd9e0b45fad112e9f73503914f36",
+            .hash = "zigimg-0.1.0-8_eo2vBrFQBhsrLpexdcDQY-zrlzkyFZfKuYX-Nry6KN",
         },
     },
     .paths = .{

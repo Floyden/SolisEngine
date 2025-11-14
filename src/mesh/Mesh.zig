@@ -61,9 +61,9 @@ pub const Face = struct {
         } else return null;
 
         return .{
-            @alignCast(@ptrCast(self.vertices[0][offset .. offset + desc.type.size()])),
-            @alignCast(@ptrCast(self.vertices[1][offset .. offset + desc.type.size()])),
-            @alignCast(@ptrCast(self.vertices[2][offset .. offset + desc.type.size()])),
+            @ptrCast(@alignCast(self.vertices[0][offset .. offset + desc.type.size()])),
+            @ptrCast(@alignCast(self.vertices[1][offset .. offset + desc.type.size()])),
+            @ptrCast(@alignCast(self.vertices[2][offset .. offset + desc.type.size()])),
         };
     }
 
@@ -133,13 +133,13 @@ pub const ElementIter = struct {
     pub fn next(self: *ElementIter) ?[]f32 {
         const res = self.at(self.index);
         if (res) |_| self.index += 1;
-        return @alignCast(@ptrCast(res));
+        return @ptrCast(@alignCast(res));
     }
 
     pub fn nextAs(self: *ElementIter, comptime T: type) ?*T {
         const res = self.at(self.index);
         if (res) |_| self.index += 1;
-        return @alignCast(@ptrCast(res));
+        return @ptrCast(@alignCast(res));
     }
 
     pub fn at(self: *ElementIter, index: usize) ?[]u8 {
@@ -151,7 +151,7 @@ pub const ElementIter = struct {
     pub fn atAs(self: *ElementIter, index: usize, comptime T: type) ?*T {
         if (index >= self.mesh.num_vertices) return null;
         const base_index = index * self.vertex_size + self.offset;
-        return @alignCast(@ptrCast(self.mesh.data.?[base_index .. base_index + self.element_size]));
+        return @ptrCast(@alignCast(self.mesh.data.?[base_index .. base_index + self.element_size]));
     }
 
     pub fn reset(self: *ElementIter) void {
@@ -169,7 +169,7 @@ num_vertices: u32,
 pub fn init(allocator: std.mem.Allocator) Self {
     return .{
         .allocator = allocator,
-        .vertex_description = std.ArrayList(vertex_data.ElementDesc).init(allocator),
+        .vertex_description = .empty,
         .index_buffer = null,
         .data = null,
         .num_vertices = 0,
@@ -248,7 +248,7 @@ pub fn rearrange(self: *Self, new_description: []const vertex_data.ElementDesc) 
         if (new_desc.usage == .color) {
             for (0..self.num_vertices) |i| {
                 const dst_start = i * new_vertex_size + new_desc.offset;
-                @memset(@as([]f32, @alignCast(@ptrCast(new_data[dst_start .. dst_start + new_desc.type.size()]))), 1.0);
+                @memset(@as([]f32, @ptrCast(@alignCast(new_data[dst_start .. dst_start + new_desc.type.size()]))), 1.0);
             }
         } else if (new_desc.usage == .normal) {
             calculate_normals = true;
@@ -260,7 +260,7 @@ pub fn rearrange(self: *Self, new_description: []const vertex_data.ElementDesc) 
     self.allocator.free(self.data.?);
     self.data = new_data;
     self.vertex_description.clearRetainingCapacity();
-    self.vertex_description.appendSlice(new_description) catch @panic("OOM");
+    self.vertex_description.appendSlice(self.allocator, new_description) catch @panic("OOM");
 
     if (calculate_normals) self.calculateNormals();
     if (calculate_tangents) self.calculateTangents();

@@ -268,7 +268,7 @@ pub fn loadImage(self: Self, index: usize, asset_server: *AssetServer) !Handle(I
     std.debug.assert(self._resource_path != null);
     std.debug.assert(self.images.?.len > index);
 
-    const path = try std.fs.path.join(asset_server.allocator, &[2][]const u8{ self._resource_path.?, self.images.?[index].uri });
+    const path = try std.fs.path.join(asset_server.allocator, &[_][]const u8{ self._resource_path.?, self.images.?[index].uri });
     const handle = try asset_server.load(Image, path);
 
     return handle;
@@ -304,13 +304,13 @@ pub fn loadMetalRoughImage(self: Self, asset_server: *AssetServer, mat_idx: u32)
 }
 
 pub fn parseMaterials(self: Self, allocator: std.mem.Allocator, textures: []const TextureHandle) !std.ArrayList(PBRMaterial) {
-    var materials = std.ArrayList(PBRMaterial).init(allocator);
-    errdefer materials.deinit();
+    var materials = std.ArrayList(PBRMaterial).empty;
+    errdefer materials.deinit(allocator);
 
     if (self.materials == null) return materials;
 
     for (self.materials.?) |mat| {
-        const material = try materials.addOne();
+        const material = try materials.addOne(allocator);
         material.* = PBRMaterial{};
         if (mat.pbrMetallicRoughness) |pbr| {
             material.*.base_color = pbr.baseColorFactor;
@@ -326,12 +326,12 @@ pub fn parseMaterials(self: Self, allocator: std.mem.Allocator, textures: []cons
 }
 
 pub fn parseMeshes(self: Self, allocator: std.mem.Allocator) !std.ArrayList(Mesh) {
-    var meshes = std.ArrayList(Mesh).init(allocator);
-    errdefer meshes.deinit();
+    var meshes: std.ArrayList(Mesh) = .empty;
+    errdefer meshes.deinit(allocator);
 
     if (self.meshes == null) return meshes;
 
-    for (0..self.meshes.?.len) |i| try meshes.append(try self.parseMeshData(i, allocator));
+    for (0..self.meshes.?.len) |i| try meshes.append(allocator, try self.parseMeshData(i, allocator));
     return meshes;
 }
 
@@ -365,7 +365,7 @@ pub fn parseMeshData(self: Self, mesh_index: usize, allocator: std.mem.Allocator
         element_desc.index = usage[1];
         num_vertices = accessor.count;
 
-        mesh_res.vertex_description.append(element_desc) catch @panic("OOM");
+        mesh_res.vertex_description.append(allocator, element_desc) catch @panic("OOM");
     }
     if (num_vertices == null) return error.NoVertices;
     mesh_res.num_vertices = num_vertices.?;

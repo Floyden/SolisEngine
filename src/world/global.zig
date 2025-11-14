@@ -10,7 +10,7 @@ pub fn Global(T: type) type {
         pub fn init(world: *World, _: u64) !Self {
             return .{
                 .world = world,
-                .value = world.getGlobalMut(T) orelse std.debug.panic("Unregistered Type ({?})", .{T}),
+                .value = world.getGlobalMut(T) orelse std.debug.panic("Unregistered Type ({})", .{T}),
             };
         }
 
