@@ -5,14 +5,12 @@ pub fn Events(comptime Event: type) type {
     return struct {
         const Self = @This();
 
-        allocator: std.mem.Allocator,
         next_id: usize,
         current: std.ArrayList(Event),
         old: std.ArrayList(Event),
 
-        pub fn init(allocator: std.mem.Allocator) Self {
+        pub fn init() Self {
             return .{
-                .allocator = allocator,
                 .next_id = 0,
                 .current = .empty,
                 .old = .empty,
@@ -25,9 +23,9 @@ pub fn Events(comptime Event: type) type {
         }
 
         // TODO: Replace with a writer
-        pub fn emit(self: *Self, event: Event) !void {
+        pub fn emit(self: *Self, allocator: std.mem.Allocator, event: Event) !void {
             self.next_id += 1;
-            try self.current.append(self.allocator, event);
+            try self.current.append(allocator, event);
         }
 
         pub fn writer(self: *Self) EventWriter(Event) {
@@ -112,8 +110,8 @@ pub fn EventWriter(comptime T: type) type {
             std.debug.panic("Event ({}) not initialized ", .{EventType});
         }
 
-        pub fn emit(self: Self, event: EventType) !void {
-            try self.events.emit(event);
+        pub fn emit(self: Self, allocator: std.mem.Allocator, event: EventType) !void {
+            try self.events.emit(allocator, event);
         }
     };
 }

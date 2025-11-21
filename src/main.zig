@@ -80,11 +80,13 @@ pub fn main() !void {
     if (!c.SDL_Init(c.SDL_INIT_VIDEO)) return SDL_ERROR.Fail;
     defer c.SDL_Quit();
 
-    const allocator = std.heap.page_allocator;
+    // const allocator = std.heap.page_allocator;
     const file_path: []const u8 = @ptrCast(std.os.argv[1][0..std.mem.len(std.os.argv[1])]);
 
-    var world = World.init(allocator);
+    var world = World.init();
     defer world.deinit();
+
+    const allocator = world.registerGlobal(std.mem.Allocator, std.heap.page_allocator).*;
 
     // world.register(assets.Server);
     var asset_server = world.registerGlobal(assets.Server, assets.Server.init(std.heap.page_allocator));
@@ -109,12 +111,12 @@ pub fn main() !void {
     world.registerEvent(Window.Event);
     world.registerEvent(system_event.SystemEvent);
     world.registerEvent(input.InputEvent);
-    try world.addSystem(system_event.handleSDLEvents, .{ .stage = ecs.PreUpdate });
-    try world.addSystem(input.keyboardInputSystem, .{ .stage = ecs.PreUpdate });
-    try world.addSystem(cameraMover, .{});
+    try world.addSystem(allocator, system_event.handleSDLEvents, .{ .stage = ecs.PreUpdate });
+    try world.addSystem(allocator, input.keyboardInputSystem, .{ .stage = ecs.PreUpdate });
+    try world.addSystem(allocator, cameraMover, .{});
 
     var renderer = world.registerGlobal(Renderer, try Renderer.init(&world, window));
-    try world.addSystem(handleWindowResized, .{});
+    try world.addSystem(allocator, handleWindowResized, .{});
 
     defaults.TextureDefaults.init(allocator, renderer) catch @panic("OOM");
     defer defaults.TextureDefaults.deinit(renderer);

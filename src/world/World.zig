@@ -4,12 +4,10 @@ const events = @import("solis").events;
 
 const Self = @This();
 inner: *ecs.world_t,
-allocator: std.mem.Allocator,
 
-pub fn init(allocator: std.mem.Allocator) Self {
+pub fn init() Self {
     return .{
         .inner = ecs.init(),
-        .allocator = allocator,
     };
 }
 
@@ -63,7 +61,7 @@ pub fn registerEvent(self: *Self, T: type) void {
     ecs.COMPONENT(self.inner, events.EventWriter(T));
     ecs.COMPONENT(self.inner, events.EventCursor(T));
     // TODO: Add destructor for events
-    _ = self.registerGlobal(events.Events(T), events.Events(T).init(self.allocator));
+    _ = self.registerGlobal(events.Events(T), events.Events(T).init());
 }
 
 pub fn parseParamTuple(args: []const type) type {
@@ -94,7 +92,7 @@ const SystemDescription = struct {
 };
 
 // TODO: Add support for error values in systems
-pub fn addSystem(self: *Self, system: anytype, desc: SystemDescription) !void {
+pub fn addSystem(self: *Self, allocator: std.mem.Allocator, system: anytype, desc: SystemDescription) !void {
     const SystemType = @TypeOf(system);
     const system_info = @typeInfo(SystemType);
     if (system_info != .@"fn") @compileError("Only Functions supported in World.addSystem");
@@ -134,10 +132,10 @@ pub fn addSystem(self: *Self, system: anytype, desc: SystemDescription) !void {
     const system_entity = self.newEntity(@typeName(SystemType));
 
     // Create and fill parameter tuple
-    const ctx: *Context = try self.allocator.create(Context);
+    const ctx: *Context = try allocator.create(Context);
     const tuple = &ctx.params;
     ctx.callback = system;
-    ctx.allocator = self.allocator;
+    ctx.allocator = allocator;
     inline for (params, 0..) |param, i| {
         const field_name = comptime std.fmt.comptimePrint("{}", .{i});
         if (param.type) |ptype|
