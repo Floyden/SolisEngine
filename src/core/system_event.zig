@@ -12,7 +12,8 @@ pub const SystemEvent = union {
     close_request: bool,
 };
 
-pub fn handleSDLEvents(allocator: Global(std.mem.Allocator), window_events: EventWriter(Window.Event), input_events: EventWriter(input.InputEvent), system_events: EventWriter(SystemEvent)) void {
+// TODO: Use World to get the EventWriter.
+pub fn handleSDLEvents(allocator: Global(std.mem.Allocator), window_events: EventWriter(Window.Event), input_events: EventWriter(input.KeyEvent), system_events: EventWriter(SystemEvent)) void {
     var event: c.SDL_Event = undefined;
     while (c.SDL_PollEvent(&event)) {
         switch (event.type) {
@@ -22,18 +23,18 @@ pub fn handleSDLEvents(allocator: Global(std.mem.Allocator), window_events: Even
                 .width = @intCast(event.window.data1),
                 .height = @intCast(event.window.data2),
             } }) catch @panic("OOM?"),
-            c.SDL_EVENT_KEY_DOWN => input_events.emit(allocator.get().*, .{ .key_event = .{
+            c.SDL_EVENT_KEY_DOWN => input_events.emit(allocator.get().*, .{
                 .down = true,
                 .key_code = event.key.key,
                 .scan_code = event.key.scancode,
                 .mod = event.key.mod,
-            } }) catch @panic("OOM?"),
-            c.SDL_EVENT_KEY_UP => input_events.emit(allocator.get().*, .{ .key_event = .{
+            }) catch @panic("OOM?"),
+            c.SDL_EVENT_KEY_UP => input_events.emit(allocator.get().*, .{
                 .down = false,
                 .key_code = event.key.key,
                 .scan_code = event.key.scancode,
                 .mod = event.key.mod,
-            } }) catch @panic("OOM?"),
+            }) catch @panic("OOM?"),
             else => {},
         }
     }

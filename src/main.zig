@@ -110,7 +110,7 @@ pub fn main() !void {
 
     world.registerEvent(Window.Event);
     world.registerEvent(system_event.SystemEvent);
-    world.registerEvent(input.InputEvent);
+    world.registerEvent(input.KeyEvent);
     try world.addSystem(allocator, system_event.handleSDLEvents, .{ .stage = ecs.PreUpdate });
     try world.addSystem(allocator, input.keyboardInputSystem, .{ .stage = ecs.PreUpdate });
     try world.addSystem(allocator, cameraMover, .{});
