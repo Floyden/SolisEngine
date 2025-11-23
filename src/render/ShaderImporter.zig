@@ -1,29 +1,22 @@
 const std = @import("std");
+const solis = @import("solis");
 const Allocator = std.mem.Allocator;
 const Shader = @import("Shader.zig");
 
 const Self = @This();
 
-pub fn import(allocator: Allocator, path: []const u8) ?Shader {
-    const file = std.fs.cwd().openFile(path, .{}) catch |e| {
-        std.log.err("ShaderImporter: {}, Path: {s}", .{ e, path });
+pub fn import(allocator: Allocator, reader: *std.Io.Reader, meta: solis.assets.Server.ImportMeta) ?Shader {
+    const code = allocator.alloc(u8, meta.length) catch @panic("OOM");
+    const len = reader.readSliceShort(code) catch |e| {
+        std.log.err("ShaderImporter: {}, Path: {s}", .{ e, meta.path });
         return null;
     };
-    defer file.close();
-
-    const stat = file.stat() catch |e| {
-        std.log.err("ShaderImporter: {}, Path: {s}", .{ e, path });
-        return null;
-    };
-    const code = file.readToEndAlloc(allocator, stat.size) catch |e| {
-        std.log.err("ShaderImporter: {}, Path: {s}", .{ e, path });
-        return null;
-    };
+    std.debug.assert(len == meta.length);
 
     // TODO: Call the preprocessor when implemented
-    const extension = std.fs.path.extension(path);
-    const stage = getShaderStage(extension) orelse {
-        std.log.err("ShaderImporter: Unknown extension: {s}, Path: {s}", .{ extension, path });
+    // const extension = std.fs.path.extension(meta.path);
+    const stage = getShaderStage(meta.ext) orelse {
+        std.log.err("ShaderImporter: Unknown extension: {s}, Path: {s}", .{ meta.ext, meta.path });
         return null;
     };
 
@@ -34,7 +27,7 @@ pub fn import(allocator: Allocator, path: []const u8) ?Shader {
     };
 
     return Shader.init(desc, allocator) catch |e| {
-        std.log.err("ShaderImporter: {}, Path: {s}", .{ e, path });
+        std.log.err("ShaderImporter: {}, Path: {s}", .{ e, meta.path });
         return null;
     };
 }

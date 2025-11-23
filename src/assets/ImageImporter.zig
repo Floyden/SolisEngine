@@ -7,20 +7,12 @@ const zigimg = solis.zigimg;
 
 const Self = @This();
 
-pub fn import(allocator: Allocator, path: []const u8) ?Image {
-    var buffer: [4096]u8 = undefined;
-    const fd = std.fs.cwd().openFile(path, .{ .mode = .read_only }) catch |e| {
-        std.log.err("ImageImporter: Failed to open file: {s}, Error: {}", .{ path, e });
-        return null;
-    };
-    defer fd.close();
-
-    var reader = fd.reader(&buffer);
-    const data = reader.interface.readAlloc(allocator, fd.getEndPos() catch @panic("Fail")) catch @panic("Fail");
+pub fn import(allocator: Allocator, reader: *std.Io.Reader, meta: solis.assets.Server.ImportMeta) ?Image {
+    const data = reader.readAlloc(allocator, meta.length) catch @panic("Fail");
     defer allocator.free(data);
 
     var image = zigimg.Image.fromMemory(allocator, data) catch |e| {
-        std.log.err("ImageImporter: {}, Path: {s}", .{ e, path });
+        std.log.err("ImageImporter: {}, Path: {s}", .{ e, meta.path });
         return null;
     };
 

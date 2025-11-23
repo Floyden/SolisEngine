@@ -13,6 +13,11 @@ importers: std.AutoHashMapUnmanaged(TypeId, *const anyopaque),
 loaded_assets: std.AutoHashMapUnmanaged(HandleAny, *anyopaque),
 
 // TODO: Metadata (Path, Type, ...)
+pub const ImportMeta = struct {
+    path: []const u8,
+    ext: []const u8,
+    length: usize,
+};
 
 pub fn init(allocator: std.mem.Allocator) Self {
     return .{
@@ -36,15 +41,27 @@ pub fn register_importer(self: *Self, comptime T: type, comptime importer: type)
 pub fn load(self: *Self, comptime T: type, path: []const u8) !Handle(T) {
     // TODO: check if the asset has been loaded already.
     // TODO: Figure out error handling
-    const importer = @as(*const fn (std.mem.Allocator, path: []const u8) ?T, @ptrCast(self.importers.get(typeId(T)) orelse return error.ImporterNotFound));
-    const handle = Handle(T).new();
+    var file = try std.fs.cwd().openFile(path, .{});
+    const stat = try file.stat();
+    defer file.close();
+
+    const meta = ImportMeta{
+        .path = path,
+        .ext = std.fs.path.extension(path),
+        .length = stat.size,
+    };
+    var buffer: [4096]u8 = undefined;
+    var reader = file.reader(&buffer);
+
+    const importer = @as(*const fn (std.mem.Allocator, *std.Io.Reader, ImportMeta) ?T, @ptrCast(self.importers.get(typeId(T)) orelse return error.ImporterNotFound));
     const dest = try self.allocator.create(T);
-    dest.* = importer(self.allocator, path) orelse {
+    dest.* = importer(self.allocator, &reader.interface, meta) orelse {
         std.log.info("Failed to load asset: {s}", .{path});
         self.allocator.destroy(dest);
         return Handle(T).empty;
     };
 
+    const handle = Handle(T).new();
     try self.loaded_assets.put(self.allocator, handle.inner, dest);
     return handle;
 }
