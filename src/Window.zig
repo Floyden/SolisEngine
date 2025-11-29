@@ -1,4 +1,5 @@
-const c = @import("solis").external.c;
+const solis = @import("solis");
+const c = solis.external.c;
 pub const SDL_ERROR = error{Fail};
 const Window = @This();
 

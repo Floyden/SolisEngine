@@ -111,7 +111,6 @@ pub fn main() !void {
     world.registerEvent(Window.Event);
     world.registerEvent(system_event.SystemEvent);
     world.registerEvent(input.KeyEvent);
-    try world.addSystem(allocator, system_event.handleSDLEvents, .{ .stage = ecs.PreUpdate });
     try world.addSystem(allocator, input.keyboardInputSystem, .{ .stage = ecs.PreUpdate });
     try world.addSystem(allocator, cameraMover, .{});
 
@@ -207,10 +206,12 @@ pub fn main() !void {
     // Main loop
     var done = false;
     while (!done) {
-        world.update();
+        try system_event.handleSystemEvents(allocator, &world);
         while (system_events.next()) |sys_event| {
             if (sys_event.close_request) done = true;
         }
+
+        world.update();
         c.SDL_Delay(16);
         lights.items[1].direction = Vector4f.create(.{ @sin(angle), 0.0, @cos(angle), 0.0 });
         angle += 0.03;
