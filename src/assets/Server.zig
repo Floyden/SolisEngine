@@ -83,3 +83,7 @@ pub fn fetch(self: *Self, comptime T: type, path: []const u8) ?*T {
     if (res.is_empty()) return null;
     return self.get(T, res);
 }
+
+pub fn initModule(allocator: std.mem.Allocator, world: *solis.world.World) !void {
+    _ = world.registerGlobal(Self, init(allocator));
+}

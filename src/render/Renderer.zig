@@ -22,6 +22,7 @@ device: *c.SDL_GPUDevice,
 sample_count: c.SDL_GPUSampleCount,
 
 /// Initializes the Renderer with a given window. Returns an error if it is unable to create a GPU device or claim the window.
+// TODO: do not make the init depend on window
 pub fn init(world: *World, window: *Window) !Renderer {
     const device = c.SDL_CreateGPUDevice(c.SDL_GPU_SHADERFORMAT_SPIRV, true, null) orelse return error.UnableToCreateGPUDevice;
     if (!c.SDL_ClaimWindowForGPUDevice(device, window.handle)) return error.UnableToClaimWindowForGPU;

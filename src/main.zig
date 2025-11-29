@@ -70,6 +70,37 @@ fn handleWindowResized(window_events: EventReader(Window.Event), query: Query(.{
     }
 }
 
+fn handleMouseInput(mouse_button: EventReader(input.MouseButtonEvent)) void {
+    while (mouse_button.next()) |event| {
+        std.log.debug("Mouse input {}", .{event});
+    }
+}
+
+var window_handle: u64 = 0;
+
+pub fn initModule(allocator: std.mem.Allocator, world: *World) !void {
+    _ = world.registerGlobal(std.mem.Allocator, std.heap.page_allocator).*;
+
+    try assets.Server.initModule(allocator, world);
+    var asset_server = world.getGlobalMut(assets.Server) orelse @panic("Failed to get AssetServer");
+    try asset_server.register_importer(Image, assets.ImageImporter);
+
+    world.registerEvent(system_event.SystemEvent);
+    try input.initModule(allocator, world);
+
+    // Video subsystem & windows
+    try Window.initModule(allocator, world);
+    world.register(Camera);
+
+    window_handle = world.newEntity("Main Window");
+    const window = world.set(window_handle, Window, try Window.init());
+
+    try solis.render.initModule(allocator, world);
+
+    _ = world.registerGlobal(Renderer, try Renderer.init(world, window));
+    try world.addSystem(allocator, handleWindowResized, .{});
+}
+
 pub fn main() !void {
     if (std.os.argv.len < 2) {
         std.log.err("Expected at least one argument", .{});
@@ -86,40 +117,26 @@ pub fn main() !void {
     var world = World.init();
     defer world.deinit();
 
-    const allocator = world.registerGlobal(std.mem.Allocator, std.heap.page_allocator).*;
-
-    // world.register(assets.Server);
-    var asset_server = world.registerGlobal(assets.Server, assets.Server.init(std.heap.page_allocator));
-    try input.init(allocator, &world);
-
-    try asset_server.register_importer(Image, assets.ImageImporter);
-    try asset_server.register_importer(Shader, ShaderImporter);
+    const allocator = std.heap.page_allocator;
+    try initModule(allocator, &world);
+    var asset_server = world.getGlobalMut(assets.Server) orelse @panic("Failed to get AssetServer");
 
     const parsed = try Gltf.parseFromFile(allocator, file_path);
     var meshes = try parsed.parseMeshes(allocator);
     defer meshes.deinit(allocator);
-
     if (meshes.items.len == 0) return error.NoMeshesFound;
 
-    // Video subsystem & windows
-    world.register(Window);
-    world.register(Texture);
-    world.register(Camera);
-    const window_handle = world.newEntity("Main Window");
-    var window = world.set(window_handle, Window, try Window.init());
-
-    world.registerEvent(Window.Event);
-    world.registerEvent(system_event.SystemEvent);
+    try world.addSystem(allocator, handleMouseInput, .{});
     try world.addSystem(allocator, cameraMover, .{});
 
-    var renderer = world.registerGlobal(Renderer, try Renderer.init(&world, window));
-    try world.addSystem(allocator, handleWindowResized, .{});
-
-    defaults.TextureDefaults.init(allocator, renderer) catch @panic("OOM");
-    defer defaults.TextureDefaults.deinit(renderer);
+    var renderer = world.getGlobalMut(Renderer).?;
+    var window = world.get(window_handle, Window);
 
     const pipeline = try renderer.createDefaultGraphicsPipeline(asset_server);
     defer renderer.destroyGraphicsPipeline(pipeline);
+
+    defaults.TextureDefaults.init(allocator, renderer) catch @panic("OOM");
+    defer defaults.TextureDefaults.deinit(renderer);
 
     // window textures
     _ = world.set(window_handle, Texture, try renderer.createTexture(.{
@@ -163,8 +180,6 @@ pub fn main() !void {
     }
 
     // var buf: [4096]u8 = undefined;
-    // const res = try std.os.getFdPath(std.fs.cwd().fd, &buf);
-    std.log.debug("Path: {s}", .{try std.fs.cwd().realpathAlloc(allocator, ".")});
     if (parsed.images) |parsed_images| {
         for (0..parsed_images.len) |i| {
             const img_handle = parsed.loadImage(i, asset_server) catch @panic("Failed to load Image");

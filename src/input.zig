@@ -10,7 +10,7 @@ const World = @import("world.zig").World;
 const std = @import("std");
 const ecs = @import("solis").ecs;
 
-pub fn init(allocator: std.mem.Allocator, world: *World) !void {
+pub fn initModule(allocator: std.mem.Allocator, world: *World) !void {
     _ = world.registerGlobal(KeyboardInput, .init(allocator));
     world.registerEvent(KeyEvent);
     world.registerEvent(MouseMotionEvent);

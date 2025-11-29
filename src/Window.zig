@@ -1,3 +1,4 @@
+const std = @import("std");
 const solis = @import("solis");
 const c = solis.external.c;
 pub const SDL_ERROR = error{Fail};
@@ -34,3 +35,8 @@ pub const Resized = struct {
 };
 
 pub const Event = union { resized: Resized };
+
+pub fn initModule(_: std.mem.Allocator, world: *solis.world.World) !void {
+    world.register(Window);
+    world.registerEvent(Window.Event);
+}

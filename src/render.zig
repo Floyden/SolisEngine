@@ -14,3 +14,12 @@ pub const TextureFormat = @import("render/texture.zig").Format;
 pub const TextureHandle = @import("render/texture.zig").Handle;
 pub const TextureType = @import("render/texture.zig").Type;
 pub const TextureUsage = @import("render/texture.zig").Usage;
+
+const std = @import("std");
+const solis = @import("solis");
+pub fn initModule(_: std.mem.Allocator, world: *solis.world.World) !void {
+    world.register(TextureHandle);
+
+    var asset_server = world.getGlobalMut(solis.assets.Server) orelse return error.NoAssetServer;
+    try asset_server.register_importer(Shader, ShaderImporter);
+}
