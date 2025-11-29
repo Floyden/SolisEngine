@@ -90,7 +90,7 @@ pub fn main() !void {
 
     // world.register(assets.Server);
     var asset_server = world.registerGlobal(assets.Server, assets.Server.init(std.heap.page_allocator));
-    _ = world.registerGlobal(input.KeyboardInput, .init(allocator));
+    try input.init(allocator, &world);
 
     try asset_server.register_importer(Image, assets.ImageImporter);
     try asset_server.register_importer(Shader, ShaderImporter);
@@ -110,8 +110,6 @@ pub fn main() !void {
 
     world.registerEvent(Window.Event);
     world.registerEvent(system_event.SystemEvent);
-    world.registerEvent(input.KeyEvent);
-    try world.addSystem(allocator, input.keyboardInputSystem, .{ .stage = ecs.PreUpdate });
     try world.addSystem(allocator, cameraMover, .{});
 
     var renderer = world.registerGlobal(Renderer, try Renderer.init(&world, window));

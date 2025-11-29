@@ -4,6 +4,7 @@ const c = solis.external.c;
 const World = solis.world.World;
 const EventWriter = solis.events.EventWriter;
 const KeyEvent = solis.input.KeyEvent;
+const input = solis.input;
 const Window = solis.Window;
 
 pub const SystemEvent = union {
@@ -35,6 +36,24 @@ pub fn handleSystemEvents(allocator: std.mem.Allocator, world: *World) !void {
                 .scan_code = event.key.scancode,
                 .mod = event.key.mod,
             }) catch @panic("OOM?"),
+            c.SDL_EVENT_MOUSE_MOTION => {
+                var writer = try EventWriter(input.MouseMotionEvent).init(world, 0);
+                const motion = event.motion;
+                try writer.emit(allocator, .{
+                    .abs = .{ motion.x, motion.y },
+                    .rel = .{ motion.xrel, motion.yrel },
+                });
+            },
+            c.SDL_EVENT_MOUSE_BUTTON_UP, c.SDL_EVENT_MOUSE_BUTTON_DOWN => {
+                var writer = try EventWriter(input.MouseButtonEvent).init(world, 0);
+                const button = event.button;
+                try writer.emit(allocator, .{
+                    .button = button.button,
+                    .down = button.down,
+                    .clicks = button.clicks,
+                    .pos = .{ button.x, button.y },
+                });
+            },
             else => {},
         }
     }
