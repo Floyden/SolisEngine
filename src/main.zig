@@ -16,6 +16,7 @@ const Vector3f = matrix.Vector3f;
 const Vector4f = matrix.Vector4f;
 const Matrix3f = matrix.Matrix3f;
 const Matrix4f = matrix.Matrix4f;
+const Transformation = solis.Transformation;
 const Buffer = solis.render.Buffer;
 const RenderPass = solis.render.RenderPass;
 const EnvironmentMap = solis.render.EnvironmentMap;
@@ -91,6 +92,9 @@ pub fn initModule(allocator: std.mem.Allocator, world: *World) !void {
     // Video subsystem & windows
     try Window.initModule(allocator, world);
     world.register(Camera);
+    world.register(Material);
+    world.register(Transformation);
+    world.register(Light);
 
     window_handle = world.newEntity("Main Window");
     const window = world.set(window_handle, Window, try Window.init());
@@ -122,9 +126,6 @@ pub fn main() !void {
     var asset_server = world.getGlobalMut(assets.Server) orelse @panic("Failed to get AssetServer");
 
     const parsed = try Gltf.parseFromFile(allocator, file_path);
-    var meshes = try parsed.parseMeshes(allocator);
-    defer meshes.deinit(allocator);
-    if (meshes.items.len == 0) return error.NoMeshesFound;
 
     try world.addSystem(allocator, handleMouseInput, .{});
     try world.addSystem(allocator, cameraMover, .{});
@@ -148,29 +149,16 @@ pub fn main() !void {
     }));
     defer renderer.releaseTexture(world.getMut(window_handle, Texture).*);
 
-    // Buffers
-    var buffers: std.ArrayList(MeshBuffer) = .empty;
-    for (meshes.items) |item| {
-        try buffers.append(allocator, try MeshBuffer.init(renderer, item));
-    }
-    defer {
-        for (buffers.items) |buffer| {
-            buffer.deinit(renderer);
-        }
-        buffers.deinit(allocator);
-    }
-
     // Lights
-    var lights: std.ArrayList(Light) = .empty;
-    defer lights.deinit(allocator);
-    try lights.append(allocator, Light.createPoint(Vector3f.create(.{ 0.0, 5.0, 0.0 }), Vector4f.create(.{ 1.0, 1.0, 1.0, 1.0 }), 40));
-    try lights.append(allocator, Light.createDirectional(Vector3f.create(.{ 1.0, 0.0, 2.0 }).normalize(), Vector4f.create(.{ 1.0, 1.0, 1.0, 1.0 }), 0.5));
-
-    const lights_buffer = try renderer.createBufferNamed(@intCast(lights.items.len * @sizeOf(Light)), c.SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ, "Lights");
+    const lights_buffer = try renderer.createBufferNamed(@intCast(2 * @sizeOf(Light)), c.SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ, "Lights");
     defer renderer.releaseBuffer(lights_buffer);
+    {
+        const point_ent = world.newEntity("PointLight");
+        _ = world.set(point_ent, Light, Light.createPoint(Vector3f.create(.{ 0.0, 5.0, 0.0 }), Vector4f.create(.{ 1.0, 1.0, 1.0, 1.0 }), 40));
 
-    for (lights.items, 0..) |light, i|
-        try renderer.uploadDataToBuffer(@intCast(i * @sizeOf(Light)), lights_buffer, light.toBuffer());
+        const directional_ent = world.newEntity("DirectionalLight");
+        _ = world.set(directional_ent, Light, Light.createDirectional(Vector3f.create(.{ 1.0, 0.0, 2.0 }).normalize(), Vector4f.create(.{ 1.0, 1.0, 1.0, 1.0 }), 0.5));
+    }
 
     // Image Texture
     var textures: std.ArrayList(Texture) = .empty;
@@ -179,34 +167,57 @@ pub fn main() !void {
         textures.deinit(allocator);
     }
 
-    // var buf: [4096]u8 = undefined;
-    if (parsed.images) |parsed_images| {
-        for (0..parsed_images.len) |i| {
-            const img_handle = parsed.loadImage(i, asset_server) catch @panic("Failed to load Image");
-            defer asset_server.unload(Image, img_handle);
-            const img = asset_server.get(Image, img_handle) orelse @panic("Failed to load Image Handle");
-
-            try textures.append(allocator, try renderer.createTextureFromImage(img.*));
-        }
-    }
-
     var environment_map: EnvironmentMap = undefined;
     defer environment_map.deinit(renderer);
+
     {
-        const img = try asset_server.load(Image, "assets/textures/cubemap.jpg");
-        defer asset_server.unload(Image, img);
-        environment_map = try EnvironmentMap.initFromImage(renderer, asset_server.get(Image, img).?.*, allocator);
+        {
+            const img = try asset_server.load(Image, "assets/textures/cubemap.jpg");
+            defer asset_server.unload(Image, img);
+            environment_map = try EnvironmentMap.initFromImage(renderer, asset_server.get(Image, img).?.*, allocator);
+        }
+        if (parsed.images) |parsed_images| {
+            for (0..parsed_images.len) |i| {
+                const img_handle = parsed.loadImage(i, asset_server) catch @panic("Failed to load Image");
+                defer asset_server.unload(Image, img_handle);
+                const img = asset_server.get(Image, img_handle) orelse @panic("Failed to load Image Handle");
+
+                try textures.append(allocator, try renderer.createTextureFromImage(img.*));
+            }
+        }
+
+        // Materials
+        var materials = try parsed.parseMaterials(allocator, textures.items);
+        defer materials.deinit(allocator);
+
+        try materials.append(allocator, Material{});
+
+        // TODO: Prefabs seem to not work atm
+        // var material_prefabs = std.ArrayList(u64).empty;
+        //
+        // for (materials.items) |material| {
+        //     const prefab = world.prefab("Material");
+        //     try material_prefabs.append(allocator, prefab);
+        //     _ = world.set(prefab, Material, material);
+        // }
+
+        // Buffers
+        var meshes = try parsed.parseMeshes(allocator);
+        defer meshes.deinit(allocator);
+        if (meshes.items.len == 0) return error.NoMeshesFound;
+
+        for (parsed.nodes.?) |node| {
+            const entity = world.newEntity("Node");
+            const material = parsed.meshes.?[node.mesh.?].primitives[0].material.?;
+            // world.pair(entity, ecs.IsA, material_prefabs.items[material]);
+            _ = world.set(entity, MeshBuffer, try MeshBuffer.init(renderer, meshes.items[node.mesh.?]));
+            _ = world.set(entity, Transformation, node.getTransform());
+            _ = world.set(entity, Material, materials.items[material]);
+        }
     }
 
     const sampler = try renderer.createSampler(.{});
     defer renderer.releaseSampler(sampler);
-
-    // Materials
-    var materials = try parsed.parseMaterials(allocator, textures.items);
-    defer materials.deinit(allocator);
-
-    if (materials.items.len == 0)
-        try materials.append(allocator, Material{});
 
     // Camera
     const camera = world.set(window_handle, Camera, .{ .aspect = window.getAspect() });
@@ -226,9 +237,19 @@ pub fn main() !void {
 
         world.update();
         c.SDL_Delay(16);
-        lights.items[1].direction = Vector4f.create(.{ @sin(angle), 0.0, @cos(angle), 0.0 });
+
+        const lights_query = try Query(.{Light}).init(&world, 0);
+        var light_iter = lights_query.iter();
+        while (light_iter.next()) |items| {
+            const lights = @field(items, "0") orelse continue;
+            for (lights) |*light| {
+                if (light.type != .Directional)
+                    continue;
+                light.direction = Vector4f.create(.{ @sin(angle), 0.0, @cos(angle), 0.0 });
+                try renderer.uploadDataToBuffer(@intCast(@sizeOf(Light)), lights_buffer, light.toBuffer());
+            }
+        }
         angle += 0.03;
-        try renderer.uploadDataToBuffer(@intCast(@sizeOf(Light)), lights_buffer, lights.items[1].toBuffer());
 
         const cmd = try renderer.acquireCommandBuffer();
         defer cmd.submit();
@@ -245,36 +266,36 @@ pub fn main() !void {
         pass.bindGraphicsPipeline(pipeline);
         pass.bindFragmentStorageBuffers(0, &.{lights_buffer.handle});
 
-        for (parsed.nodes.?) |node| {
-            var transform = node.getTransform();
-            const model_matrix = transform.toMatrix();
-            // MVP, model, MV
-            var matrices = [_]matrix.Matrix4f{ model_matrix, model_matrix, undefined };
-            matrices[2] = camera.viewMatrix().mult(matrices[0]);
-            matrices[0] = camera.projectionMatrix().mult(matrices[2]);
+        const query = try Query(.{ MeshBuffer, Material, Transformation }).init(&world, 0);
+        var iter = query.iter();
+        while (iter.next()) |item| {
+            const bufs, const mats, const transforms = item;
+            for (bufs.?, mats.?, transforms.?) |buffer, material, transform| {
+                const model_matrix = transform.toMatrix();
+                // MVP, model, MV
+                var matrices = [_]matrix.Matrix4f{ model_matrix, model_matrix, undefined };
+                matrices[2] = camera.viewMatrix().mult(matrices[0]);
+                matrices[0] = camera.projectionMatrix().mult(matrices[2]);
 
-            for (&matrices) |*mat|
-                mat.* = mat.transpose();
+                for (&matrices) |*mat|
+                    mat.* = mat.transpose();
 
-            cmd.pushVertexUniformData(0, Matrix4f, &matrices);
+                cmd.pushVertexUniformData(0, Matrix4f, &matrices);
 
-            const buffer = buffers.items[node.mesh.?];
-            buffer.bind(&pass, 0);
+                buffer.bind(&pass, 0);
 
-            const parsed_mesh = parsed.meshes.?[node.mesh.?];
-            const mat_idx = parsed_mesh.primitives[0].material.?;
-            const material_bindings = materials.items[mat_idx].createSamplerBinding(sampler);
-            pass.bindFragmentSamplers(0, &material_bindings);
-            pass.bindFragmentSamplers(material_bindings.len, &environment_map.createSamplerBinding(sampler));
-            cmd.pushFragmentUniformData(0, u8, materials.items[mat_idx].createUniformBinding().toBuffer());
+                const material_bindings = material.createSamplerBinding(sampler);
+                pass.bindFragmentSamplers(0, &material_bindings);
+                pass.bindFragmentSamplers(material_bindings.len, &environment_map.createSamplerBinding(sampler));
+                cmd.pushFragmentUniformData(0, u8, material.createUniformBinding().toBuffer());
 
-            if (buffer.index_buffer) |_| {
-                pass.drawPrimitivesIndexed(buffer.element_count);
-            } else {
-                pass.drawPrimitives(buffer.element_count);
+                if (buffer.index_buffer) |_| {
+                    pass.drawPrimitivesIndexed(buffer.element_count);
+                } else {
+                    pass.drawPrimitives(buffer.element_count);
+                }
             }
         }
-
         pass.end();
     }
 }

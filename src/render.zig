@@ -19,6 +19,7 @@ const std = @import("std");
 const solis = @import("solis");
 pub fn initModule(_: std.mem.Allocator, world: *solis.world.World) !void {
     world.register(TextureHandle);
+    world.register(MeshBuffer);
 
     var asset_server = world.getGlobalMut(solis.assets.Server) orelse return error.NoAssetServer;
     try asset_server.register_importer(Shader, ShaderImporter);

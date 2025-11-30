@@ -54,6 +54,14 @@ pub fn getMut(self: *Self, entity: ecs.entity_t, T: type) *T {
     return ecs.get_mut(self.inner, entity, T).?;
 }
 
+pub fn prefab(self: *Self, name: [*:0]const u8) u64 {
+    return ecs.new_prefab(self.inner, name);
+}
+
+pub fn pair(self: *Self, a: ecs.entity_t, relationship: ecs.entity_t, b: ecs.entity_t) void {
+    ecs.add_pair(self.inner, a, relationship, b);
+}
+
 /// -------- Event Handling ----------------
 pub fn registerEvent(self: *Self, T: type) void {
     ecs.COMPONENT(self.inner, events.Events(T));
