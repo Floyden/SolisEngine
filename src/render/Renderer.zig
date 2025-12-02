@@ -128,6 +128,16 @@ pub fn createDefaultGraphicsPipeline(self: Renderer, asset_server: *assets.Serve
     );
 }
 
+pub fn createDepthTexture(self: *Renderer, extent: [2]u32) !texture.Handle {
+    return self.createTexture(.{
+        .extent = .{ .width = extent[0], .height = extent[1] },
+        .format = texture.Format.depth16unorm,
+        .usage = .depth_stencil_target,
+        .type = .image2d,
+        .label = "Depth Texture",
+    });
+}
+
 /// Creates a 2D texture from an image.
 /// Returns a texture handle or an error if creation fails.
 pub fn createTextureFromImage(self: *Renderer, image: Image) !texture.Handle {

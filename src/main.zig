@@ -71,9 +71,13 @@ fn handleWindowResized(window_events: EventReader(Window.Event), query: Query(.{
     }
 }
 
-fn handleMouseInput(mouse_button: EventReader(input.MouseButtonEvent)) void {
+fn handleMouseInput(mouse_button: EventReader(input.MouseButtonEvent), mouse_motion: EventReader(input.MouseMotionEvent)) void {
     while (mouse_button.next()) |event| {
         std.log.debug("Mouse input {}", .{event});
+    }
+
+    while (mouse_motion.next()) |event| {
+        std.log.debug("Mouse motion {}", .{event});
     }
 }
 
@@ -115,16 +119,14 @@ pub fn main() !void {
     if (!c.SDL_Init(c.SDL_INIT_VIDEO)) return SDL_ERROR.Fail;
     defer c.SDL_Quit();
 
-    // const allocator = std.heap.page_allocator;
-    const file_path: []const u8 = @ptrCast(std.os.argv[1][0..std.mem.len(std.os.argv[1])]);
-
     var world = World.init();
     defer world.deinit();
 
     const allocator = std.heap.page_allocator;
     try initModule(allocator, &world);
-    var asset_server = world.getGlobalMut(assets.Server) orelse @panic("Failed to get AssetServer");
 
+    var asset_server = world.getGlobalMut(assets.Server) orelse @panic("Failed to get AssetServer");
+    const file_path: []const u8 = @ptrCast(std.os.argv[1][0..std.mem.len(std.os.argv[1])]);
     const parsed = try Gltf.parseFromFile(allocator, file_path);
 
     try world.addSystem(allocator, handleMouseInput, .{});
@@ -140,13 +142,7 @@ pub fn main() !void {
     defer defaults.TextureDefaults.deinit(renderer);
 
     // window textures
-    _ = world.set(window_handle, Texture, try renderer.createTexture(.{
-        .extent = .{ .width = @intCast(window.size[0]), .height = @intCast(window.size[1]) },
-        .format = TextureFormat.depth16unorm,
-        .usage = .depth_stencil_target,
-        .type = .image2d,
-        .label = "Depth Texture",
-    }));
+    _ = world.set(window_handle, Texture, try renderer.createDepthTexture(window.size));
     defer renderer.releaseTexture(world.getMut(window_handle, Texture).*);
 
     // Lights
@@ -238,6 +234,9 @@ pub fn main() !void {
         world.update();
         c.SDL_Delay(16);
 
+        const cmd = try renderer.acquireCommandBuffer();
+        defer cmd.submit();
+
         const lights_query = try Query(.{Light}).init(&world, 0);
         var light_iter = lights_query.iter();
         while (light_iter.next()) |items| {
@@ -250,9 +249,6 @@ pub fn main() !void {
             }
         }
         angle += 0.03;
-
-        const cmd = try renderer.acquireCommandBuffer();
-        defer cmd.submit();
 
         const swapchain_texture = cmd.acquireSwapchain(window) orelse {
             cmd.cancel();
