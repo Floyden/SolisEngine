@@ -2,6 +2,7 @@ const std = @import("std");
 const solis = @import("solis");
 
 const c = solis.external.c;
+const App = solis.App;
 const Extent3d = solis.Extent3d;
 const Window = solis.Window;
 const Camera = solis.Camera;
@@ -81,49 +82,16 @@ fn handleMouseInput(mouse_button: EventReader(input.MouseButtonEvent), mouse_mot
     }
 }
 
-var window_handle: u64 = 0;
-
-pub fn initModule(allocator: std.mem.Allocator, world: *World) !void {
-    _ = world.registerGlobal(std.mem.Allocator, std.heap.page_allocator).*;
-
-    try assets.Server.initModule(allocator, world);
-    var asset_server = world.getGlobalMut(assets.Server) orelse @panic("Failed to get AssetServer");
-    try asset_server.register_importer(Image, assets.ImageImporter);
-
-    world.registerEvent(system_event.SystemEvent);
-    try input.initModule(allocator, world);
-
-    // Video subsystem & windows
-    try Window.initModule(allocator, world);
-    world.register(Camera);
-    world.register(Material);
-    world.register(Transformation);
-    world.register(Light);
-
-    window_handle = world.newEntity("Main Window");
-    const window = world.set(window_handle, Window, try Window.init());
-
-    try solis.render.initModule(allocator, world);
-
-    _ = world.registerGlobal(Renderer, try Renderer.init(world, window));
-    try world.addSystem(allocator, handleWindowResized, .{});
-}
-
 pub fn main() !void {
     if (std.os.argv.len < 2) {
         std.log.err("Expected at least one argument", .{});
         return;
     }
 
-    errdefer c.SDL_Log("Error: %s", c.SDL_GetError());
-    if (!c.SDL_Init(c.SDL_INIT_VIDEO)) return SDL_ERROR.Fail;
-    defer c.SDL_Quit();
-
-    var world = World.init();
-    defer world.deinit();
-
     const allocator = std.heap.page_allocator;
-    try initModule(allocator, &world);
+    var app: App = try .init(allocator);
+    defer app.deinit();
+    var world = &app.world;
 
     var asset_server = world.getGlobalMut(assets.Server) orelse @panic("Failed to get AssetServer");
     const file_path: []const u8 = @ptrCast(std.os.argv[1][0..std.mem.len(std.os.argv[1])]);
@@ -133,17 +101,10 @@ pub fn main() !void {
     try world.addSystem(allocator, cameraMover, .{});
 
     var renderer = world.getGlobalMut(Renderer).?;
-    var window = world.get(window_handle, Window);
+    var window = world.get(app.window_handle, Window);
 
     const pipeline = try renderer.createDefaultGraphicsPipeline(asset_server);
     defer renderer.destroyGraphicsPipeline(pipeline);
-
-    defaults.TextureDefaults.init(allocator, renderer) catch @panic("OOM");
-    defer defaults.TextureDefaults.deinit(renderer);
-
-    // window textures
-    _ = world.set(window_handle, Texture, try renderer.createDepthTexture(window.size));
-    defer renderer.releaseTexture(world.getMut(window_handle, Texture).*);
 
     // Lights
     const lights_buffer = try renderer.createBufferNamed(@intCast(2 * @sizeOf(Light)), c.SDL_GPU_BUFFERUSAGE_GRAPHICS_STORAGE_READ, "Lights");
@@ -216,17 +177,17 @@ pub fn main() !void {
     defer renderer.releaseSampler(sampler);
 
     // Camera
-    const camera = world.set(window_handle, Camera, .{ .aspect = window.getAspect() });
+    const camera = world.set(app.window_handle, Camera, .{ .aspect = window.getAspect() });
     camera.position[2] = -2.5;
 
     var angle: f32 = 0;
     const reader_ent = world.newEntity("SystemEventReader");
-    const system_events = try EventReader(system_event.SystemEvent).init(&world, reader_ent);
+    const system_events = try EventReader(system_event.SystemEvent).init(world, reader_ent);
 
     // Main loop
     var done = false;
     while (!done) {
-        try system_event.handleSystemEvents(allocator, &world);
+        try system_event.handleSystemEvents(allocator, world);
         while (system_events.next()) |sys_event| {
             if (sys_event.close_request) done = true;
         }
@@ -237,7 +198,7 @@ pub fn main() !void {
         const cmd = try renderer.acquireCommandBuffer();
         defer cmd.submit();
 
-        const lights_query = try Query(.{Light}).init(&world, 0);
+        const lights_query = try Query(.{Light}).init(world, 0);
         var light_iter = lights_query.iter();
         while (light_iter.next()) |items| {
             const lights = @field(items, "0") orelse continue;
@@ -256,13 +217,13 @@ pub fn main() !void {
         };
 
         const color_target = RenderPass.ColorTarget{ .texture = swapchain_texture, .clear_color = .{ 0.1, 0.1, 0.1, 1.0 } };
-        const depth_target = RenderPass.DepthStencilTarget{ .texture = world.getMut(window_handle, Texture).* };
+        const depth_target = RenderPass.DepthStencilTarget{ .texture = world.getMut(app.window_handle, Texture).* };
 
         var pass = cmd.createRenderPass(color_target, depth_target) orelse @panic("Could not create RenderPass");
         pass.bindGraphicsPipeline(pipeline);
         pass.bindFragmentStorageBuffers(0, &.{lights_buffer.handle});
 
-        const query = try Query(.{ MeshBuffer, Material, Transformation }).init(&world, 0);
+        const query = try Query(.{ MeshBuffer, Material, Transformation }).init(world, 0);
         var iter = query.iter();
         while (iter.next()) |item| {
             const bufs, const mats, const transforms = item;

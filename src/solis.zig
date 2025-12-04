@@ -7,6 +7,7 @@ pub const Transformation = @import("Transformation.zig");
 pub const TypeId = @import("type_id.zig").TypeId;
 pub const Uuid = @import("uuid.zig").Uuid;
 
+pub const App = @import("App.zig");
 pub const Window = @import("Window.zig");
 pub const system_event = @import("core/system_event.zig");
 pub const assets = @import("assets.zig");
